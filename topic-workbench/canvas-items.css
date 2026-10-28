@@ -1,0 +1,51 @@
+/* Canvas annotations share world coordinates, but never become project records. */
+.canvas-item{position:absolute;z-index:4;box-sizing:border-box;cursor:grab;touch-action:none;user-select:none;outline:0;line-height:1.55;font-family:inherit}
+.canvas-item.selected{z-index:6}
+.canvas-item.dragging{cursor:grabbing;z-index:8}
+.canvas-text,.canvas-note{border:1px solid transparent;border-radius:3px;padding:10px 12px}
+.canvas-text:hover{border-color:#bbb8af70}
+.canvas-note{padding:18px 20px;border-color:#6b60400d;box-shadow:0 3px 8px #554a2812,0 1px 2px #554a280a}
+.canvas-note:hover{box-shadow:0 4px 12px #554a2820,0 1px 2px #554a280a}
+.canvas-text.selected,.canvas-note.selected,.canvas-text:focus-visible,.canvas-note:focus-visible{outline:2px solid #8eaabd;outline-offset:2px}
+.canvas-item-text{margin:0;width:100%;height:100%;white-space:pre-wrap;overflow-wrap:anywhere;overflow:hidden;font:inherit;color:inherit;pointer-events:none}
+.canvas-item-text:empty::before{content:attr(data-placeholder);opacity:.42;font-weight:400}
+.canvas-text-editor{display:block;width:100%;height:100%;min-height:0;padding:0;margin:0;resize:none;border:0;outline:0;background:transparent;color:inherit;font:inherit;line-height:inherit;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;touch-action:auto;cursor:text;box-shadow:none;border-radius:0}
+.canvas-item .canvas-text-editor:focus{border:0;outline:0;background:transparent;box-shadow:none}
+.canvas-item:has(.canvas-text-editor){cursor:text;outline:2px solid #8eaabd;outline-offset:2px}
+.canvas-line,.canvas-arrow{pointer-events:none}
+.canvas-line>svg,.canvas-arrow>svg{display:block;overflow:visible;pointer-events:none}
+.canvas-line-hit{pointer-events:stroke;cursor:grab}
+.canvas-line-stroke{pointer-events:none}
+.canvas-item.dragging .canvas-line-hit{cursor:grabbing}
+.canvas-line:hover .canvas-line-hit,.canvas-arrow:hover .canvas-line-hit{stroke:#9bb4c31f}
+.canvas-line.selected .canvas-line-hit,.canvas-arrow.selected .canvas-line-hit,.canvas-line:focus-visible .canvas-line-hit,.canvas-arrow:focus-visible .canvas-line-hit{stroke:#9bb4c338}
+.canvas-handle{position:absolute;display:block;width:20px;height:20px;padding:0;border:0;background:transparent;border-radius:0;transform:translate(-50%,-50%);opacity:0;pointer-events:none;touch-action:none}
+.canvas-handle::after{content:"";position:absolute;width:8px;height:8px;left:6px;top:6px;background:#fff;border:1.5px solid #839fb2;border-radius:50%;box-sizing:border-box}
+.canvas-item.selected>.canvas-handle,.canvas-item:focus-within>.canvas-handle{opacity:1;pointer-events:auto}
+.canvas-handle:hover{background:transparent}
+.canvas-handle:hover::after{border-color:#4b728e;background:#f3f8fb}
+.canvas-handle[data-canvas-endpoint]{cursor:crosshair}
+.canvas-resize-handle{right:-10px;bottom:-10px;transform:none;cursor:nwse-resize}
+.canvas-resize-handle::after{border-radius:1px}
+.canvas-item-tools{position:absolute;left:50%;bottom:75px;transform:translateX(-50%);z-index:16;display:flex;align-items:center;gap:5px;max-width:calc(100% - 32px);padding:7px 9px;border:1px solid #dedcd4;border-radius:6px;background:#fffffff5;box-shadow:0 4px 14px #37352f0d;color:#57534c;font-size:12px;white-space:nowrap}
+.canvas-item-tools label{display:flex;align-items:center;gap:5px;font-size:11px;color:#827b70}
+.canvas-item-tools button{font:inherit;color:inherit;padding:5px 7px;border-radius:4px;white-space:nowrap}
+.canvas-item-tools button:hover{background:#f1f0eb;color:#37352f}
+.canvas-item-tools select{max-width:82px;border:1px solid transparent;border-radius:3px;background:transparent;padding:4px 3px;color:inherit;font:inherit;cursor:pointer}
+.canvas-item-tools select:hover,.canvas-item-tools select:focus{border-color:#e1ddd3;background:#faf9f6;outline:0}
+.canvas-item-tools input[type=color]{width:27px;height:27px;min-width:27px;border:1px solid #e0dcd3;border-radius:4px;padding:3px;background:#fff;cursor:pointer}
+.canvas-item-tools input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+.canvas-item-tools input[type=color]::-webkit-color-swatch{border:0;border-radius:2px}
+.canvas-item-tools .tool-separator{margin:0 2px;height:19px;flex:none}
+.canvas-item-tools .canvas-delete:hover{color:#a1503f;background:#fcf1eb}
+.canvas-item-tools button:focus-visible,.canvas-item-tools select:focus-visible,.canvas-handle:focus-visible{outline:2px solid #9bb4c3;outline-offset:2px}
+body.list-view .canvas-item-tools,.workbench-screen .canvas-item-tools{display:none!important}
+@media(max-width:1000px){.canvas-item-tools{flex-wrap:wrap;justify-content:center;gap:4px;max-width:calc(100% - 24px)}.canvas-item-tools button{padding:5px}.canvas-item-tools label{gap:3px}}
+@media(max-width:760px){.canvas-item-tools{display:none!important}}
+@media(prefers-reduced-motion:reduce){.canvas-item{transition:none}}
+
+.viewport.annotating,.viewport.annotating .project-card,.viewport.annotating .canvas-item{cursor:crosshair}
+.canvas-tool-hint{position:absolute;bottom:72px;left:50%;transform:translateX(-50%);padding:6px 12px;background:#fffffff0;border:1px solid #eeece5;border-radius:5px;z-index:12;font-size:11px;color:#746e63;pointer-events:none;white-space:nowrap}
+.canvas-tool-label{font-size:11px;color:#8b8375;padding:0 3px}
+body.list-view .canvas-tool-hint,.workbench-screen .canvas-tool-hint{display:none!important}
+@media(max-width:760px){.canvas-tool-hint{display:none!important}}

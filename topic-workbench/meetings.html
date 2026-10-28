@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="会议纪要与资料：基模-落地、落地内部，记录讨论与跟进。">
+  <title>会议记录 · 我的工作台</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23f0efed'/%3E%3Cpath d='M9 8h10l5 5v12H9zM19 8v6h5M13 18h7M13 21h5' fill='none' stroke='%2337352f' stroke-width='1.5'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="meetings.css">
+</head>
+<body>
+  <a class="skip-link" href="#meetingEditor">跳到会议内容</a>
+  <header class="topbar">
+    <a class="back-link" href="./">← 工作台</a>
+    <span class="breadcrumb" aria-hidden="true">/</span><span class="breadcrumb">会议记录</span>
+    <div class="header-actions">
+      <button id="saveStatus" class="save-status" title="保存当前更改" aria-live="polite">正在读取…</button>
+      <button id="undoDelete" disabled>撤销删除</button>
+      <button id="openTrash" disabled>回收站 <span id="trashCount"></span></button>
+      <button id="exportMeetings">导出 JSON ↗</button>
+    </div>
+  </header>
+  <div id="meetingShareNotice" class="save-message" style="background:var(--soft);color:var(--muted);border-color:var(--line)" hidden>分享版 · 修改仅保存在当前浏览器，不会同步给其他人。</div>
+  <div id="saveMessage" class="save-message" role="alert" hidden></div>
+  <div class="meeting-layout">
+    <aside class="meeting-sidebar" aria-label="会议列表">
+      <div class="list-heading"><div><h1>会议记录</h1></div><button id="newMeeting" class="add-button" aria-label="新建会议">＋ 新建会议</button></div>
+      <div class="meeting-tabs" role="tablist" aria-label="会议分栏"><button id="crossTeamTab" role="tab" data-category="cross-team" aria-selected="true" aria-controls="meetingList">基模-落地</button><button id="internalTab" role="tab" data-category="internal" aria-selected="false" aria-controls="meetingList" tabindex="-1">落地内部</button></div>
+      <label class="search-label"><span class="sr-only">搜索会议</span><input id="meetingSearch" type="search" placeholder="搜索会议或内容…" autocomplete="off"></label>
+      <div class="list-caption"><span id="meetingCount"></span><span>按会议日期</span></div>
+      <nav id="meetingList" class="meeting-list" role="tabpanel" aria-labelledby="crossTeamTab"></nav>
+      <p class="local-note">本机保存</p>
+    </aside>
+    <main class="meeting-main">
+      <section id="loadError" class="empty-state" hidden aria-labelledby="loadErrorTitle">
+        <span class="document-mark" aria-hidden="true">▤</span><h2 id="loadErrorTitle">暂时无法读取会议记录</h2>
+        <p id="loadErrorText"></p><p>原记录未被覆盖。</p>
+        <div class="empty-actions"><button id="exportRaw">导出原始记录</button><button id="retryLoad">重新读取</button></div>
+      </section>
+      <section id="emptyState" class="empty-state" hidden><span class="document-mark" aria-hidden="true">▤</span><h2 id="emptyTitle">基模-落地</h2><p id="emptyMessage">还没有会议，先添加一份纪要。</p><button id="createFromEmpty" class="primary">＋ 新建会议</button></section>
+      <article id="meetingEditor" class="meeting-editor" aria-label="会议内容" tabindex="-1" hidden>
+        <div class="editor-eyebrow"><span id="meetingCategoryLabel">基模-落地</span><div class="meeting-actions"><button id="moveMeeting">移到落地内部</button><button id="deleteMeeting" class="delete-button">删除会议</button></div></div>
+        <label class="sr-only" for="meetingTitle">会议标题</label><input id="meetingTitle" class="meeting-title" placeholder="未命名会议" maxlength="200" autocomplete="off" data-field="title">
+        <div class="properties">
+          <label for="meetingDate">会议日期</label><input id="meetingDate" type="date" data-field="date">
+        </div>
+        <section class="materials-section" aria-labelledby="materialsHeading">
+          <div class="section-heading"><h2 id="materialsHeading">会议纪要与资料</h2><button id="uploadMaterial">↑ 上传文件</button><input id="meetingFileInput" type="file" multiple hidden></div>
+          <form id="materialLinkForm" class="material-link-form"><label class="sr-only" for="materialLinkInput">飞书纪要或文档链接</label><input id="materialLinkInput" type="url" placeholder="粘贴飞书纪要或文档链接…" required autocomplete="off"><button type="submit">添加链接</button></form>
+          <div id="materialList"></div>
+        </section>
+        <section class="writing-section"><label for="meetingNotes">会议记录</label><textarea id="meetingNotes" data-field="notes" placeholder="讨论要点、已明确的结论，记在这里…" rows="6"></textarea></section>
+        <section class="writing-section"><label for="meetingFollowUp">待跟进</label><textarea id="meetingFollowUp" data-field="followUp" placeholder="下一步、跟进人或待补信息…" rows="3"></textarea></section>
+        <section class="project-section" aria-labelledby="projectHeading">
+          <div class="section-heading"><h2 id="projectHeading">关联项目</h2></div>
+          <div id="linkedProjects" class="linked-projects"></div>
+          <details id="projectPicker" class="project-picker"><summary>选择关联项目</summary><label class="sr-only" for="projectSearch">搜索可关联项目</label><input id="projectSearch" type="search" placeholder="搜索项目标题…" autocomplete="off"><p id="projectReadNotice" class="muted"></p><div id="projectChoices" class="project-choices"></div></details>
+        </section>
+        <footer class="editor-footer"><span id="editedAt"></span><span>直接编辑，自动保存</span></footer>
+      </article>
+    </main>
+  </div>
+  <dialog id="materialPreview" class="material-preview"><header><h2 id="previewTitle">会议资料</h2><a id="previewOpen" target="_blank" rel="noopener noreferrer">打开原文 ↗</a><button id="closePreview" aria-label="关闭资料预览">×</button></header><div id="previewBody"></div></dialog>
+  <dialog id="meetingTrash" class="meeting-trash" aria-labelledby="trashTitle"><header><h2 id="trashTitle">回收站</h2><button id="closeTrash" aria-label="关闭回收站">×</button></header><div id="trashList"></div></dialog>
+  <div id="meetingToast" class="toast" role="status" hidden></div>
+  <script type="module" src="meetings.js"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-10-28T10:08:03.910Z",
+  "meetings": [
+    {
+      "id": "meeting-2026-10-23-biweekly",
+      "title": "10-23 双周会",
+      "date": "2026-10-23",
+      "type": "其他",
+      "attendees": "",
+      "notes": "",
+      "conclusions": "",
+      "followUp": "",
+      "projectIds": [],
+      "createdAt": "",
+      "updatedAt": "",
+      "originNote": "",
+      "materials": [
+        {
+          "id": "material-biweekly-document",
+          "title": "10-23 双周会文档",
+          "url": "https://vcnxjo4gpx7l.feishu.cn/docx/Q9lJdvXPko6mpBxAvNKcRusnnoj"
+        }
+      ],
+      "category": "cross-team"
+    }
+  ],
+  "deletedMeetings": [],
+  "meetingContentVersion": 1,
+  "deletedItems": []
+}

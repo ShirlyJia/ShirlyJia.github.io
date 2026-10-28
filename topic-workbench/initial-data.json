@@ -1,0 +1,924 @@
+{
+  "schemaVersion": 2,
+  "workbenchVersion": 1,
+  "domainTagVersion": 1,
+  "projectContentVersion": 1,
+  "quickBoards": [
+    {
+      "id": "board-committed",
+      "name": "已承诺交付",
+      "color": "#6f8192",
+      "projectIds": [],
+      "notes": "跟进已承诺事项的交付范围、验证结果与时间。",
+      "rank": 0,
+      "emphasisIds": [],
+      "contexts": {}
+    },
+    {
+      "id": "board-next-meeting",
+      "name": "下次会前补齐",
+      "color": "#9b8b78",
+      "projectIds": [
+        "7135469627",
+        "7018500789"
+      ],
+      "notes": "下次讨论前补齐业务背景、数据和影响；会上确认下一步与时间。",
+      "rank": 1,
+      "emphasisIds": [],
+      "contexts": {
+        "7135469627": ""
+      }
+    },
+    {
+      "id": "board-business",
+      "name": "待业务补充对齐",
+      "color": "#858d80",
+      "projectIds": [],
+      "notes": "补齐业务场景、落地数据与影响，再对齐下一步。",
+      "rank": 2,
+      "emphasisIds": [],
+      "contexts": {}
+    },
+    {
+      "id": "board-1230",
+      "name": "1230迭代讨论",
+      "color": "#92839d",
+      "projectIds": [
+        "6961865664",
+        "7134500575",
+        "local-direction-lower-vram"
+      ],
+      "notes": "讨论知识融合、非结构化与降显存的范围、方案和排期。",
+      "rank": 3,
+      "emphasisIds": [],
+      "contexts": {}
+    }
+  ],
+  "sourceDetachedVersion": 1,
+  "projects": [
+    {
+      "id": "7135496756",
+      "name": "模型输入容量扩展与有效信息利用优化",
+      "kind": "direction",
+      "tagIds": [
+        "domain-r",
+        "domain-p"
+      ],
+      "priority": "待定",
+      "status": "",
+      "summary": "",
+      "description": "1．问题背景\n\n随着样本规模扩大，LimiX面临显存容量与预测效果两方面的瓶颈，需分别识别资源限制、信息选择和模型能力等方面的瓶颈。\n\n2．问题分类\n\n | \n\n问题类别及陈述\n\n | \n\n需要解决的核心问题\n\n | \n\n显存容量限制。大规模样本输入可能触发显存溢出OOM\n\n | 如何在有限显存下利用更大规模的数据，同时保留预测所需的关键信息，保障任务稳定运行。\n\n | \n\n预测效果随样本增长的提升存在瓶颈。随样本规模扩大，预测效果提升可能趋缓、停滞甚至下降，在部分大样本任务中可能落后于传统树模型\n\n | 如何改善模型在大样本条件下的学习与泛化能力，使其更充分地利用数据提升预测效果。\n\n3．研究方向\n- 信息压缩：探索长历史、大样本的紧凑表示，在降低显存与推理开销的同时保留关键规律。\n- 样本选择：研究任务相关的筛选与采样机制，减少冗余占用，兼顾代表性、少数模式及关键变化片段。\n- 行业 / 场景定制模型：对于客户数据量充足、任务稳定的场景，可考虑进一步训练行业模型或场景模型，通过行业专有capacity整合，提升大样本任务下的整体性能。",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "7135469627",
+      "name": "探索LDM OOD泛化问题解法 - 插值",
+      "kind": "project",
+      "tagIds": [
+        "domain-p"
+      ],
+      "priority": "P0",
+      "status": "",
+      "summary": "",
+      "description": "当待预测数据与上下文样本的分布存在差异时，LimiX在不同组别上的预测效果可能明显下降。需研究模型对跨组别分布变化的适应能力，区分可跨组复用的规律与组别特有关系，降低对已有样本分布的依赖，提升在新组别、样本稀缺及分布偏移场景下的预测准确性与稳定性。\n\n案例说明：中石油比赛中的跨井预测\n\n据当前反馈，在中石油比赛中，同一区域内不同井的预测效果存在差异，部分井表现不佳。虽然属于同一区域，各井的地质条件、生产工况或数据采集条件仍可能不同，导致已有井上的规律难以直接迁移到其他井。需通过按井、按组别划分训练与评测数据，排查分布差异及其对预测的影响，并验证模型对未见井和不同井组的泛化能力。",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "7134500575",
+      "name": "非结构化数据转换方法研究",
+      "kind": "project",
+      "tagIds": [
+        "domain-k"
+      ],
+      "priority": "待定",
+      "status": "",
+      "summary": "",
+      "description": "当前用户的交互、需求表达及业务输出大量以自然语言等非结构化形式存在，而LimiX以结构化数据为建模输入。期望发挥LimiX在结构化数据建模上的优势，通过研究非结构化信息的有效表征，将其预测与决策能力拓展到更广泛的语言交互与业务场景。\n\n核心问题是：如何构造适合LimiX的结构化表征，充分表达原始内容中的语义、上下文及任务相关关系，使模型能够据此学习和预测。研究重点在于确定有效的表征形式，以及判断转换后是否保留了完成目标任务所需的信息。\n\n最终目标是形成可复用的转换能力，降低非结构化场景接入LimiX的成本，拓展其预测与决策能力的应用范围。应用场景如：利用Agent日志与调用记录，辅助工具选择，减少无效重试，降低执行成本并提高任务成功率。",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "7133205159",
+      "name": "【会议讨论事项记录】",
+      "kind": "project",
+      "tagIds": [
+        "domain-a"
+      ],
+      "priority": "待定",
+      "status": "",
+      "summary": "",
+      "description": "1. 为什么要升级pytorch版本。背景：落地侧还有使用旧版本的项目，当前V2无法支持2m/16m...，存在版本冲突问题，只能通过构造两个workspace解决\n2. v1.5的时候提供过一个大样本性能表现曲线，v2是否有测试过？希望能够提供几个版本的临界数值\n3. 为了更好的对齐多方信息和能够及时沉淀并转化知识资产，基模侧需要定期更新内部已成型的研究结果，并形成长期自动更新的机制，保证资产沉淀up-to-date",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "7132006442",
+      "name": "400M的微调能力",
+      "kind": "project",
+      "tagIds": [
+        "domain-p"
+      ],
+      "priority": "待定",
+      "status": "",
+      "summary": "",
+      "description": "",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "7131325852",
+      "name": "Imputation优化需求",
+      "kind": "project",
+      "tagIds": [
+        "domain-p"
+      ],
+      "priority": "长期",
+      "status": "",
+      "summary": "",
+      "description": "当前落地侧在该Imputation上有两种使用模式：基模侧提供的join联合插补，算法侧改造的iterative逐列插补。前者当前为claim的四大能力之一，但是输出实证不如均值插补，效果并不理想；虽然业务上可以改造后使用iterative，但仍缺乏limix原生差值补充的模式，希望能够针对该功能有优化规划。",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "7045165610",
+      "name": "因果可解释三大方向-分析、归纳、决策",
+      "kind": "direction",
+      "tagIds": [
+        "domain-c"
+      ],
+      "priority": "长期",
+      "status": "",
+      "summary": "",
+      "description": "- 因果分析 - 数据层面通过因果建模方法实现更可靠的预测，并且提供哪些样本对于分析结果更有用；因果解释 - 将因果分析的输出结论转化/提炼出让人能够理解的背后的真实规律\n- 因果归纳 - 自然语言表达的事实性结论，例如如何发现新的知识。这是从数据到知识转化的过程，因果分析中产出的多个数据的共性可以被语言表达或知识总结归纳形成易理解的结论。\n- 因果决策 - 达到更好的y如何在一定约束下调节x，作为整条因果链路的终态环节，成为决策系统。",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "7018500789",
+      "name": "多目标预测能力（时序/非时序）",
+      "kind": "project",
+      "tagIds": [
+        "domain-p"
+      ],
+      "priority": "P0",
+      "status": "",
+      "summary": "",
+      "description": "需求背景：现阶段LimiX以单目标预测或多个单目标独立预测为主，难以充分利用目标间的关联。广告点击量与转化量、门店订单量与销售额等任务，需要同时预测多个相互关联的目标。\n\n研究目标：建立覆盖时序与非时序场景的多目标联合预测能力，提升预测准确性及目标间的一致性。\n\n技术诉求：支持指定多个目标列，按样本或未来时间点返回对应预测；适配各参数规模模型，兼容现有单目标能力，并与多个单目标独立预测进行对比，明确联合建模的收益与适用边界。\n\n输入输出样例：\n\n[原文图片]",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": [],
+      "detailLayout": {
+        "order": [
+          "description",
+          "result",
+          "comments",
+          "children",
+          "parents",
+          "history",
+          "plans",
+          "materials"
+        ],
+        "hidden": [],
+        "titles": {}
+      }
+    },
+    {
+      "id": "6998770550",
+      "name": "LimiX内嵌自动化特征工程",
+      "kind": "project",
+      "tagIds": [
+        "domain-k"
+      ],
+      "priority": "P1",
+      "status": "",
+      "summary": "",
+      "description": "特征工程作为结构化数据建模链路中的关键环节，将会直接影响有效信息的提取质量、数据关系的表达上限及最终预测效果。为提升 LimiX 对结构化数据的建模能力，我们预期建设 通过LimiX内生的自动化特征工程能力。\n\n该能力应能够针对不同字段类型与数据特征，自动执行特征转换、派生、组合与筛选，构建更具判别力的特征表达，为模型训练提供高质量输入。理论上希望能够突破原始字段的信息表达局限，增强模型对复杂关系与交互信息的刻画能力，减少对人工经验和任务级特征定制的依赖，提升建模效率、预测效果与跨场景泛化能力，并作为 LimiX 处理结构化数据的基础能力，为后续任务扩展与整体性能提升提供持续支撑。",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "6989896654",
+      "name": "LDM CoT",
+      "kind": "project",
+      "tagIds": [
+        "domain-p"
+      ],
+      "priority": "长期",
+      "status": "",
+      "summary": "",
+      "description": "（待探索）\n\n可以针对探索相关方向的解决方案",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "6989747197",
+      "name": "探索LDM OOD泛化问题解法 - 外推",
+      "kind": "project",
+      "tagIds": [
+        "domain-p"
+      ],
+      "priority": "P2",
+      "status": "",
+      "summary": "",
+      "description": "探索解决OOD中的外推问题：模型在推理时，遇到了训练集中未曾覆盖、分布不同的全新数据时，预测能力大幅下降或失效的现象",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "6989023658",
+      "name": "面向LDM性能提升的模型互补与Stacking融合方法研究",
+      "kind": "project",
+      "tagIds": [
+        "domain-p"
+      ],
+      "priority": "待定",
+      "status": "",
+      "summary": "",
+      "description": "需求背景：不同模型在任务类型、数据分布及样本规模上的表现可能各有优势，为提升LDM预测效果提供了互补空间。但增加模型数量并不必然带来收益，需研究如何将模型间的能力差异转化为有效的集成增益。\n\n研究目标：构建基于Stacking的多模型协同预测能力，利用不同模型的优势改善单模型表现不足的任务，提升预测准确性与稳定性。\n\n技术诉求：探索面向不同任务特征的基模型差异化训练与选择方法，研究元模型对各基模型预测结果的融合机制。",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "6985473599",
+      "name": "数据生成能力建设",
+      "kind": "project",
+      "tagIds": [
+        "domain-m"
+      ],
+      "priority": "待定",
+      "status": "",
+      "summary": "",
+      "description": "需要补充数据生成能力，用于支撑数据治理、样本增强和高质量数据集建设等场景。当前已有基于 diffusion model 的数据生成方向，实验室效果较好，但仍需要基模侧沉淀为可复用能力，便于后续在业务场景中使用。\n\n短期目标是先建立数据生成能力任务，由基模侧保留方案和代码，形成可复用的能力资产。",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "6962286552",
+      "name": "基模能力-理论推理加速",
+      "kind": "project",
+      "tagIds": [
+        "domain-r"
+      ],
+      "priority": "长期",
+      "status": "",
+      "summary": "",
+      "description": "推理加速问题（理论）。更快，更轻量级",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "6961865664",
+      "name": "基模能力-知识融合嵌入",
+      "kind": "project",
+      "tagIds": [
+        "domain-k"
+      ],
+      "priority": "P2",
+      "status": "",
+      "summary": "",
+      "description": "需求背景：面向结构化数据任务，除表格样本外，数理规律、通用常识、领域知识及专家经验等也可为预测提供依据。需研究LimiX融合多类知识的能力，补充仅从样本中难以充分学习的信息。\n\n研究目标：使LimiX能够结合数据规律与已有知识进行预测，提升数据不足场景下的预测准确性，以及结果与已知规律的一致性。\n\n技术诉求：探索知识表示与模型融合机制。如：\n    - 数理知识嵌入。假设：已知一个变量A的合理范围是[1, 10], 并且某个机理关系是C=A*B，需要让模型可以结合机理知识。",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "6962195614",
+      "name": "基模版本-大模型",
+      "kind": "project",
+      "tagIds": [
+        "domain-m"
+      ],
+      "priority": "长期",
+      "status": "",
+      "summary": "",
+      "description": "更大更强的基模",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "6961890662",
+      "name": "基模版本-小模型",
+      "kind": "project",
+      "tagIds": [
+        "domain-m"
+      ],
+      "priority": "待定",
+      "status": "",
+      "summary": "",
+      "description": "小1M的基模开发",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "6989963650",
+      "name": "基模能力-多模态",
+      "kind": "project",
+      "tagIds": [
+        "domain-k"
+      ],
+      "priority": "P2",
+      "status": "处理中",
+      "summary": "",
+      "description": "研究四大方向：\n- 文字/语义\n- Graph\n- 结构化数据\n- 时序",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "6985308324",
+      "name": "基模能力-时序预测（汇总）",
+      "kind": "project",
+      "tagIds": [
+        "domain-k"
+      ],
+      "priority": "P1",
+      "status": "处理中",
+      "summary": "",
+      "description": "1. ~~时序版本的微调能力需要更新，目前只有beta版~~\n2. 时序现有以下三个场景，模型需要针对b场景能够支持主动先预测未来协变量的情况\n    1. 存在历史协变量和未来协变量，预测未来单变量\n    2. 仅存在历史协变量，需要手动预测未来协变量，再预测未来单变量\n    3. 预测单线单变量\n3. ~~仓库源统一问题：limix-inneropen 和 舒扬给的 limix-opensource-tsf，未来希望能够合并并且相互兼容，只有一个基准仓库~~",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "6980097253",
+      "name": "基模组论文资产收集与可用性梳理",
+      "kind": "project",
+      "tagIds": [
+        "domain-a"
+      ],
+      "priority": "P0",
+      "status": "处理中",
+      "summary": "",
+      "description": "面向基模组统一收集历史已发表、已中稿及未来计划发表且可能纳入模型能力体系的论文资产，并补充每篇论文的对外可用性（公开/内部/保密级别）、使用范围限制及预计发布时间等信息。该需求主要用于支持算法、工程及产品侧对模型方法与能力的系统性学习与理解，同时为后续基于论文的内部知识沉淀与细粒度培训提供基础输入。",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "6961881183",
+      "name": "落地侧poc_bench沉淀",
+      "kind": "project",
+      "tagIds": [
+        "domain-a"
+      ],
+      "priority": "长期",
+      "status": "处理中",
+      "summary": "",
+      "description": "当前基模评测体系主要依赖筛选后的公开数据集，数据维度覆盖有限，难以刻画真实业务中的多样化与复杂性。这将导致评测结果对模型实际表现的预测能力不足，进而影响模型优化方向的准确性。因此，有必要补充更贴近业务场景的评测数据维度。",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "6962297566",
+      "name": "基模能力-推理加速（流式推理）",
+      "kind": "project",
+      "tagIds": [
+        "domain-r"
+      ],
+      "priority": "P0",
+      "status": "处理中",
+      "summary": "",
+      "description": "支持模型基于 Dtrain 完成训练（fit）后，对持续输入的 Dtest 数据进行分批或逐条推理，技术上通过该场景下缓存的KV Cache进行持续复用，无需重新计算训练集并重复更新。\n\n在工艺优化、实时控制等场景中，系统会持续产生新的特征数据，业务侧需要在单条数据到达后立即触发模型预测。因此，模型应支持：\n- 持续接收新增特征输入；\n- 按单条或小批次方式执行推理；\n- 在不重复加载模型的情况下连续输出预测结果；\n- 满足毫秒级低延迟预测要求；\n- 保证流式推理结果与离线批量推理结果的一致性。\n\n通过该能力，模型可适配在线工艺参数优化、实时质量预测、异常预警等对预测时效性要求较高的业务场景。",
+      "result": "",
+      "outcome": "",
+      "planNodes": [
+        {
+          "id": "end",
+          "title": "处理中",
+          "owner": "",
+          "targetDate": "2026-10-23",
+          "estimatedDate": "",
+          "dateConfirmed": false,
+          "status": "doing",
+          "actualStart": "2026-06-05"
+        }
+      ],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "6962172098",
+      "name": "模型记忆能力建设（KV Cache + LDM RAG）",
+      "kind": "direction",
+      "tagIds": [
+        "domain-r"
+      ],
+      "priority": "P2",
+      "status": "",
+      "summary": "",
+      "description": "当前基座模型在长上下文、多轮推理和重复任务场景中，需要反复输入并计算历史上下文，导致推理延迟及显存/内存开销增加，也难以沉淀可持续复用的任务记忆。为提升模型在连续任务和复杂场景中的记忆与推理能力，需要建设模型记忆与上下文复用机制，将历史上下文、任务状态、领域背景和高频推理信息沉淀为检索及复用的Memory。\n\n该能力可以从三个阶段逐步开展：\n- 一是运行时上下文复用，用于复用模型已处理过的上下文状态（历史任务中training data下的context)，KV Cache 可作为该层的关键实现方式；（当前已完成小规模数据集实验验证，需要落实进展并制定排期计划尽快部署上线。）\n\n- 二是在KV Cache基础上，引入任务上下文信息，使模型能够结合当前任务数据上下文及历史任务信息等进行更为准确的推理和复用。\n\n- 三是长期记忆检索，用于在记忆数量扩大后，从大量历史信息中召回与当前任务相关的内容，并注入当前推理过程，支持信息复用。预期构建LimiX的记忆管理能力，当记忆规模从少量上下文扩展到数百或上千条时，系统应能够基于任务类型、上下文摘要或元信息进行检索匹配，找到与当前输入最相关的历史记忆。\n\n最终目标是减少重复上下文输入与重复计算，提升长上下文推理效率，并让模型具备可持续积累、检索和复用历史任务信息的能力。KV Cache 用于提升运行时复用效率，RAG/检索机制用于支撑长期记忆召回，共同服务于模型记忆能力建设。",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    },
+    {
+      "id": "local-direction-lower-vram",
+      "name": "降显存",
+      "kind": "direction",
+      "tagIds": [
+        "domain-r"
+      ],
+      "priority": "",
+      "status": "",
+      "summary": "",
+      "description": "",
+      "result": "",
+      "outcome": "",
+      "planNodes": [],
+      "materials": [],
+      "closed": false,
+      "comments": [],
+      "customSections": []
+    }
+  ],
+  "tags": [
+    {
+      "id": "domain-r",
+      "name": "R 资源与推理效率",
+      "color": "#9b8671",
+      "rank": 0
+    },
+    {
+      "id": "domain-p",
+      "name": "P 预测效果与泛化",
+      "color": "#6284a0",
+      "rank": 1
+    },
+    {
+      "id": "domain-k",
+      "name": "K 特征、知识与输入能力",
+      "color": "#668777",
+      "rank": 2
+    },
+    {
+      "id": "domain-e",
+      "name": "E 部署与运行环境",
+      "color": "#8c8981",
+      "rank": 3
+    },
+    {
+      "id": "domain-m",
+      "name": "M 数据生成与模型规格",
+      "color": "#9080a1",
+      "rank": 4
+    },
+    {
+      "id": "domain-c",
+      "name": "C 因果能力",
+      "color": "#b18b50",
+      "rank": 5
+    },
+    {
+      "id": "domain-a",
+      "name": "A 协作与资产",
+      "color": "#738b91",
+      "rank": 6
+    }
+  ],
+  "relations": [
+    {
+      "id": "draft-lower-vram-kv-memory",
+      "main": "local-direction-lower-vram",
+      "child": "6962172098",
+      "context": "只关注此项目中 KV 相关的显存占用、缓存复用与验证问题；不将 LDM RAG、整个记忆系统或其全部成果归入降显存，也不预设 KV Cache 一定降低显存。",
+      "draft": true
+    },
+    {
+      "id": "draft-lower-vram-input-capacity",
+      "main": "local-direction-lower-vram",
+      "child": "7135496756",
+      "context": "只挂载输入规模受显存限制、OOM 与容量上限相关问题；有效信息利用、预测效果退化等更广范围仍在原项目独立跟进，不自动算作降显存完成项。",
+      "draft": true
+    }
+  ],
+  "frames": [
+    {
+      "id": "capacity-efficiency-memory",
+      "name": "容量、效率与记忆",
+      "x": 40,
+      "y": 65,
+      "w": 616,
+      "h": 570,
+      "members": [
+        "place-293f176b-676d-4798-ba9e-9cf3279cc2bd",
+        "place-f8b80ff2-1295-4f4f-ade2-bdce0d3715a1",
+        "place-e549ac18-edbd-4e6d-ad7c-dafd3a52ccb3",
+        "place-338f98d8-69e5-444b-9623-cf365029734b",
+        "place-d2e6fe65-5b07-49ce-86d6-aa33f5a9bccd"
+      ],
+      "tone": "sand",
+      "color": "#e7e4db"
+    },
+    {
+      "id": "generalization-prediction",
+      "name": "泛化与预测效果",
+      "x": 698,
+      "y": 65,
+      "w": 616,
+      "h": 388,
+      "members": [
+        "place-d300f0bd-9716-4f50-a941-29b0e16389b0",
+        "place-9d397b34-4a3f-4950-b1b2-c75c45869e7a",
+        "place-3d6c96dd-dae8-4a4a-ab26-e503544d5537",
+        "place-71833eec-4b5a-441c-96cf-dcd8817d1abf"
+      ],
+      "tone": "blue",
+      "color": "#e0e4e6"
+    },
+    {
+      "id": "data-feature-generation",
+      "name": "数据处理与生成",
+      "x": 1356,
+      "y": 65,
+      "w": 616,
+      "h": 388,
+      "members": [
+        "place-7b84ce53-4207-4c6d-92c1-9e9115d7c068",
+        "place-b8a48c9c-cdb3-4023-bcaa-a638d42a1407",
+        "place-ef999b0b-b0cd-4aaf-8683-1831ca214f27"
+      ],
+      "tone": "green",
+      "color": "#e5e5de"
+    },
+    {
+      "id": "mechanism-fusion",
+      "name": "机理融合",
+      "x": 40,
+      "y": 700,
+      "w": 616,
+      "h": 206,
+      "members": [
+        "place-438f0bb6-89a6-4770-b7d3-3d7a9dd952c8",
+        "place-54f0fbd0-7af3-46ac-8ad3-2ae2a799ee70"
+      ],
+      "tone": "sand",
+      "color": "#e7e4db"
+    },
+    {
+      "id": "temporal-multimodal",
+      "name": "时序与多模态",
+      "x": 698,
+      "y": 700,
+      "w": 616,
+      "h": 206,
+      "members": [
+        "place-84dd943f-43e6-4b4d-9978-ab5774161a55",
+        "place-d378273d-0f78-4215-956f-a5ee1b48dccd"
+      ],
+      "tone": "blue",
+      "color": "#e0e4e6"
+    },
+    {
+      "id": "model-versions-adaptation",
+      "name": "模型版本与适配",
+      "x": 1356,
+      "y": 700,
+      "w": 616,
+      "h": 388,
+      "members": [
+        "place-e4fda871-17d2-4a16-ad15-302d49d2cb15",
+        "place-3e2ebbb0-30dd-4032-af20-2e97ea5c7a4e",
+        "place-cda694d7-bbc3-4df6-87cf-f95421fd5360"
+      ],
+      "tone": "green",
+      "color": "#e5e5de"
+    },
+    {
+      "id": "causal-reasoning",
+      "name": "因果与推理探索",
+      "x": 40,
+      "y": 1335,
+      "w": 616,
+      "h": 206,
+      "members": [
+        "place-129da50a-75c3-4fe8-bb8a-2b5a2be12e7b",
+        "place-279a9d60-e9a5-42c0-bcf4-aebff68f0295"
+      ],
+      "tone": "sand",
+      "color": "#e7e4db"
+    },
+    {
+      "id": "assets-evidence",
+      "name": "资料与评测资产",
+      "x": 698,
+      "y": 1335,
+      "w": 616,
+      "h": 388,
+      "members": [
+        "place-d7b1b745-719d-44fc-84a0-4fd991b42ead",
+        "place-6693d02c-f402-4338-b6ba-fadb6c4ccc8f",
+        "place-ed91ab79-321e-4300-9b73-52ad8bc3dbba"
+      ],
+      "tone": "blue",
+      "color": "#e0e4e6"
+    }
+  ],
+  "instances": [
+    {
+      "id": "place-293f176b-676d-4798-ba9e-9cf3279cc2bd",
+      "pid": "local-direction-lower-vram",
+      "x": 56,
+      "y": 81,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-f8b80ff2-1295-4f4f-ade2-bdce0d3715a1",
+      "pid": "7135496756",
+      "x": 356,
+      "y": 81,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-e549ac18-edbd-4e6d-ad7c-dafd3a52ccb3",
+      "pid": "6962297566",
+      "x": 56,
+      "y": 263,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-338f98d8-69e5-444b-9623-cf365029734b",
+      "pid": "6962286552",
+      "x": 356,
+      "y": 263,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-d2e6fe65-5b07-49ce-86d6-aa33f5a9bccd",
+      "pid": "6962172098",
+      "x": 56,
+      "y": 445,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-d300f0bd-9716-4f50-a941-29b0e16389b0",
+      "pid": "7135469627",
+      "x": 714,
+      "y": 81,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-9d397b34-4a3f-4950-b1b2-c75c45869e7a",
+      "pid": "6989747197",
+      "x": 1014,
+      "y": 81,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-3d6c96dd-dae8-4a4a-ab26-e503544d5537",
+      "pid": "7018500789",
+      "x": 714,
+      "y": 263,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-71833eec-4b5a-441c-96cf-dcd8817d1abf",
+      "pid": "6989023658",
+      "x": 1014,
+      "y": 263,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-7b84ce53-4207-4c6d-92c1-9e9115d7c068",
+      "pid": "6998770550",
+      "x": 1372,
+      "y": 81,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-b8a48c9c-cdb3-4023-bcaa-a638d42a1407",
+      "pid": "7131325852",
+      "x": 1672,
+      "y": 81,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-ef999b0b-b0cd-4aaf-8683-1831ca214f27",
+      "pid": "6985473599",
+      "x": 1372,
+      "y": 263,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-438f0bb6-89a6-4770-b7d3-3d7a9dd952c8",
+      "pid": "6961865664",
+      "x": 56,
+      "y": 716,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-54f0fbd0-7af3-46ac-8ad3-2ae2a799ee70",
+      "pid": "7134500575",
+      "x": 356,
+      "y": 716,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-84dd943f-43e6-4b4d-9978-ab5774161a55",
+      "pid": "6985308324",
+      "x": 714,
+      "y": 716,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-d378273d-0f78-4215-956f-a5ee1b48dccd",
+      "pid": "6989963650",
+      "x": 1014,
+      "y": 716,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-e4fda871-17d2-4a16-ad15-302d49d2cb15",
+      "pid": "7132006442",
+      "x": 1372,
+      "y": 716,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-3e2ebbb0-30dd-4032-af20-2e97ea5c7a4e",
+      "pid": "6961890662",
+      "x": 1672,
+      "y": 716,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-cda694d7-bbc3-4df6-87cf-f95421fd5360",
+      "pid": "6962195614",
+      "x": 1372,
+      "y": 898,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-129da50a-75c3-4fe8-bb8a-2b5a2be12e7b",
+      "pid": "7045165610",
+      "x": 56,
+      "y": 1351,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-279a9d60-e9a5-42c0-bcf4-aebff68f0295",
+      "pid": "6989896654",
+      "x": 356,
+      "y": 1351,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-d7b1b745-719d-44fc-84a0-4fd991b42ead",
+      "pid": "6980097253",
+      "x": 714,
+      "y": 1351,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-6693d02c-f402-4338-b6ba-fadb6c4ccc8f",
+      "pid": "6961881183",
+      "x": 1014,
+      "y": 1351,
+      "context": "",
+      "focus": false
+    },
+    {
+      "id": "place-ed91ab79-321e-4300-9b73-52ad8bc3dbba",
+      "pid": "7133205159",
+      "x": 714,
+      "y": 1533,
+      "context": "",
+      "focus": false
+    }
+  ],
+  "canvasItems": [],
+  "view": {
+    "z": 0.3333333333333333,
+    "x": 280.6666666666667,
+    "y": 19.666666666666668
+  }
+}
