@@ -13,6 +13,8 @@ import { detachSourceMetadata } from './source-detach.js';
 import { displayPriority, visibleNodes, nodeStatus, displayDescription } from './presentation.js';
 import {deployment, storageKey} from './deployment-config.js';
 import {richEditorMarkup, mountRichEditors, readRichEditor, richHTML, flushRichEditors, destroyRichEditors} from './rich-text.js';
+import {readProjectFlow, setCurrentFlowNode, setProjectClosed} from './project-flow.js';
+import {flowMarkup, mountProjectFlow} from './project-flow-view.js';
 
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -23,7 +25,7 @@ const safeURL = value => { try { const u = new URL(value); return ['https:','htt
 const dateOnly = value => /^\d{4}-\d{2}-\d{2}/.test(value || '') ? value.slice(0,10) : '';
 const textValue = value => typeof value === 'string' ? value : typeof value === 'number' ? String(value) : '';
 const pageIcon = '<svg class="page-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 2h7l4 4v12H5zM12 2v5h4M8 11h5M8 14h4"/></svg>';
-let workbench = null, canvasEditor = null;
+let workbench = null, canvasEditor = null, flowEditor = null;
 const inlineTimers = new Map();
 let state, projects = [], byId = {}, tagById = {}, lastEditor, editorInstance, gesture = null, space = false, toastTimer, pendingFrame, clickSuppressed = false, lastFrameClick, dirty = false;
 const viewport = $('viewport'), world = $('world');
@@ -41,7 +43,15 @@ function mutate(fn, message='', options={}) {
   if(canvasEditor?.flush()===false)return false;
   const before=clone(documentData());
   try {fn();storage.validate(documentData());} catch(e) {restoreData(before);toast(e.message);return false;}
-  indexData(); const saved=save();renderAll(options);if(message&&saved)toast(message);return true;
+  indexData(); const saved=save();
+  if(!saved&&options.rollbackOnSaveFailure){restoreData(before);renderAll({...options,keepDetail:true});return false;}
+  renderAll(options);if(message&&saved)toast(message);return true;
+}
+function mutateFlow(pid,fn,message,options){
+  // The flow editor guards its own flush while committing. Save the rest of the
+  // detail before a stage change can rebuild it and discard pending field edits.
+  if(!flushInline()||(dirty&&!save(false)))return false;
+  return mutate(()=>{const wasClosed=isClosedProject(byId[pid]);fn();if(!wasClosed&&isClosedProject(byId[pid]))setDetailSectionHidden(byId[pid],'result',false);},message,{...options,rollbackOnSaveFailure:true});
 }
 function toast(message) {$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,4000);}
 function mobileScope(){return state.frames.find(f=>f.id===state.scopeFrame)||null;}
@@ -195,6 +205,7 @@ function directionHistory(p){
 }
 function openDetail(pid,instanceId=null,resetScroll=true){
   if(!flushRichEditors($('detailBody')))return;
+  if(flowEditor?.flush()===false)return;
   if(state.detail&&state.detail!==pid&&!flushInline())return;
   const p=byId[pid];if(!p)return;const scroll=$('detailBody').scrollTop;state.detail=pid;state.detailInstance=instanceId||null;
   const instance=state.instances.find(i=>i.id===instanceId),nodes=visibleNodes(p);
@@ -204,6 +215,7 @@ function openDetail(pid,instanceId=null,resetScroll=true){
   html+='<div class="project-title-editor">'+inlineText('name','项目标题',p.name,{title:true,rows:1,autogrow:true})+'<button type="button" data-edit-project-title aria-label="修改项目标题">✎ 改标题</button></div>';
   const closed=isClosedProject(p);
   html+='<div class="detail-edit-properties"><label><span>优先级</span>'+priorityControl(p)+'</label><label class="free-status"><span>结果状态</span><input class="inline-input" data-inline="outcome" aria-label="结果状态" value="'+esc(p.outcome||'')+'" placeholder="自由填写"></label><button class="project-lifecycle" data-toggle-closed>'+ (closed?'↺ 恢复跟进':'结束项目')+'</button></div>';
+  html+=flowMarkup(p);
   const tagForm='<form id="projectTagForm" class="inline-form"><label class="sr-only" for="projectTagName">添加或新建标签</label><input id="projectTagName" list="tagSuggestions" placeholder="选择或输入新标签" maxlength="40" required autocomplete="off"><datalist id="tagSuggestions">'+state.tagDefinitions.filter(t=>!p.tagIds.includes(t.id)).map(t=>'<option value="'+esc(t.name)+'"></option>').join('')+'</datalist><button type="submit">添加</button></form>';
   html+='<div class="detail-tags">'+p.tagIds.map(id=>tagMarkup(id,true)).join('')+detailMenu('＋ 标签',tagForm)+'</div>';
   const sectionKeys=visibleDetailSections(p,availableSections);
@@ -211,7 +223,7 @@ function openDetail(pid,instanceId=null,resetScroll=true){
   html+='<div class="detail-section-additions"><button class="add-section" data-action="section-add">＋ 添加栏目</button>'+(!nodes.length?'<button class="inline-add-plan" data-action="inline-node-add">＋ 添加计划</button>':'')+(detailLayout(p).hidden.some(key=>availableSections.includes(key))?detailMenu('＋ 加回栏目',detailRestoreMenu(p,availableSections)):'')+'</div>';
   if(instance&&(instance.focus||instance.context))html+=section('本处备注',(instance.focus?'<p>★ 本处重点</p>':'')+(instance.context?'<div class="rich-content">'+richHTML(instance.richText?.context,instance.context)+'</div>':''),actionButton('编辑','placement',instance.id));
   html+='<details class="board-membership"><summary>行动看板 <span>'+state.quickBoards.filter(b=>b.projectIds.includes(pid)).map(b=>esc(b.name)).join(' · ')+'</span></summary><div>'+state.quickBoards.map(b=>'<label><input type="checkbox" data-project-board="'+esc(b.id)+'"'+(b.projectIds.includes(pid)?' checked':'')+'><span class="nav-color" style="background:'+esc(b.color)+'"></span>'+esc(b.name)+'</label>').join('')+'</div></details>';
-  $('detailBody').querySelectorAll('[data-inline]').forEach(el=>{clearTimeout(inlineTimers.get(el));inlineTimers.delete(el);});destroyRichEditors($('detailBody'));$('detailBody').innerHTML=html;mountRichEditors($('detailBody'),{onError:toast});$('detail').hidden=false;$('detailBody').scrollTop=resetScroll?0:scroll;resizeInlineFields();syncActiveProject();if(resetScroll){$('closeDetail').focus({preventScroll:true});revealActiveProject();}
+  $('detailBody').querySelectorAll('[data-inline]').forEach(el=>{clearTimeout(inlineTimers.get(el));inlineTimers.delete(el);});flowEditor?.destroy();destroyRichEditors($('detailBody'));$('detailBody').innerHTML=html;mountRichEditors($('detailBody'),{onError:toast});flowEditor=mountProjectFlow($('detailBody'),{getProject:()=>byId[pid],mutate:(fn,message,options)=>mutateFlow(pid,fn,message,options),toast,onChange:({kind})=>{if(kind==='current')openDetail(pid,state.detailInstance,false);}});$('detail').hidden=false;$('detailBody').scrollTop=resetScroll?0:scroll;resizeInlineFields();syncActiveProject();if(resetScroll){$('closeDetail').focus({preventScroll:true});revealActiveProject();}
   $('projectTagForm').addEventListener('submit',e=>{e.preventDefault();const name=$('projectTagName').value.trim();if(!name)return;mutate(()=>{let t=state.tagDefinitions.find(t=>t.name.toLocaleLowerCase()===name.toLocaleLowerCase());if(!t){t={id:uid('tag'),name,color:'#8a8982',rank:state.tagDefinitions.length};state.tagDefinitions.push(t);}if(!byId[pid].tagIds.includes(t.id))byId[pid].tagIds.push(t.id);},'标签已添加');});
 }
 function closeDetail(){if(!flushInline())return;state.detail=null;state.detailInstance=null;$('detail').hidden=true;workbench?.render();syncActiveProject();}
@@ -222,11 +234,29 @@ function check(name,label,value){return '<label class="check-field"><input name=
 function editor(title,html,onSubmit,button='保存'){lastEditor=onSubmit;destroyRichEditors($('editorFields'));$('editorTitle').textContent=title;$('editorFields').innerHTML=html;mountRichEditors($('editorFields'),{onError:toast});$('editorSubmit').textContent=button;$('editorError').hidden=true;if(!$('editorDialog').open)$('editorDialog').showModal();}
 function richArea(name,label,value='',html=''){return '<div class="form-field"><span>'+esc(label)+'</span>'+richEditorMarkup({value,html,label,placeholder:'输入内容，或直接粘贴图片…',attrs:'data-rich-name="'+esc(name)+'"'})+'</div>';}
 function projectEditor(pid=null){
+  const creatingClosed=!pid&&state.display==='results';
   const p=byId[pid]||{name:'',kind:'project',priority:'',description:'',outcome:''};
-  editor(pid?'编辑项目':'新建项目',field('name','标题',p.name,'text','required maxlength="180"')+'<div class="form-grid">'+selectField('kind','呈现为',p.kind,[['project','项目'],['direction','长期方向']])+field('priority','项目优先级',p.priority,'text','list="priorities" placeholder="可留空，自由填写"')+'</div><datalist id="priorities"><option>P0</option><option>P1</option><option>P2</option></datalist>'+richArea('description','问题陈述',p.description,p.richText?.description)+field('outcome','结果状态',p.outcome,'text','placeholder="自由填写，可留空"'),form=>{
+  const resultFields=creatingClosed?richArea('result','解决 / 牵引了什么问题')+richArea('impact','影响与证据说明')+field('closedAt','结束日期（选填）','','date'):'';
+  editor(pid?'编辑项目':creatingClosed?'记录已结项目':'新建项目',field('name','标题',p.name,'text','required maxlength="180"')+'<div class="form-grid">'+selectField('kind','呈现为',p.kind,[['project','项目'],['direction','长期方向']])+field('priority','项目优先级',p.priority,'text','list="priorities" placeholder="可留空，自由填写"')+'</div><datalist id="priorities"><option>P0</option><option>P1</option><option>P2</option></datalist>'+richArea('description','问题陈述',p.description,p.richText?.description)+resultFields+field('outcome','结果状态',p.outcome,'text','placeholder="自由填写，可留空"'),form=>{
     const name=form.get('name').trim();if(!name)throw Error('标题不能为空');let nextId=pid;
-    const ok=mutate(()=>{const values=Object.fromEntries(['name','kind','priority','description','outcome'].map(k=>[k,form.get(k).trim()]));values.richText={...(p.richText||{}),description:form.get('_rich:description')||''};if(pid)Object.assign(byId[pid],values);else{nextId=uid('project');state.projects.push({id:nextId,...values,status:'',summary:'',result:'',closed:false,comments:[],customSections:[],tagIds:[],planNodes:[],materials:[]});const pos=toWorld(viewport.getBoundingClientRect().left+80,viewport.getBoundingClientRect().top+70);state.instances.push({id:uid('place'),pid:nextId,x:pos.x,y:pos.y,context:'',focus:false});}},'项目已更新');if(ok)openDetail(nextId);return ok;
-  });
+    const ok=mutate(()=>{
+      const values=Object.fromEntries(['name','kind','priority','description','outcome'].map(k=>[k,form.get(k).trim()]));
+      values.richText={...(p.richText||{}),description:form.get('_rich:description')||''};
+      if(pid)Object.assign(byId[pid],values);
+      else{
+        nextId=uid('project');
+        const project={id:nextId,...values,status:'',summary:'',result:creatingClosed?(form.get('result')||'').trim():'',impact:creatingClosed?(form.get('impact')||'').trim():'',closed:creatingClosed,closedAt:creatingClosed?form.get('closedAt')||'':'',comments:[],customSections:[],tagIds:[],planNodes:[],materials:[]};
+        project.flow=readProjectFlow(project);
+        if(!creatingClosed)setCurrentFlowNode(project,'start');
+        if(creatingClosed){project.richText.result=form.get('_rich:result')||'';project.richText.impact=form.get('_rich:impact')||'';}
+        state.projects.push(project);
+        const pos=toWorld(viewport.getBoundingClientRect().left+80,viewport.getBoundingClientRect().top+70);
+        state.instances.push({id:uid('place'),pid:nextId,x:pos.x,y:pos.y,context:'',focus:false});
+        state.query='';state.tags.clear();state.scopeFrame=null;$('search').value='';
+      }
+    },creatingClosed?'已记入成果与历史':'项目已更新',{rollbackOnSaveFailure:true});
+    if(ok)openDetail(nextId);return ok;
+  },creatingClosed?'记录成果':'保存');
 }
 function nodeEditor(pid,nodeId=null){const p=byId[pid],n=p.planNodes.find(n=>n.id===nodeId)||{};editor(nodeId?'编辑计划':'添加计划',field('title','计划事项',n.title,'text','required placeholder="如：补充落地对照数据"')+field('owner','当前跟进人',n.owner,'text','placeholder="可留空"')+'<div class="form-grid">'+field('targetDate','目标日期',n.targetDate,'date')+field('estimatedDate','预计日期',n.estimatedDate,'date')+'</div>'+check('dateConfirmed','日期已确认',n.dateConfirmed)+check('focus','在卡片上显示这条计划',n.focus)+field('status','进展',n.status)+richArea('note','补充说明',n.note,n.richText?.note)+(nodeId?'<button class="danger-link" type="button" data-editor-remove="node">删除此节点</button>':''),f=>mutate(()=>{const values={id:nodeId||uid('node'),title:f.get('title').trim(),owner:f.get('owner').trim(),targetDate:f.get('targetDate'),estimatedDate:f.get('estimatedDate'),dateConfirmed:f.has('dateConfirmed'),focus:f.has('focus'),status:f.get('status').trim(),note:f.get('note').trim(),richText:{...(n.richText||{}),note:f.get('_rich:note')||''}};if(!values.title)throw Error('请填写计划事项');if(values.focus)byId[pid].planNodes.forEach(n=>n.focus=false);if(nodeId)Object.assign(byId[pid].planNodes.find(n=>n.id===nodeId),values);else byId[pid].planNodes.push(values);},'节点已更新'));editorInstance={pid,nodeId};}
 function materialEditor(pid,materialId=null){const p=byId[pid],m=p.materials.find(m=>m.id===materialId)||{};editor(materialId?'编辑资料链接':'添加资料链接',field('title','名称',m.title,'text','placeholder="选填"')+field('url','链接',m.url,'url','required placeholder="https://…"')+(materialId?'<button class="danger-link" type="button" data-editor-remove="material">删除此链接</button>':''),f=>mutate(()=>{const url=safeURL(f.get('url').trim());if(!url)throw Error('请输入有效的 http 或 https 链接');const v={id:materialId||uid('material'),title:f.get('title').trim()||new URL(url).hostname,url};if(materialId)Object.assign(byId[pid].materials.find(m=>m.id===materialId),v);else byId[pid].materials.push(v);setDetailSectionHidden(byId[pid],'materials',false);},'资料已更新'));editorInstance={pid,materialId};}
@@ -256,13 +286,14 @@ function commitInline(el){
   const ok=mutate(()=>{target[key]=value;if(rich){target.richText??={};target.richText[key]=rich.html;}if(key==='focus'&&value)p.planNodes.filter(n=>n.id!==el.dataset.nodeId).forEach(n=>n.focus=false);if(el.dataset.commentId)target.updatedAt=new Date().toISOString();},'',{keepDetail:true});
   if(ok){delete el.dataset.pending;el.removeAttribute('aria-invalid');if(key==='focus')$('detailBody').querySelectorAll('[data-inline="focus"]').forEach(box=>box.checked=!!p.planNodes.find(n=>n.id===box.dataset.nodeId)?.focus);}return ok;
 }
-function flushInline(){if(!flushRichEditors($('detailBody')))return false;let ok=canvasEditor?.flush()!==false;document.querySelectorAll('[data-inline][data-pending]').forEach(el=>{if(!commitInline(el))ok=false;});if(workbench?.flush()===false)ok=false;return ok;}
+function flushInline(){if(!flushRichEditors($('detailBody')))return false;let ok=flowEditor?.flush()!==false;if(canvasEditor?.flush()===false)ok=false;document.querySelectorAll('[data-inline][data-pending]').forEach(el=>{if(!commitInline(el))ok=false;});if(workbench?.flush()===false)ok=false;return ok;}
 function navigate(display,board=null){
   if(!flushInline())return;closeDetail();state.activeBoard=board;state.scopeFrame=null;state.tags.clear();state.query='';$('search').value='';renderTags();setDisplay(display);if(mobile())toggleSidebar(false);
 }
 function setDisplay(display){
   if(!flushInline())return;canvasEditor?.clear();if(mobile()&&display==='canvas')display='list';state.display=display;
   if(display!=='boards')state.activeBoard=null;
+  $('newProject').textContent=display==='results'?'＋ 记录已结项目':'＋ 新项目';
   document.body.classList.toggle('list-view',display==='list');document.body.classList.toggle('workbench-screen',['boards','results'].includes(display));
   for(const [id,value] of [['boardsView','boards'],['canvasView','canvas'],['listView','list']]){$(id).classList.toggle('active',value===display);$(id).setAttribute('aria-pressed',String(value===display));}
   const board=state.quickBoards.find(b=>b.id===state.activeBoard);
@@ -284,7 +315,7 @@ function bindProjectContent(){
     if(action.hasAttribute('data-move-section')){const key=action.dataset.moveSection,step=Number(action.dataset.step),keys=[...$('detailBody').querySelectorAll('[data-detail-section]')].map(el=>el.dataset.detailSection);mutate(()=>moveDetailSection(p,key,step,keys));focusDetailSection(key);return;}
     if(action.hasAttribute('data-hide-section')){const key=action.dataset.hideSection,title=detailSectionTitle(p,key),keys=[...$('detailBody').querySelectorAll('[data-detail-section]')].map(el=>el.dataset.detailSection),index=keys.indexOf(key),next=keys[index+1]||keys[index-1];if(mutate(()=>setDetailSectionHidden(p,key,true))){focusDetailSection(next);detailUndo('已隐藏「'+title+'」，内容保留',()=>{if(!flushInline()||!byId[pid])return;mutate(()=>setDetailSectionHidden(byId[pid],key,false),'栏目已加回');if(state.detail===pid)focusDetailSection(key);});}return;}
     if(action.hasAttribute('data-restore-section')){const key=action.dataset.restoreSection;mutate(()=>setDetailSectionHidden(p,key,false),'栏目已加回');focusDetailSection(key);return;}
-    if(action.hasAttribute('data-toggle-closed')){const closed=!isClosedProject(p);mutate(()=>{p.closed=closed;if(closed){setDetailSectionHidden(p,'result',false);if(!p.closedAt)p.closedAt=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}},closed?'项目已结束，可以填写成果记录':'已恢复跟进');if(closed)focusDetailSection('result');return;}
+    if(action.hasAttribute('data-toggle-closed')){const closed=!isClosedProject(p);mutate(()=>{setProjectClosed(p,closed);if(closed)setDetailSectionHidden(p,'result',false);},closed?'项目已结束，可以填写成果记录':'已恢复跟进');if(closed)focusDetailSection('result');return;}
     if(action.hasAttribute('data-delete-section')){const id=action.dataset.deleteSection;let removed;const keys=[...$('detailBody').querySelectorAll('[data-detail-section]')].map(el=>el.dataset.detailSection),index=keys.indexOf('custom:'+id),next=keys[index+1]||keys[index-1];if(mutate(()=>removed=removeCustomSection(p,id))&&removed){focusDetailSection(next);detailUndo('已删除「'+(removed.section.title||'未命名栏目')+'」',()=>{if(!flushInline()||!byId[pid])return;mutate(()=>restoreCustomSection(byId[pid],removed),'栏目已恢复');if(state.detail===pid)focusDetailSection('custom:'+id,true);});}return;}
     if(action.hasAttribute('data-delete-comment')){const index=p.comments.findIndex(c=>c.id===action.dataset.deleteComment),comment=p.comments[index];if(!comment)return;if(mutate(()=>p.comments.splice(index,1))){$('commentForm')?.querySelector('[data-inline="commentDraft"]').focus();detailUndo('记录已删除',()=>{if(!flushInline()||!byId[pid])return;mutate(()=>{const current=byId[pid];if(!current.comments.some(c=>c.id===comment.id))current.comments.splice(Math.min(index,current.comments.length),0,comment);},'记录已恢复');});}return;}
     const id=uid('section');mutate(()=>p.customSections.push({id,title:'',body:''}),'已添加栏目');focusDetailSection('custom:'+id,true);

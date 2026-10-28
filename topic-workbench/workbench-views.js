@@ -1,3 +1,4 @@
+import {setProjectClosed} from './project-flow.js';
 import {isClosedProject, sortProjectsByPriority, outcomeKind} from './workbench-model.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -113,7 +114,7 @@ export function createWorkbenchViews(api) {
     const state=getState(),allEnded=state.projects.filter(isClosedProject),ended=sortProjectsByPriority(allEnded.filter(matches));
     view.innerHTML='<div class="overview-heading"><div><h2>成果与历史</h2><p>项目结束后，沉淀解决的问题、结果与证据。</p></div>'+(allEnded.length?'<button data-record-result>＋ 补充成果</button>':'')+'</div><div id="resultsContent"></div>';
     const target=$('resultsContent');
-    if(!ended.length){target.innerHTML='<div class="view-empty"><strong>'+(allEnded.length?'没有匹配的结项记录':'还没有结项记录')+'</strong><p>'+(allEnded.length?'清除筛选后查看已结束项目。':'推进中的项目无需填写成果。在项目详情中结束项目后，即可补充成果，并保留在所属主项目中。')+'</p></div>';return;}
+    if(!ended.length){target.innerHTML='<div class="view-empty"><strong>'+(allEnded.length?'没有匹配的结项记录':'还没有结项记录')+'</strong><p>'+(allEnded.length?'清除筛选后查看已结束项目。':'推进中的项目无需填写成果。可直接记录已结项目，或在项目详情中结束项目后补充成果，并保留在所属主项目中。')+'</p></div>';return;}
     for(const [kind,title] of [['resolved','已解决 / 已交付'],['stopped','已结束，问题未解决'],['ended','其他结项记录']]){
       const rows=ended.filter(p=>outcomeKind(p)===kind);if(!rows.length)continue;
       target.insertAdjacentHTML('beforeend','<div class="section-row"><h3>'+title+'</h3><span>'+rows.length+' 项</span></div><div class="outcome-grid">'+rows.map(p=>'<article class="outcome-card" data-project-highlight="'+esc(p.id)+'"><header><span>'+esc(p.outcome||'已结束')+'</span><time>'+esc(p.closedAt||'')+'</time></header><button data-project-open="'+esc(p.id)+'"><h3>'+esc(p.name)+'</h3></button><p class="outcome-result">'+esc(p.result||'待补充结果')+'</p>'+(p.impact?'<p>'+esc(p.impact)+'</p>':'')+'<footer><span>'+p.materials.length+' 份资料</span><button data-project-open="'+esc(p.id)+'">查看与补充 →</button><button data-reopen-project="'+esc(p.id)+'">恢复跟进</button></footer></article>').join('')+'</div>');
@@ -140,7 +141,7 @@ export function createWorkbenchViews(api) {
       const name=input.value.trim();
       if(commit&&!name){input.setCustomValidity('请填写看板名称');input.reportValidity();return false;}
       finished=true;renameSession=null;
-      if(commit&&name!==boardById(id)?.name){if(update(()=>{const live=boardById(id);if(live)live.name=name;},'看板已改名',{keepMain:true})===false){finished=false;return false;}}
+      if(commit&&name!==boardById(id)?.name){if(update(()=>{const live=boardById(id);if(live)live.name=name;},'看板已改名',{keepMain:true,keepDetail:true})===false){finished=false;return false;}}
       restoreTitle();return true;
     };
     input.addEventListener('input',()=>input.setCustomValidity(''));
@@ -180,7 +181,7 @@ export function createWorkbenchViews(api) {
     if(b.hasAttribute('data-create-board')){boardEditor();return;}
     if(b.hasAttribute('data-delete-board')){removeBoard(b.dataset.deleteBoard);return;}
     if(b.hasAttribute('data-record-result')){const ended=sortProjectsByPriority(getState().projects.filter(isClosedProject));if(!ended.length)return;editor('为已结束项目补充成果','<div class="member-options">'+ended.map(p=>'<label class="member-option"><input type="radio" name="pid" required value="'+esc(p.id)+'"><span>'+esc(p.name)+'</span></label>').join('')+'</div>',f=>{openProject(f.get('pid'));document.querySelector('[data-inline="result"]')?.focus();},'打开项目');return;}
-    if(b.hasAttribute('data-reopen-project')){update(()=>{const p=getState().projects.find(p=>p.id===b.dataset.reopenProject);p.closed=false;},'已恢复跟进，历史结果保留');return;}
+    if(b.hasAttribute('data-reopen-project')){update(()=>{const p=getState().projects.find(p=>p.id===b.dataset.reopenProject);setProjectClosed(p,false);},'已恢复跟进，历史结果保留');return;}
     const id=b.dataset.boardRemove||b.dataset.boardStar,pid=b.dataset.pid;
     update(()=>{const board=boardById(id);if(b.hasAttribute('data-board-remove')){board.projectIds=board.projectIds.filter(x=>x!==pid);board.emphasisIds=board.emphasisIds.filter(x=>x!==pid);delete board.contexts?.[pid];}else board.emphasisIds=board.emphasisIds.includes(pid)?board.emphasisIds.filter(x=>x!==pid):[...board.emphasisIds,pid];});
   });

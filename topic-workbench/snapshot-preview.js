@@ -1,3 +1,4 @@
+import {readProjectFlow} from './project-flow.js';
 import {isClosedProject} from './workbench-model.js';
 import {richHTML} from './rich-text.js';
 /** A pure, read-only projection of one saved snapshot. No DOM handlers or storage access. */
@@ -206,10 +207,17 @@ function resultsHTML(project,data) {
   return `<section class="snapshot-project-section"><h4>成果记录</h4>${richParagraph('结果',project.result,project.richText?.result)}${richParagraph('影响与证据说明',project.impact,project.richText?.impact)}</section>`;
 }
 
+function flowHTML(project) {
+  if(!project.flow)return '';
+  const flow=readProjectFlow(project);
+  if(!flow.nodes.length)return '';
+  return '<section class="snapshot-project-section"><h4>当时的流程</h4><p>'+flow.nodes.map(node=>esc(node.title)+(node.id===flow.currentId?'（当前）':'')).join(' → ')+'</p></section>';
+}
+
 function projectsHTML(data, projects, projectById, tagById) {
   if (!projects.length) return '<p class="snapshot-empty muted">这份快照没有项目记录。</p>';
   return `<div class="snapshot-projects">${projects.map(project => {
-    return `<details class="snapshot-project"><summary>${present(project.priority) ? `<span class="snapshot-badge">${esc(project.priority)}</span>` : ''}<strong>${esc(project.name || '未命名项目')}</strong>${present(project.outcome) ? `<small>${esc(project.outcome)}</small>` : ''}</summary><div class="snapshot-project-body">${metadataHTML(project)}<div class="snapshot-tags">${tagsHTML(project,tagById)}</div>${richParagraph('问题陈述',project.description,project.richText?.description)}${paragraph('历史摘要',project.summary)}${commentsHTML(project)}${customSectionsHTML(project)}${resultsHTML(project,data)}${plansHTML(project)}${materialsHTML(project)}${placementNotesHTML(project,data)}${relationsHTML(project,data,projectById)}</div></details>`;
+    return `<details class="snapshot-project"><summary>${present(project.priority) ? `<span class="snapshot-badge">${esc(project.priority)}</span>` : ''}<strong>${esc(project.name || '未命名项目')}</strong>${present(project.outcome) ? `<small>${esc(project.outcome)}</small>` : ''}</summary><div class="snapshot-project-body">${metadataHTML(project)}${flowHTML(project)}<div class="snapshot-tags">${tagsHTML(project,tagById)}</div>${richParagraph('问题陈述',project.description,project.richText?.description)}${paragraph('历史摘要',project.summary)}${commentsHTML(project)}${customSectionsHTML(project)}${resultsHTML(project,data)}${plansHTML(project)}${materialsHTML(project)}${placementNotesHTML(project,data)}${relationsHTML(project,data,projectById)}</div></details>`;
   }).join('')}</div>`;
 }
 

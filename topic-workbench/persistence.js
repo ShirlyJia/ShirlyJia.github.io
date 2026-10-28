@@ -1,4 +1,5 @@
 import {validateCanvasItems} from './canvas-items.js';
+import {validateProjectFlow} from './project-flow.js';
 /** Local-only, schema-v2 persistence. No seed writes, remote calls, or business workflow rules. */
 export function createPersistence({ key = 'topic-workbench-v2', onStatus } = {}) {
   if (typeof key !== 'string' || !key.trim()) throw new Error('存储 key 必须是非空字符串');
@@ -152,6 +153,7 @@ export function createPersistence({ key = 'topic-workbench-v2', onStatus } = {})
       optionalStrings(project, ['kind', 'priority', 'status', 'summary', 'description', 'result', 'outcome', 'closedAt', 'impact', 'commentDraft', 'commentAuthor'], path);
       richTextShape(project.richText, ['description', 'result', 'impact', 'commentDraft'], `${path}.richText`);
       if (project.closed !== undefined && typeof project.closed !== 'boolean') fail(`${path}.closed 必须为布尔值`);
+      validateProjectFlow(project.flow, `${path}.flow`);
       if (project.comments !== undefined) {
         indexed(project.comments, `${path}.comments`);
         project.comments.forEach((comment, commentIndex) => {
