@@ -1,3 +1,4 @@
+import {validateDelivery} from './delivery-model.js';
 import {validateCanvasItems} from './canvas-items.js';
 import {validateProjectFlow} from './project-flow.js';
 /** Local-only, schema-v2 persistence. No seed writes, remote calls, or business workflow rules. */
@@ -133,6 +134,7 @@ export function createPersistence({ key = 'topic-workbench-v2', onStatus } = {})
     if (data.workbenchVersion !== undefined && data.workbenchVersion !== 1) fail('workbenchVersion 必须为 1');
     if (data.sourceDetachedVersion !== undefined && data.sourceDetachedVersion !== 1) fail('sourceDetachedVersion 必须为 1');
     sourceShape(data.source, 'source');
+    validateDelivery(data);
 
     const projectIds = indexed(data.projects, 'projects');
     const tagIds = indexed(data.tags, 'tags');
@@ -320,15 +322,19 @@ export function createPersistence({ key = 'topic-workbench-v2', onStatus } = {})
     }
   }
 
-  function undo() {
+  function peekUndo() { return history.length ? JSON.parse(history[history.length - 1]) : null; }
+
+  function undo({transform} = {}) {
     if (!history.length) return null;
     const previous = history[history.length - 1];
     try {
-      const data = JSON.parse(previous);
+      let data = JSON.parse(previous);
+      if(transform!==undefined){if(typeof transform!=='function')fail('撤销转换必须是函数');const transformed=transform(data);if(transformed!==undefined)data=transformed;}
       validate(data);
-      globalThis.localStorage.setItem(key, previous);
+      const next=JSON.stringify(data);
+      globalThis.localStorage.setItem(key, next);
       history.pop();
-      lastSaved = previous;
+      lastSaved = next;
       report({ ok: true, message: '已保存到此浏览器' });
       return data;
     } catch (error) {
@@ -363,5 +369,5 @@ export function createPersistence({ key = 'topic-workbench-v2', onStatus } = {})
     }
   }
 
-  return { load, commit, undo, canUndo: () => history.length > 0, download, validate };
+  return { load, commit, undo, peekUndo, canUndo: () => history.length > 0, download, validate };
 }

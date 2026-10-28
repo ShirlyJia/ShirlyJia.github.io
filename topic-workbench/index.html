@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="editor.css">
   <link rel="stylesheet" href="rich-text.css">
   <link rel="stylesheet" href="project-flow.css">
+  <link rel="stylesheet" href="delivery.css">
   <link rel="stylesheet" href="workbench.css">
   <link rel="stylesheet" href="canvas-items.css">
 </head>
@@ -23,6 +24,7 @@
       <button class="sidebar-item active" id="homeNav" aria-current="page"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M8 3v14M8 9h9"/></svg><span>推进总览</span><small id="totalProjects">—</small></button>
       <button class="sidebar-item" id="canvasNav"><span class="nav-symbol">▱</span><span>自由画板</span></button>
       <button class="sidebar-item" id="resultsNav"><span class="nav-symbol">◈</span><span>成果与历史</span><small id="resultsCount">0</small></button>
+      <button class="sidebar-item" id="deliveryNav"><span class="nav-symbol">◷</span><span>延期记录</span><small id="deliveryCount" class="delivery-nav-count" hidden>0</small></button>
       <a class="sidebar-item" href="meetings.html"><span class="nav-symbol">▤</span><span>会议记录</span><small>↗</small></a>
     </nav>
     <nav class="sidebar-section" aria-label="行动看板"><div class="sidebar-label label-actions"><span>行动看板</span><button data-create-board title="新建行动看板">＋</button></div><div id="quickBoardNav"></div></nav>
@@ -36,6 +38,7 @@
     <div class="header-spacer"></div><button id="saveStatus" class="save-status" title="保存状态">正在载入…</button><button class="plain-button" id="undo" disabled>撤销</button><button class="plain-button" id="snapshots">快照</button><button class="plain-button" id="reviewIssues">待核对</button><button class="plain-button" id="help" title="操作说明与快捷键">帮助</button>
   </header>
   <section class="page-heading" aria-labelledby="pageTitle"><h1 id="pageTitle">议题画板</h1><p>模型 · 工程化 · 落地</p><p id="shareNotice" hidden>分享版 · 修改仅保存在当前浏览器，不会同步给其他人。</p><p id="loadCaption" role="status">正在载入项目…</p></section>
+  <button id="deliveryReminder" class="delivery-reminder" hidden></button>
   <section class="database-toolbar" aria-label="视图与搜索">
     <div class="view-tabs" role="group" aria-label="项目展示方式"><button id="boardsView" aria-pressed="false">推进看板</button><button id="canvasView" class="active" aria-pressed="true"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4" width="5" height="12" rx="1"/><rect x="11" y="4" width="6" height="8" rx="1"/></svg>画板</button><button id="listView" aria-pressed="false"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 5h10M7 10h10M7 15h10M3 5h.5M3 10h.5M3 15h.5"/></svg>项目列表</button></div>
     <label class="search-wrap"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg><span class="sr-only">搜索项目标题</span><input id="search" type="search" placeholder="搜索项目…" autocomplete="off"></label><button id="newProject" class="primary new-project">＋ 新项目</button>

@@ -1,3 +1,5 @@
+import {deliveryCases} from './delivery-model.js';
+import {deliveryPageMarkup} from './delivery-view.js';
 import {setProjectClosed} from './project-flow.js';
 import {isClosedProject, sortProjectsByPriority, outcomeKind} from './workbench-model.js';
 
@@ -69,7 +71,10 @@ export function createWorkbenchViews(api) {
     const state=getState();
     $('quickBoardNav').innerHTML=[...state.quickBoards].sort((a,b)=>a.rank-b.rank).map(b=>'<button class="sidebar-item'+(state.activeBoard===b.id?' current':'')+'" data-board-open="'+esc(b.id)+'"><span class="nav-color" style="background:'+esc(b.color)+'"></span><span>'+esc(b.name)+'</span><small>'+b.projectIds.length+'</small></button>').join('');
     $('resultsCount').textContent=state.projects.filter(isClosedProject).length;
-    for(const [id,selected] of [['homeNav',state.display==='boards'&&!state.activeBoard],['canvasNav',state.display==='canvas'],['resultsNav',state.display==='results']]){
+    const overdue=deliveryCases(state).filter(r=>r.state.kind==='overdue'&&!r.removed).length;
+    $('deliveryCount').textContent=overdue;$('deliveryCount').hidden=!overdue;
+    $('deliveryReminder').hidden=!overdue||state.display!=='boards';$('deliveryReminder').textContent=overdue+' 项计划已超过承诺交付日 · 查看延期记录 →';
+    for(const [id,selected] of [['homeNav',state.display==='boards'&&!state.activeBoard],['canvasNav',state.display==='canvas'],['resultsNav',state.display==='results'],['deliveryNav',state.display==='delivery']]){
       $(id).classList.toggle('active',selected);selected?$(id).setAttribute('aria-current','page'):$(id).removeAttribute('aria-current');
     }
   }
@@ -84,7 +89,8 @@ export function createWorkbenchViews(api) {
   }
   function renderContent(){
     const state=getState(),view=$('workbenchView');
-    view.hidden=!['boards','results'].includes(state.display);if(view.hidden)return;
+    view.hidden=!['boards','results','delivery'].includes(state.display);if(view.hidden)return;
+    if(state.display==='delivery'){view.innerHTML=deliveryPageMarkup(state,{filter:state.deliveryFilter,query:state.deliveryQuery});return;}
     if(state.display==='results'){renderResults(view);return;}
     const board=boardById(state.activeBoard);
     $('pageTitle').textContent=board?board.name:'推进总览';

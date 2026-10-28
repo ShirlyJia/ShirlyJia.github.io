@@ -1,0 +1,78 @@
+/* Dates have a consistent visual weight; only confirmed exceptions use warning color. */
+.delivery-tone-neutral{--delivery-ink:#77736b;--delivery-soft:#f6f5f2;--delivery-line:#e5e2db}
+.delivery-tone-confirmed{--delivery-ink:#51728a;--delivery-soft:#f0f5f8;--delivery-line:#cfdee7}
+.delivery-tone-soon{--delivery-ink:#946b30;--delivery-soft:#fbf5e9;--delivery-line:#e9d8b5}
+.delivery-tone-overdue{--delivery-ink:#ad5548;--delivery-soft:#fcf1ed;--delivery-line:#e9c4b9}
+.delivery-tone-delivered{--delivery-ink:#617e68;--delivery-soft:#f1f6f1;--delivery-line:#d5e0d3}
+.delivery-state{display:inline-flex;align-items:center;white-space:nowrap;color:var(--delivery-ink,#77736b);background:var(--delivery-soft,#f6f5f2);border:1px solid var(--delivery-line,#e5e2db);border-radius:4px;padding:3px 6px;font-size:10px;line-height:1.45;font-weight:500}
+.delivery-card-date{margin-top:12px;padding-top:10px;border-top:1px solid #eeece6;color:var(--delivery-ink);font-size:11px;font-variant-numeric:tabular-nums}
+.delivery-card-date-main{display:flex;align-items:center;gap:6px;flex-wrap:wrap;line-height:1.5}
+.delivery-calendar{font-size:13px;opacity:.75}.delivery-date-label{font-size:10px;color:#8a8479}
+.delivery-card-date time{font-size:13px;font-weight:600;letter-spacing:.05px;white-space:nowrap}
+.delivery-card-date .delivery-state{margin-left:auto;font-size:10px;padding:2px 5px}
+.delivery-card-context{display:flex;align-items:center;gap:7px;color:#9a9389;font-size:10px;margin-top:5px;min-width:0}
+.delivery-card-context>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:63%}.delivery-other-count{margin-left:auto;white-space:nowrap}
+.delivery-tone-overdue.delivery-card-date{border-top-color:#edd4cd}.delivery-tone-overdue.delivery-card-date time{color:#a84b3f}
+.world.overview .delivery-card-date{display:none}
+.delivery-plan{margin:10px 0 6px;padding:12px;border:1px solid var(--delivery-line);border-radius:5px;background:#fff;font-variant-numeric:tabular-nums}
+.delivery-plan-date{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.delivery-plan-date>div{min-width:0}.delivery-eyebrow{display:block;color:#8d877d;font-size:10px;line-height:1.5;margin-bottom:3px}
+.delivery-date-large{display:block;font-size:20px;font-weight:550;letter-spacing:-.4px;line-height:1.4;color:var(--delivery-ink)}
+.delivery-plan .delivery-state{font-size:11px;padding:4px 7px}
+.delivery-date-context{display:flex;flex-wrap:wrap;gap:6px 18px;margin:10px 0 0;font-size:11px;color:#7b766d}
+.delivery-date-context>div{display:flex;gap:7px}.delivery-date-context dt{color:#a19a8f}.delivery-date-context dd{margin:0}
+.delivery-plan-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:11px;padding-top:8px;border-top:1px solid #f1efea}
+.delivery-plan-actions button{font:inherit;font-size:11px;padding:3px 5px;color:#7d776b;border-radius:3px;line-height:1.5;cursor:pointer}
+.delivery-plan-actions button:hover,.delivery-plan-actions button:focus-visible{background:var(--delivery-soft);color:var(--delivery-ink);outline:0}
+.delivery-plan-actions .delivery-complete{color:#66816a}.delivery-plan-actions .delivery-history-link{margin-left:auto;color:#9a7361}
+.delivery-no-date{color:#a19a8f;font-size:11px}.delivery-plan:has(.delivery-no-date){padding:9px 11px;background:#fbfaf8;border-style:dashed}
+.delivery-plan:has(.delivery-no-date) .delivery-plan-actions{margin-top:5px;padding-top:0;border-top:0}
+.delivery-page{max-width:1160px;margin:0 auto}.delivery-page-head{display:flex;justify-content:space-between;gap:22px;align-items:flex-start;margin-bottom:24px}
+.delivery-page-head h2{font-size:20px;font-weight:600;margin:0 0 6px;letter-spacing:-.35px}.delivery-page-head p{font-size:12px;color:#918a7f;margin:0}
+.delivery-summary{display:flex;gap:21px;font-size:11px;color:#938b80;padding-top:4px;flex-wrap:wrap}.delivery-summary strong{font-size:18px;font-weight:550;margin-right:4px;color:#625c52}.delivery-summary .has-delays strong{color:#a85748}
+.delivery-page-controls{display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:1px solid #e9e6df;margin-bottom:18px}
+.delivery-page-controls [role=tablist]{display:flex;align-self:stretch;gap:18px}
+.delivery-page-controls [role=tab]{font:inherit;font-size:12px;padding:10px 0;color:#928b80;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.delivery-page-controls [role=tab][aria-selected=true]{border-bottom-color:#766f62;color:#4d473e}
+.delivery-page-controls [role=tab] span{font-size:10px;margin-left:5px;color:#a09789}
+.delivery-search{min-width:130px;width:230px;max-width:40%;display:block;margin:0 0 5px}
+.delivery-search input{font:inherit;font-size:11px;border:1px solid #ece8e1;border-radius:4px;padding:6px 8px;width:100%;background:#fff;color:#6f675a;box-sizing:border-box}
+.delivery-search input:focus{outline:0;border-color:#bcc9d1}.delivery-search input::placeholder{color:#aaa195}
+.delivery-case-list{display:flex;flex-direction:column;gap:14px}.delivery-case{padding:17px 19px;border:1px solid #e6e2da;border-left:3px solid var(--delivery-line);border-radius:5px;background:#fff}
+.delivery-case header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.delivery-case-title{min-width:0}
+.delivery-case-title>button,.delivery-case-title>strong{font-size:14px;font-weight:550;text-align:left;line-height:1.6;padding:0;color:#4c463e;overflow-wrap:anywhere}
+.delivery-case-title>button:hover{text-decoration:underline;text-underline-offset:3px}.delivery-case-title p{margin:3px 0 0;font-size:11px;color:#9a9185;line-height:1.6}
+.delivery-case-dates{display:flex;flex-wrap:wrap;gap:12px 28px;margin:15px 0 9px;font-variant-numeric:tabular-nums}.delivery-case-dates>div{display:flex;flex-direction:column;gap:4px}
+.delivery-case-dates span{color:#a59b8d;font-size:10px}.delivery-case-dates time{font-size:14px;font-weight:500;color:#766b5c}.delivery-case-dates>div:last-child time{color:var(--delivery-ink)}
+.delivery-latest-reason{margin:12px 0 0;padding:8px 10px;background:#faf9f6;border-radius:3px}.delivery-latest-reason>span{font-size:10px;color:#a09586}.delivery-latest-reason p{font-size:12px;color:#6f6558;margin:3px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.75}
+.delivery-case footer{margin-top:14px}.delivery-case-history{width:100%}.delivery-case-history>summary{font-size:11px;color:#8d8070;cursor:pointer;padding:3px 0;line-height:1.6;list-style-position:inside}
+.delivery-case-actions{display:flex;justify-content:flex-end;gap:14px;margin-top:8px}.delivery-case-actions>button{font-size:11px;padding:3px 0;color:#887863;cursor:pointer}.delivery-case-actions>button:hover{text-decoration:underline;text-underline-offset:3px}
+.delivery-timeline{list-style:none;margin:14px 0 0 4px;padding:0 0 0 17px;border-left:1px solid #e8e2d8}.delivery-timeline>li{position:relative;padding:0 0 18px}.delivery-timeline>li:last-child{padding-bottom:2px}
+.delivery-timeline>li:before{content:"";position:absolute;left:-20px;top:5px;width:5px;height:5px;border:1px solid #ccc1b1;background:#fff;border-radius:50%}
+.delivery-event-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:11px}.delivery-event-heading strong{font-weight:500;color:#6a5e4d}.delivery-event-heading time{color:#aaa090;font-size:10px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.delivery-event-dates{display:flex;gap:8px;font-size:11px;color:#83725c;font-variant-numeric:tabular-nums;margin-top:5px}.delivery-event-dates:empty{display:none}
+.delivery-event-reason{font-size:12px!important;color:#766a59!important;line-height:1.7!important;margin:6px 0 5px;white-space:pre-wrap;overflow-wrap:anywhere}.delivery-event-author{font-size:10px;color:#a49a8a;margin-top:5px;line-height:1.5}
+.delivery-empty{padding:54px 20px;text-align:center;border:1px dashed #e6e0d6;border-radius:5px;margin-top:22px}.delivery-empty strong{font-size:14px;font-weight:500;color:#7a6e5b}.delivery-empty p{font-size:12px;color:#a29684;margin:9px 0 0;line-height:1.7}
+.delivery-nav-count:not(:empty){color:#a85748}.delivery-reminder{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;padding:10px 13px;border:1px solid #ebcfc4;border-radius:4px;background:#fdf5f1;font-size:12px;color:#a85b47}.delivery-reminder button{font-size:11px;white-space:nowrap;color:inherit}
+.delivery-editor-context{padding:0 0 11px;border-bottom:1px solid #ece8e1;margin-bottom:14px}.delivery-editor-context strong{font-size:13px;font-weight:500;line-height:1.7}.delivery-editor-context p{font-size:11px;color:#9b9183;margin:3px 0 0}.delivery-previous-date{font-size:12px;color:#9d8a73;padding:9px 11px;background:#faf7f2;border-radius:4px;margin:12px 0}.delivery-previous-date strong{font-weight:550;color:#7e684d;margin-left:7px;font-variant-numeric:tabular-nums}.delivery-expected-date{margin:14px 0;border-top:1px solid #efebe4;padding-top:11px}.delivery-expected-date summary{font-size:11px;color:#9c8f7d;cursor:pointer}.delivery-expected-date .form-field{margin-bottom:4px}.editor-dialog [data-delivery-reason][hidden]{display:none}
+@media(max-width:760px){
+  .delivery-page-head{display:block;margin-bottom:14px}.delivery-summary{margin-top:13px;gap:18px}.delivery-page-controls{flex-wrap:wrap;gap:5px}.delivery-search{width:100%;max-width:100%;order:-1;margin:0}.delivery-search input{font-size:12px;padding:8px}
+  .delivery-page-controls [role=tablist]{width:100%}.delivery-case{padding:14px 13px}.delivery-case header{gap:9px}.delivery-case-title>button,.delivery-case-title>strong{font-size:13px}.delivery-case-dates{gap:10px 17px}.delivery-case-dates time{font-size:13px}
+  .delivery-event-heading{flex-wrap:wrap;gap:4px}.delivery-event-heading time{font-size:10px}.delivery-plan-actions button{padding:5px}.delivery-date-large{font-size:19px}
+}
+.delivery-screen .database-toolbar,.delivery-screen .filterbar{display:none}
+.delivery-screen .page-heading{padding-bottom:16px}
+.delivery-reminder{margin-top:12px;cursor:pointer;text-align:left;width:fit-content;max-width:100%}
+.delivery-reminder[hidden],.delivery-nav-count[hidden]{display:none!important}
+.world.overview .delivery-card-date{display:none}
+.delivery-undo-list{padding-left:18px;color:#6e695f;font-size:13px;line-height:1.8}
+@media(max-width:760px){.delivery-reminder{width:100%;font-size:12px}.delivery-screen .workbench-view{padding-top:16px}}
+.detail-delivery-summary{margin:0 0 14px;padding:10px 12px;border:1px solid #e8e5df;background:#fcfbf9;border-radius:5px}
+.detail-delivery-summary .delivery-card-date{margin:0;padding:0;border:0}
+.detail-delivery-summary .delivery-card-date time{font-size:18px}
+.detail-delivery-summary>button{display:block;margin-top:7px;padding:0;font-size:10px;color:#948879}
+.detail-delivery-summary>button:hover{color:#5c554a;text-decoration:underline}
+#deliveryReminder{flex:none;margin:0 40px 8px;width:fit-content;max-width:calc(100% - 80px)}
+@media(max-width:760px){#deliveryReminder{margin:0 17px 8px;max-width:calc(100% - 34px)}}
+.app-shell>.page-heading{height:auto;flex:0 0 auto;min-height:108px}
+@media(max-width:760px){.app-shell>.page-heading{min-height:80px}}
