@@ -89,6 +89,15 @@ export function createPersistence({ key = 'topic-workbench-v2', onStatus } = {})
     }
   }
 
+  function richTextShape(value, fields, path) {
+    if (value === undefined) return;
+    record(value, path);
+    for (const [field, html] of Object.entries(value)) {
+      if (!fields.includes(field)) fail(`${path}.${field} 不是可编辑的富文本字段`);
+      if (typeof html !== 'string') fail(`${path}.${field} 必须是字符串`);
+    }
+  }
+
   function sourceShape(value, path) {
     if (value === undefined || value === null) return;
     record(value, path);
@@ -141,6 +150,7 @@ export function createPersistence({ key = 'topic-workbench-v2', onStatus } = {})
       text(project.name, `${path}.name`);
       references(project.tagIds, tagIds, `${path}.tagIds`);
       optionalStrings(project, ['kind', 'priority', 'status', 'summary', 'description', 'result', 'outcome', 'closedAt', 'impact', 'commentDraft', 'commentAuthor'], path);
+      richTextShape(project.richText, ['description', 'result', 'impact', 'commentDraft'], `${path}.richText`);
       if (project.closed !== undefined && typeof project.closed !== 'boolean') fail(`${path}.closed 必须为布尔值`);
       if (project.comments !== undefined) {
         indexed(project.comments, `${path}.comments`);
@@ -148,6 +158,7 @@ export function createPersistence({ key = 'topic-workbench-v2', onStatus } = {})
           const commentPath = `${path}.comments[${commentIndex}]`;
           for (const field of ['body', 'createdAt']) if (typeof comment[field] !== 'string') fail(`${commentPath}.${field} 必须是字符串`);
           optionalStrings(comment, ['author', 'updatedAt'], commentPath);
+          richTextShape(comment.richText, ['body'], `${commentPath}.richText`);
         });
       }
       if (project.customSections !== undefined) {
@@ -155,6 +166,7 @@ export function createPersistence({ key = 'topic-workbench-v2', onStatus } = {})
         project.customSections.forEach((section, sectionIndex) => {
           const sectionPath = `${path}.customSections[${sectionIndex}]`;
           for (const field of ['title', 'body']) if (typeof section[field] !== 'string') fail(`${sectionPath}.${field} 必须是字符串`);
+          richTextShape(section.richText, ['body'], `${sectionPath}.richText`);
         });
       }
       if (project.detailLayout !== undefined) {
@@ -178,6 +190,7 @@ export function createPersistence({ key = 'topic-workbench-v2', onStatus } = {})
       project.planNodes.forEach((node, nodeIndex) => {
         const nodePath = `${path}.planNodes[${nodeIndex}]`;
         optionalStrings(node, ['title', 'owner', 'targetDate', 'estimatedDate', 'status', 'note'], nodePath);
+        richTextShape(node.richText, ['note'], `${nodePath}.richText`);
         for (const field of ['focus', 'dateConfirmed']) {
           if (node[field] !== undefined && typeof node[field] !== 'boolean') {
             fail(`${nodePath}.${field} 必须是布尔值`);
@@ -196,6 +209,7 @@ export function createPersistence({ key = 'topic-workbench-v2', onStatus } = {})
     const incoming = new Map([...projectIds].map(id => [id, 0]));
     data.relations.forEach((relation, index) => {
       const path = `relations[${index}]`;
+      richTextShape(relation.richText, ['context'], `${path}.richText`);
       if (!projectIds.has(relation.main) || !projectIds.has(relation.child)) {
         fail(`${path} 的主项目或小项目不存在`);
       }
@@ -214,6 +228,7 @@ export function createPersistence({ key = 'topic-workbench-v2', onStatus } = {})
     if (queue.length !== projectIds.size) fail('主项目与小项目的关联不能构成方向环');
 
     data.instances.forEach((instance, index) => {
+      richTextShape(instance.richText, ['context'], `instances[${index}].richText`);
       if (!projectIds.has(instance.pid)) fail(`instances[${index}] 引用的项目不存在`);
       finite(instance.x, `instances[${index}].x`);
       finite(instance.y, `instances[${index}].y`);

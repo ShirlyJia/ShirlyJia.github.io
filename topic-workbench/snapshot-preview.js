@@ -1,4 +1,5 @@
 import {isClosedProject} from './workbench-model.js';
+import {richHTML} from './rich-text.js';
 /** A pure, read-only projection of one saved snapshot. No DOM handlers or storage access. */
 const text = value => typeof value === 'string' ? value : typeof value === 'number' && Number.isFinite(value) ? String(value) : '';
 const esc = value => text(value).replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
@@ -9,6 +10,7 @@ const finite = value => typeof value === 'number' && Number.isFinite(value);
 const color = (value, fallback = '#d7d5cd') => /^#[0-9a-f]{6}$/i.test(text(value)) ? value : /^#[0-9a-f]{6}$/i.test(text(fallback)) ? fallback : '#d7d5cd';
 const n = value => String(Math.abs(value) < 1e12 ? Math.round(value * 100) / 100 : value);
 const paragraph = (label, value) => present(value) ? `<div class="snapshot-field"><h5>${esc(label)}</h5><p class="snapshot-text preserve-text">${esc(value)}</p></div>` : '';
+const richParagraph = (label, value, html) => present(value) || present(html) ? `<div class="snapshot-field"><h5>${esc(label)}</h5><div class="snapshot-text rich-content">${richHTML(text(html), text(value))}</div></div>` : '';
 
 function safeURL(value) {
   if (!present(value)) return '';
@@ -154,7 +156,7 @@ function plansHTML(project) {
     const fields = [['跟进人',plan.owner],['目标日期',plan.targetDate],['预计日期',plan.estimatedDate],['实际开始',plan.actualStart],['实际完成',plan.actualFinish],['状态',Object.hasOwn(statuses,text(plan.status)) ? statuses[plan.status] : plan.status]];
     const info = fields.filter(([,value]) => present(value));
     if (present(plan.targetDate) || present(plan.estimatedDate)) info.push(['日期确认',plan.dateConfirmed === true ? '已确认' : '未确认']);
-    return `<article class="snapshot-plan"><strong>${esc(plan.title || '未命名计划')}</strong>${plan.focus ? '<span class="snapshot-badge">卡片展示</span>' : ''}${info.length ? `<dl class="snapshot-meta">${info.map(([label,value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>` : ''}${paragraph('说明',plan.note)}</article>`;
+    return `<article class="snapshot-plan"><strong>${esc(plan.title || '未命名计划')}</strong>${plan.focus ? '<span class="snapshot-badge">卡片展示</span>' : ''}${info.length ? `<dl class="snapshot-meta">${info.map(([label,value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>` : ''}${richParagraph('说明',plan.note,plan.richText?.note)}</article>`;
   }).join('')}</div></section>`;
 }
 
@@ -170,11 +172,11 @@ function materialsHTML(project) {
 function placementNotesHTML(project, data) {
   const placements = list(data.instances).filter(instance => instance.pid === project.id);
   const frames = list(data.frames);
-  const notes = placements.map((instance,index) => ({instance,index})).filter(({instance}) => present(instance.context) || instance.focus);
+  const notes = placements.map((instance,index) => ({instance,index})).filter(({instance}) => present(instance.context) || present(instance.richText?.context) || instance.focus);
   if (!notes.length) return '';
   return `<section class="snapshot-project-section"><h4>画板各处备注</h4>${notes.map(({instance,index}) => {
     const names = frames.filter(frame => ids(frame.members).includes(instance.id)).map(frame => text(frame.name)).filter(Boolean);
-    return `<div class="snapshot-placement-note"><strong>${esc(names.join(' / ') || `画板位置 ${index+1}`)}</strong>${instance.focus ? '<span class="snapshot-badge">★ 本处重点</span>' : ''}${present(instance.context) ? `<p class="snapshot-text preserve-text">${esc(instance.context)}</p>` : ''}</div>`;
+    return `<div class="snapshot-placement-note"><strong>${esc(names.join(' / ') || `画板位置 ${index+1}`)}</strong>${instance.focus ? '<span class="snapshot-badge">★ 本处重点</span>' : ''}${present(instance.context)||present(instance.richText?.context) ? `<div class="snapshot-text rich-content">${richHTML(text(instance.richText?.context),text(instance.context))}</div>` : ''}</div>`;
   }).join('')}</section>`;
 }
 
@@ -183,31 +185,31 @@ function relationsHTML(project, data, projectById) {
   if (!relations.length) return '';
   return `<section class="snapshot-project-section"><h4>当时的项目关联</h4><ul class="snapshot-relations">${relations.map(relation => {
     const child = relation.main === project.id, other = projectById.get(child ? relation.child : relation.main);
-    return `<li><span class="muted">${child ? '关联小项目' : '所属主项目'}</span> <strong>${esc(other?.name || '快照中缺少此项目')}</strong>${relation.draft ? '<span class="snapshot-badge">待确认</span>' : ''}${paragraph('关联说明',relation.context)}</li>`;
+    return `<li><span class="muted">${child ? '关联小项目' : '所属主项目'}</span> <strong>${esc(other?.name || '快照中缺少此项目')}</strong>${relation.draft ? '<span class="snapshot-badge">待确认</span>' : ''}${richParagraph('关联说明',relation.context,relation.richText?.context)}</li>`;
   }).join('')}</ul></section>`;
 }
 
 function commentsHTML(project) {
   const comments=list(project.comments);
   if(!comments.length)return '';
-  return `<section class="snapshot-project-section"><h4>评论池</h4><ul class="snapshot-comments">${comments.map(comment=>`<li><div class="snapshot-meta">${present(comment.author)?`<span>${esc(comment.author)}</span>`:''}${present(comment.createdAt)?`<time>${esc(dateLabel(comment.createdAt))}</time>`:''}</div><p class="snapshot-text preserve-text">${esc(comment.body)}</p></li>`).join('')}</ul></section>`;
+  return `<section class="snapshot-project-section"><h4>评论池</h4><ul class="snapshot-comments">${comments.map(comment=>`<li><div class="snapshot-meta">${present(comment.author)?`<span>${esc(comment.author)}</span>`:''}${present(comment.createdAt)?`<time>${esc(dateLabel(comment.createdAt))}</time>`:''}</div><div class="snapshot-text rich-content">${richHTML(text(comment.richText?.body),text(comment.body))}</div></li>`).join('')}</ul></section>`;
 }
 
 function customSectionsHTML(project) {
   const sections=list(project.customSections);
-  return sections.map(section=>`<section class="snapshot-project-section"><h4>${esc(section.title||'未命名栏目')}</h4><p class="snapshot-text preserve-text">${esc(section.body)}</p></section>`).join('');
+  return sections.map(section=>`<section class="snapshot-project-section"><h4>${esc(section.title||'未命名栏目')}</h4><div class="snapshot-text rich-content">${richHTML(text(section.richText?.body),text(section.body))}</div></section>`).join('');
 }
 
 function resultsHTML(project,data) {
   const show=isClosedProject(project)||(data.projectContentVersion!==1&&typeof project.closed!=='boolean');
-  if(!show||(!present(project.result)&&!present(project.impact)))return '';
-  return `<section class="snapshot-project-section"><h4>成果记录</h4>${paragraph('结果',project.result)}${paragraph('影响与证据说明',project.impact)}</section>`;
+  if(!show||(!present(project.result)&&!present(project.impact)&&!present(project.richText?.result)&&!present(project.richText?.impact)))return '';
+  return `<section class="snapshot-project-section"><h4>成果记录</h4>${richParagraph('结果',project.result,project.richText?.result)}${richParagraph('影响与证据说明',project.impact,project.richText?.impact)}</section>`;
 }
 
 function projectsHTML(data, projects, projectById, tagById) {
   if (!projects.length) return '<p class="snapshot-empty muted">这份快照没有项目记录。</p>';
   return `<div class="snapshot-projects">${projects.map(project => {
-    return `<details class="snapshot-project"><summary>${present(project.priority) ? `<span class="snapshot-badge">${esc(project.priority)}</span>` : ''}<strong>${esc(project.name || '未命名项目')}</strong>${present(project.outcome) ? `<small>${esc(project.outcome)}</small>` : ''}</summary><div class="snapshot-project-body">${metadataHTML(project)}<div class="snapshot-tags">${tagsHTML(project,tagById)}</div>${paragraph('问题陈述',project.description)}${paragraph('历史摘要',project.summary)}${commentsHTML(project)}${customSectionsHTML(project)}${resultsHTML(project,data)}${plansHTML(project)}${materialsHTML(project)}${placementNotesHTML(project,data)}${relationsHTML(project,data,projectById)}</div></details>`;
+    return `<details class="snapshot-project"><summary>${present(project.priority) ? `<span class="snapshot-badge">${esc(project.priority)}</span>` : ''}<strong>${esc(project.name || '未命名项目')}</strong>${present(project.outcome) ? `<small>${esc(project.outcome)}</small>` : ''}</summary><div class="snapshot-project-body">${metadataHTML(project)}<div class="snapshot-tags">${tagsHTML(project,tagById)}</div>${richParagraph('问题陈述',project.description,project.richText?.description)}${paragraph('历史摘要',project.summary)}${commentsHTML(project)}${customSectionsHTML(project)}${resultsHTML(project,data)}${plansHTML(project)}${materialsHTML(project)}${placementNotesHTML(project,data)}${relationsHTML(project,data,projectById)}</div></details>`;
   }).join('')}</div>`;
 }
 

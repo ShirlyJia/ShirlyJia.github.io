@@ -1,0 +1,38 @@
+.rich-editor{position:relative;min-width:0;border:1px solid transparent;border-radius:5px;background:#fff;transition:border-color .15s}
+.rich-editor:hover,.rich-editor:focus-within{border-color:#e4e4df}
+.rich-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:2px;padding:4px 5px;color:var(--muted,#73726e);border-bottom:1px solid transparent;opacity:.55;transition:opacity .15s}
+.rich-editor:hover .rich-toolbar,.rich-editor:focus-within .rich-toolbar{opacity:1;border-color:#efefeb}
+.rich-toolbar button{min-width:27px;min-height:28px;margin:0;padding:3px 6px;border:0;border-radius:3px;background:transparent;color:inherit;font-family:inherit;font-size:12px;line-height:1.5;cursor:pointer}
+.rich-toolbar button:hover,.rich-toolbar button:focus-visible{background:#efefeb;color:#37352f}
+.rich-paste-hint{margin-left:auto;font-size:10px;color:#a0a09a;padding:0 4px}
+.rich-editor-input{position:relative;display:block;min-height:90px;padding:8px 10px;outline:none;border:0;background:transparent;color:var(--ink,#37352f);font:inherit;line-height:1.85;overflow-wrap:anywhere;white-space:normal;cursor:text}
+.rich-editor-input[data-empty=true]:before{content:attr(data-placeholder);position:absolute;pointer-events:none;color:#a3a29b;max-width:calc(100% - 20px)}
+.rich-content p,.rich-content div,.rich-content blockquote,.rich-content pre{margin:0 0 .55em}
+.rich-content>:last-child{margin-bottom:0}
+.rich-content h1,.rich-content h2,.rich-content h3{font-size:1.15em;line-height:1.55;font-weight:650;margin:1em 0 .4em}
+.rich-content ul,.rich-content ol{margin:.3em 0 .6em;padding-left:1.7em}
+.rich-content li{padding-left:.15em;margin:.15em 0}
+.rich-content blockquote{border-left:3px solid #d8d6ce;padding-left:12px;color:#73726e}
+.rich-content pre,.rich-content code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;background:#f5f5f2;border-radius:3px;font-size:.92em}
+.rich-content pre{padding:10px;white-space:pre-wrap}
+.rich-content code{padding:1px 4px}
+.rich-content a{color:#54768a;text-decoration:underline;text-underline-offset:3px}
+.rich-content img{display:block;max-width:100%;height:auto;max-height:620px;object-fit:contain;margin:10px 0;border-radius:3px;cursor:pointer;outline-offset:3px}
+.rich-content img.rich-image-selected{outline:2px solid #8ca9ba}
+.rich-content table{border-collapse:collapse;display:block;max-width:100%;overflow:auto;margin:10px 0}
+.rich-content td,.rich-content th{border:1px solid #e0e0da;padding:5px 9px;min-width:40px}
+.rich-content th{background:#f7f7f4;text-align:left}
+.rich-content figure{margin:10px 0}.rich-content figcaption{color:#898880;font-size:12px}
+.rich-content hr{border:0;border-top:1px solid #e4e4df;margin:15px 0}
+.rich-image-tools{display:flex;align-items:center;gap:10px;padding:3px 9px 8px;font-size:11px;color:#898880}
+.rich-image-tools button{border:0;background:#f4f3ee;border-radius:4px;font-size:11px;padding:4px 8px;color:#8f5249;cursor:pointer}
+.rich-link-popover{display:flex;flex-wrap:wrap;align-items:end;gap:6px;padding:10px;border-top:1px solid #e6e6df;background:#fafaf8}
+.rich-link-popover label{display:flex;flex:1;min-width:140px;flex-direction:column;gap:4px;font-size:11px;color:#73726e}
+.rich-link-popover input{width:100%;padding:5px 7px;font:inherit;border:1px solid #deded7;border-radius:4px;background:#fff}
+.rich-link-popover button{border:0;background:#efefeb;color:#55544d;border-radius:4px;padding:5px 8px;font-size:12px;cursor:pointer}
+.rich-editor-message{font-size:11px;line-height:1.6;padding:4px 10px;margin:0;color:#73726e}.rich-editor-message.error{color:#a05d3c;background:#fffaf0}
+.rich-dragging{border-color:#8ca9ba!important;background:#f6f9fb}
+.rich-editor [hidden]{display:none!important}
+.comment-pool .rich-editor-input{min-height:65px}
+.comment-entry .rich-toolbar{padding-top:0}.comment-entry .rich-editor-input{min-height:42px}
+@media(max-width:760px){.rich-toolbar{opacity:1}.rich-editor{border-color:#ecece6}.rich-paste-hint{display:none}.rich-toolbar button{min-height:34px;padding:4px 7px}.rich-editor-input{font-size:16px}.rich-content img{max-height:480px}}

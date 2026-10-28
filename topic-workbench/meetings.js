@@ -2,11 +2,13 @@ import {MEETING_CATEGORIES, meetingCategory, enrichMeetingContent} from './meeti
 import {createMeetingFiles} from './meeting-files.js';
 import {removeMeetingItem, restoreMeetingItem, restoreMeetingById} from './meeting-trash.js';
 import {deployment, storageKey} from './deployment-config.js';
+import {richEditorMarkup, mountRichEditors, readRichEditor, setRichEditor, flushRichEditors} from './rich-text.js';
 /** Independent meeting notes. The project store is read-only here. */
 export const MEETING_KEY = storageKey('topic-workbench-meetings-v1');
 export const PROJECT_KEY = storageKey('topic-workbench-v2');
 const TYPES = ['落地内部', '基模对齐', '其他'];
 const TEXT_FIELDS = ['title', 'date', 'type', 'attendees', 'notes', 'conclusions', 'followUp', 'originNote', 'createdAt', 'updatedAt'];
+const RICH_FIELDS = ['notes', 'followUp'];
 const clone = value => JSON.parse(JSON.stringify(value));
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
 const uid = prefix => `${prefix}-${globalThis.crypto.randomUUID()}`;
@@ -61,6 +63,7 @@ export function validateMeetings(data) {
     ids.add(meeting.id);
     if(meeting.category!==undefined&&!MEETING_CATEGORIES.some(c=>c.id===meeting.category))throw Error('会议分栏无效');
     if (TEXT_FIELDS.some(field => typeof meeting[field] !== 'string') || !TYPES.includes(meeting.type) || !validDate(meeting.date)) throw new Error('会议字段或日期格式无效');
+    if (meeting.richText !== undefined && (!meeting.richText || typeof meeting.richText !== 'object' || Array.isArray(meeting.richText) || ![Object.prototype,null].includes(Object.getPrototypeOf(meeting.richText)) || Object.entries(meeting.richText).some(([field,value]) => !RICH_FIELDS.includes(field) || typeof value !== 'string'))) throw new Error('会议富文本格式无效');
     if (!Array.isArray(meeting.projectIds) || meeting.projectIds.some(id => typeof id !== 'string' || !id) || new Set(meeting.projectIds).size !== meeting.projectIds.length) throw new Error('关联项目格式无效');
     if (!Array.isArray(meeting.materials)) throw new Error('会议资料格式无效');
     const materialIds = new Set();
@@ -167,7 +170,7 @@ export function meetingMatches(meeting, query) {
 }
 
 export function isBlankMeeting(meeting) {
-  return ['title','date','attendees','notes','conclusions','followUp','originNote'].every(field => !meeting[field]?.trim()) && !meeting.materials.length && !meeting.projectIds.length;
+  return ['title','date','attendees','notes','conclusions','followUp','originNote'].every(field => !meeting[field]?.trim()) && !Object.values(meeting.richText||{}).some(html=>/<img\b/i.test(html)) && !meeting.materials.length && !meeting.projectIds.length;
 }
 
 export function deletedMeetingFileIds(data) {
@@ -188,6 +191,9 @@ function bootMeetings() {
   const categoryMeetings=()=>data?data.meetings.filter(m=>meetingCategory(m)===activeCategory).sort((a,b)=>b.date.localeCompare(a.date)||b.updatedAt.localeCompare(a.updatedAt)):[];
   const current = () => data?.meetings.find(meeting => meeting.id === selected);
   const visibleMeetings=()=>categoryMeetings().filter(meeting=>meetingMatches(meeting,$('meetingSearch').value));
+  $('meetingNotesHost').innerHTML=richEditorMarkup({label:'会议记录',placeholder:'讨论要点、已明确的结论；可直接粘贴图片…',attrs:'id="meetingNotes" data-field="notes"'});
+  $('meetingFollowUpHost').innerHTML=richEditorMarkup({label:'待跟进',placeholder:'下一步、跟进人或待补信息…',attrs:'id="meetingFollowUp" data-field="followUp"'});
+  mountRichEditors($('meetingEditor'),{onError:message=>toast(message)});
   function toast(message, action) {
     const box=$('meetingToast');box.replaceChildren();const text=document.createElement('span');text.textContent=message;box.append(text);
     if(action){const button=document.createElement('button');button.textContent='撤销';button.onclick=()=>{box.hidden=true;action();};box.append(button);}
@@ -197,13 +203,15 @@ function bootMeetings() {
   function error(message = '') { $('saveMessage').textContent = message; $('saveMessage').hidden = !message; }
   function save() {
     clearTimeout(timer);
+    if(!flushRichEditors($('meetingEditor')))return false;
     if (!data || !dirty) return !dirty;
     try {
       store.save(data); dirty = false; fromStorage = true;
       status(data.meetings.some(meeting => meeting.materials.some(material => material.draftUrl)) ? '已保存 · 有待补全链接' : '已保存到此浏览器'); error(); updateFooter(); return true;
     } catch (failure) {
       status('未保存 · 点击重试',true);
-      error(`${failure.message}。草稿保留在当前页面，可重试或导出 JSON；离开前请先备份。`);
+      const message=failure.name==='QuotaExceededError'?'浏览器存储空间不足':failure.message;
+      error(`${message}。草稿保留在当前页面，可重试或导出 JSON；离开前请先备份。`);
       return false;
     }
   }
@@ -293,12 +301,17 @@ function bootMeetings() {
     if($('materialPreview').open)$('materialPreview').close();releasePreview();
     const meeting = current(); $('meetingEditor').hidden = !meeting; $('emptyState').hidden = !data || !!meeting;
     if (!meeting) return;
-    for (const input of document.querySelectorAll('[data-field]')) input.value = meeting[input.dataset.field];
+    for (const input of document.querySelectorAll('[data-field]')) {
+      const field=input.dataset.field;
+      if(input.matches('.rich-editor-input'))setRichEditor(input,{text:meeting[field],html:meeting.richText?.[field]||''});
+      else input.value=meeting[field];
+    }
     $('meetingCategoryLabel').textContent=categoryLabel(meetingCategory(meeting));$('moveMeeting').textContent='移到'+categoryLabel(meetingCategory(meeting)==='cross-team'?'internal':'cross-team');$('materialLinkInput').value='';
     $('projectSearch').value = ''; $('projectPicker').open = false;
     renderProjects(); renderMaterials(); updateFooter();
   }
   async function load() {
+    if(!flushRichEditors($('meetingEditor')))return;
     const revision = ++loadRevision;
     clearTimeout(timer);
     error();
@@ -372,11 +385,16 @@ function bootMeetings() {
   document.querySelectorAll('[data-category]').forEach(button=>{button.onclick=()=>switchCategory(button.dataset.category);button.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const id=e.key==='Home'?'cross-team':e.key==='End'?'internal':activeCategory==='cross-team'?'internal':'cross-team';switchCategory(id);document.querySelector('[data-category="'+id+'"]').focus();};});
   $('moveMeeting').onclick=()=>{const meeting=current();if(!meeting||!save())return;meeting.category=meetingCategory(meeting)==='cross-team'?'internal':'cross-team';activeCategory=meeting.category;changed(true);renderEditor();};
   $('meetingSearch').oninput = renderList; $('projectSearch').oninput = renderProjects;
-  $('meetingList').onclick = event => { const remove=event.target.closest('[data-delete-meeting]');if(remove){removeMeeting(remove.dataset.deleteMeeting);return;}const button=event.target.closest('[data-meeting]');if(!button||!save())return;selected=button.dataset.meeting;renderList();renderEditor(); }; 
+  $('meetingList').onclick = event => { const remove=event.target.closest('[data-delete-meeting]');if(remove){removeMeeting(remove.dataset.deleteMeeting);return;}const button=event.target.closest('[data-meeting]');if(!button||!save())return;selected=button.dataset.meeting;renderList();renderEditor(); };
   $('meetingEditor').addEventListener('input',event => {
     const meeting = current(); if (!meeting) return;
     const field = event.target.dataset.field;
-    if (field && TEXT_FIELDS.includes(field)) { meeting[field] = event.target.value; changed(); if (['title','date'].includes(field)) renderList(); return; }
+    if (field && TEXT_FIELDS.includes(field)) {
+      if(event.target.matches('.rich-editor-input')){
+        const value=readRichEditor(event.target);meeting[field]=value.text;meeting.richText??={};meeting.richText[field]=value.html;
+      }else meeting[field] = event.target.value;
+      changed(); if (['title','date'].includes(field)) renderList(); return;
+    }
     const materialId = event.target.dataset.material;
     if (materialId) {
       const material = meeting.materials.find(item => item.id === materialId); const property = event.target.dataset.materialField;
@@ -403,15 +421,16 @@ function bootMeetings() {
   $('openTrash').onclick=()=>{renderTrash();$('meetingTrash').showModal();};
   $('closeTrash').onclick=()=>$('meetingTrash').close();
   $('trashList').onclick=event=>{const button=event.target.closest('[data-restore-id]');if(button)restoreEntry(button.dataset.restoreKind,button.dataset.restoreId);};
-  $('exportMeetings').onclick=async()=>{if(!data)return;try{const backup=clone(data),ids=deletedMeetingFileIds(backup);if(ids.length)backup.embeddedFiles=await files.exportFiles(ids);download(backup,`会议记录${dirty?'-未保存草稿':''}-${new Date().toISOString().slice(0,10)}.json`);}catch(failure){toast('导出未完成：'+failure.message);}};
+  $('exportMeetings').onclick=async()=>{if(!data||!flushRichEditors($('meetingEditor')))return;try{const backup=clone(data),ids=deletedMeetingFileIds(backup);if(ids.length)backup.embeddedFiles=await files.exportFiles(ids);download(backup,`会议记录${dirty?'-未保存草稿':''}-${new Date().toISOString().slice(0,10)}.json`);}catch(failure){toast('导出未完成：'+failure.message);}};
   $('exportRaw').onclick = () => { const raw = store.original(); if (raw !== null) download(raw,'会议记录-原始备份.json'); };
-  window.addEventListener('beforeunload',event => { if (dirty && !save()) { event.preventDefault(); event.returnValue = ''; } });
+  document.addEventListener('click',event=>{const link=event.target.closest('a[href]');if(link&&link.target!=='_blank'&&!link.hasAttribute('download')&&!link.getAttribute('href').startsWith('#')&&!save())event.preventDefault();});
+  window.addEventListener('beforeunload',event => { if (!flushRichEditors($('meetingEditor')) || dirty && !save()) { event.preventDefault(); event.returnValue = ''; } });
   document.addEventListener('visibilitychange',() => { if (document.visibilityState === 'hidden') save(); });
   window.addEventListener('focus',refreshProjects);
   window.addEventListener('storage',event => {
     if (event.key === PROJECT_KEY || event.key === null) refreshProjects();
     if (event.key === MEETING_KEY || event.key === null) {
-      if (dirty) { clearTimeout(timer); status('未保存 · 检测到其他页面更改',true); error('另一个页面修改了会议记录。当前草稿已保留，请导出后再刷新页面合并。'); }
+      if (dirty || !flushRichEditors($('meetingEditor'))) { clearTimeout(timer); status('未保存 · 检测到其他页面更改',true); error('另一个页面修改了会议记录。当前草稿已保留，请导出后再刷新页面合并。'); }
       else load();
     }
   });

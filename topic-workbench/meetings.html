@@ -7,6 +7,7 @@
   <title>会议记录 · 我的工作台</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23f0efed'/%3E%3Cpath d='M9 8h10l5 5v12H9zM19 8v6h5M13 18h7M13 21h5' fill='none' stroke='%2337352f' stroke-width='1.5'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="meetings.css">
+  <link rel="stylesheet" href="rich-text.css">
 </head>
 <body>
   <a class="skip-link" href="#meetingEditor">跳到会议内容</a>
@@ -49,8 +50,8 @@
           <form id="materialLinkForm" class="material-link-form"><label class="sr-only" for="materialLinkInput">飞书纪要或文档链接</label><input id="materialLinkInput" type="url" placeholder="粘贴飞书纪要或文档链接…" required autocomplete="off"><button type="submit">添加链接</button></form>
           <div id="materialList"></div>
         </section>
-        <section class="writing-section"><label for="meetingNotes">会议记录</label><textarea id="meetingNotes" data-field="notes" placeholder="讨论要点、已明确的结论，记在这里…" rows="6"></textarea></section>
-        <section class="writing-section"><label for="meetingFollowUp">待跟进</label><textarea id="meetingFollowUp" data-field="followUp" placeholder="下一步、跟进人或待补信息…" rows="3"></textarea></section>
+        <section class="writing-section"><label for="meetingNotes">会议记录</label><div id="meetingNotesHost"></div></section>
+        <section class="writing-section"><label for="meetingFollowUp">待跟进</label><div id="meetingFollowUpHost"></div></section>
         <section class="project-section" aria-labelledby="projectHeading">
           <div class="section-heading"><h2 id="projectHeading">关联项目</h2></div>
           <div id="linkedProjects" class="linked-projects"></div>
