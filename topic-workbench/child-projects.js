@@ -14,6 +14,18 @@ export function childSectionActionsMarkup(){
   return '<div class="child-project-actions"><button type="button" class="text-action" data-action="child-create">＋ 新建小项目</button><button type="button" class="text-action" data-action="relation-add-main">关联已有项目</button></div>';
 }
 
+/** Direct parents are navigation hints; they do not create another project tag. */
+export function parentProjectHintMarkup(pid,data){
+  const projects=new Map((data.projects||[]).map(project=>[project.id,project])),parents=new Map();
+  for(const relation of data.relations||[]){
+    if(relation.child!==pid||relation.main===pid||!projects.has(relation.main))continue;
+    const previous=parents.get(relation.main);
+    parents.set(relation.main,{project:projects.get(relation.main),draft:!!relation.draft&&(!previous||previous.draft)});
+  }
+  if(!parents.size)return '';
+  return '<nav class="project-parent-hint" aria-label="所属主项目"><span class="parent-hint-label">'+treeIcon+'主项目</span>'+[...parents.values()].map(({project,draft})=>'<button type="button" class="parent-project-link" data-related="'+esc(project.id)+'" title="'+esc(project.name)+(draft?' · 关联待确认':'')+'" aria-label="查看主项目：'+esc(project.name)+'"><span>'+esc(project.name)+'</span>'+(draft?'<small>待确认</small>':'')+'</button>').join('')+'</nav>';
+}
+
 function text(value,label,{required=false,max=Infinity}={}){
   if(typeof value!=='string')throw Error(label+'必须是文字');
   const result=value.trim();if(required&&!result)throw Error(label+'不能为空');if(result.length>max)throw Error(label+'过长');return result;

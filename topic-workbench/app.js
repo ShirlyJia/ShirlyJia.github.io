@@ -21,7 +21,7 @@ import {previewDeliveryUndo, applyDeliveryUndo} from './delivery-undo.js';
 import {resizeFrameBounds, frameResizeEdges, frameEdgeNames} from './frame-resize.js';
 import {mountDetailResize} from './detail-panel.js';
 import {wheelDelta, enclosedFrameIds, moveSelection} from './canvas-gesture.js';
-import {childBadgeMarkup, childSectionActionsMarkup, createChildProject} from './child-projects.js';
+import {childBadgeMarkup, childSectionActionsMarkup, createChildProject, parentProjectHintMarkup} from './child-projects.js';
 import {colorPickerMarkup, installColorPickers} from './color-presets.js';
 import {moveFramesToEdge} from './frame-layers.js';
 import {orderedTags,renameTag,moveTag,tagFilterMarkup,mountTagEditor} from './tag-editor.js';
@@ -273,7 +273,7 @@ function openDetail(pid,instanceId=null,resetScroll=true){
   const detailBlocks=projectDetailSections(p,nodes),availableSections=detailBlocks.map(block=>block.key);
   const additions=actionButton('新栏目','section-add')+actionButton('计划','inline-node-add')+actionButton('资料链接','material-add')+actionButton('小项目','children-show')+actionButton('所属主项目','relation-add-child')+actionButton('放到其他画板分组','reference')+(instance?actionButton('本处备注与重点','placement',instance.id):'')+detailRestoreMenu(p,availableSections);
   let html='<div class="detail-title-tools"><label class="kind-select"><select data-inline="kind" aria-label="项目类型"><option value="project"'+(p.kind!=='direction'?' selected':'')+'>项目</option><option value="direction"'+(p.kind==='direction'?' selected':'')+'>长期方向</option></select></label><div class="detail-toolbar">'+actionButton('小项目 ＋','children-show')+detailMenu('＋ 添加',additions)+detailMenu('•••',actionButton('删除项目','project-delete'))+'</div></div>';
-  html+='<div class="project-title-editor">'+inlineText('name','项目标题',p.name,{title:true,rows:1,autogrow:true})+'<button type="button" data-edit-project-title aria-label="修改项目标题">✎ 改标题</button></div>';
+  html+=parentProjectHintMarkup(p.id,state)+'<div class="project-title-editor">'+inlineText('name','项目标题',p.name,{title:true,rows:1,autogrow:true})+'<button type="button" data-edit-project-title aria-label="修改项目标题">✎ 改标题</button></div>';
   const closed=isClosedProject(p);
   html+='<div class="detail-edit-properties"><label><span>优先级</span>'+priorityControl(p)+'</label><label class="free-status"><span>结果状态</span><input class="inline-input" data-inline="outcome" aria-label="结果状态" value="'+esc(p.outcome||'')+'" placeholder="自由填写"></label><button class="project-lifecycle" data-toggle-closed>'+ (closed?'↺ 恢复跟进':'结束项目')+'</button></div>';
   html+=flowMarkup(p);

@@ -8,4 +8,11 @@ button.child-project-badge:hover,button.child-project-badge:focus-visible{color:
 .child-project-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:0 0 16px}
 .child-project-actions .text-action{padding:7px 9px;background:#faf9f7;border:1px solid #eeece7}
 .child-project-actions .text-action:hover{background:#f1f0ec;border-color:#dcd8cf}
+.project-parent-hint{display:flex;flex-wrap:wrap;align-items:center;gap:5px 7px;margin:15px 0 4px;font-size:11px;line-height:1.6;color:#928d83;}
+.parent-hint-label{display:inline-flex;align-items:center;gap:5px;flex:none;}
+.parent-hint-label svg{width:13px;height:13px;}
+.parent-project-link{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%;padding:3px 7px;border-radius:4px;background:#f5f4f1;color:#747067;font-size:11px;text-align:left;}
+.parent-project-link>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.parent-project-link>small{flex:none;font-size:10px;color:#a19887;}
+.parent-project-link:hover,.parent-project-link:focus-visible{background:#eae9e3;color:#45423c;}
 @media(max-width:760px){.child-project-actions{gap:8px}.child-project-actions .text-action{min-height:36px}.child-project-badge{right:10px;top:10px}}
