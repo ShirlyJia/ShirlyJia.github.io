@@ -124,7 +124,8 @@ function canvasHTML(data, projectById, tagById) {
   if (![left,top,width,height].every(finite) || width <= 0 || height <= 0) return '<p class="snapshot-empty muted">布局坐标无法显示；下方仍可查看项目与备注。</p>';
   const frameSVG = frames.map(frame => {
     const tone = color(frame.color, {sand:'#d8cfbb',blue:'#c4ced4',green:'#cbd0c5'}[frame.tone] || '#d7d5cd');
-    return `<g transform="translate(${n(frame.x)} ${n(frame.y)})"><title>${esc(frame.name || '未命名分组')}</title><rect width="${n(frame.w)}" height="${n(frame.h)}" rx="6" fill="${tone}" fill-opacity="0.15" stroke="${tone}" stroke-width="1.5"/><text x="2" y="-11" font-size="13" font-weight="600" fill="#73726e">${esc(wrap(frame.name || '未命名分组',40,1)[0])}</text></g>`;
+    const hasBackground=/^#[0-9a-f]{6}$/i.test(text(frame.backgroundColor)),background=hasBackground?color(frame.backgroundColor):tone;
+    return `<g transform="translate(${n(frame.x)} ${n(frame.y)})"><title>${esc(frame.name || '未命名分组')}</title><rect width="${n(frame.w)}" height="${n(frame.h)}" rx="6" fill="${background}" fill-opacity="${hasBackground?1:0.15}" stroke="${tone}" stroke-width="1.5"/><text x="2" y="-11" font-size="13" font-weight="600" fill="#73726e">${esc(wrap(frame.name || '未命名分组',40,1)[0])}</text></g>`;
   }).join('');
   const cardSVG = instances.map(instance => {
     const project = projectById.get(instance.pid), title = text(project.name) || '未命名项目';

@@ -1,3 +1,4 @@
+import {colorPickerMarkup,colorChoices} from './color-presets.js';
 import {deliveryCases} from './delivery-model.js';
 import {deliveryPageMarkup} from './delivery-view.js';
 import {setProjectClosed} from './project-flow.js';
@@ -5,9 +6,9 @@ import {isClosedProject, sortProjectsByPriority, outcomeKind} from './workbench-
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $ = id => document.getElementById(id);
-export const palette = ['#bd6259','#bd9146','#6284a0','#668777','#9080a1','#8c8981'];
+export const palette = colorChoices('accent').map(p=>p.value);
 export function colorControl(value, attribute, id, label) {
-  return '<label class="color-control" title="'+esc(label)+'"><input type="color" '+attribute+'="'+esc(id)+'" value="'+esc(value||palette[5])+'" aria-label="'+esc(label)+'"><span style="background:'+esc(value||palette[5])+'"></span></label>';
+  return colorPickerMarkup(value,attribute,id,label,{variant:attribute.includes('frame')?'surface':'accent'});
 }
 
 export function createWorkbenchViews(api) {
@@ -169,7 +170,7 @@ export function createWorkbenchViews(api) {
   function boardEditor(id){
     if(!flush())return;
     const b=boardById(id)||{};
-    editor(id?'看板设置':'新建行动看板',field('name','名称',b.name,'text','required maxlength="60"')+field('color','颜色',b.color||palette[5],'color')+area('notes','看板说明',b.notes,3)+(id?'<button type="button" class="danger-link" data-delete-board="'+esc(id)+'">删除看板，保留项目</button>':''),form=>update(()=>{
+    editor(id?'看板设置':'新建行动看板',field('name','名称',b.name,'text','required maxlength="60"')+'<div class="form-field"><span>颜色</span>'+colorPickerMarkup(b.color||palette[0],'data-board-draft-color',id||'new','选择看板颜色',{name:'color'})+'</div>'+area('notes','看板说明',b.notes,3)+(id?'<button type="button" class="danger-link" data-delete-board="'+esc(id)+'">删除看板，保留项目</button>':''),form=>update(()=>{
       const values={name:form.get('name').trim(),color:form.get('color'),notes:form.get('notes').trim()};if(!values.name)throw Error('请填写看板名称');
       if(id)Object.assign(boardById(id),values);else getState().quickBoards.push({id:'board-'+crypto.randomUUID(),...values,projectIds:[],emphasisIds:[],contexts:{},rank:Math.max(-1,...getState().quickBoards.map(board=>board.rank))+1});
     },'看板已保存'));

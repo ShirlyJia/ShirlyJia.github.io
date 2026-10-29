@@ -246,6 +246,7 @@ export function createPersistence({ key = 'topic-workbench-v2', onStatus } = {})
       finite(frame.h, `${path}.h`, true);
       references(frame.members, instanceIds, `${path}.members`);
       if (frame.color !== undefined) color(frame.color, `${path}.color`);
+      if (frame.backgroundColor !== undefined) color(frame.backgroundColor, `${path}.backgroundColor`);
     });
     if (data.quickBoards !== undefined) {
       indexed(data.quickBoards, 'quickBoards');

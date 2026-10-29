@@ -1,3 +1,4 @@
+import {colorPickerMarkup} from './color-presets.js';
 import {createCanvasItem, canvasItemBounds, translateCanvasItem} from './canvas-items.js';
 import {renderCanvasItem} from './canvas-item-view.js';
 
@@ -37,7 +38,7 @@ export function createCanvasEditor({world,viewport,getState,mutate,save,toWorld,
     if(bar.hidden)return;
     const line=isLine(item);bar.innerHTML='';
     const name=document.createElement('span');name.className='canvas-tool-label';name.textContent=labels[item.type];bar.append(name);
-    const color=document.createElement('input');color.type='color';color.value=item.color;color.setAttribute('aria-label',item.type==='note'?'便签颜色':'画板元素颜色');color.title=color.getAttribute('aria-label');color.dataset.canvasStyle='color';bar.append(color);
+    bar.insertAdjacentHTML('beforeend',colorPickerMarkup(item.color,'data-canvas-style','color',item.type==='note'?'便签颜色':'画板元素颜色',{variant:item.type==='note'?'surface':'ink'}));
     const options=line?[[1,'细'],[2,'标准'],[4,'粗'],[6,'加粗']]:[[14,'14'],[18,'18'],[24,'24'],[32,'32'],[40,'40'],[56,'56']];
     const property=line?'strokeWidth':'fontSize',value=item[property];if(!options.some(([v])=>v===value))options.push([value,String(value)]);
     const size=document.createElement('select');size.setAttribute('aria-label',line?'线条粗细':'文字大小');size.dataset.canvasStyle=property;
@@ -123,7 +124,7 @@ export function createCanvasEditor({world,viewport,getState,mutate,save,toWorld,
   world.addEventListener('click',e=>{if(e.target.closest('[data-canvas-item]')){e.stopPropagation();if(suppressClick)return;const item=e.target.closest('[data-canvas-item]');if(!e.target.closest('textarea,input,button'))select(item.dataset.canvasItem);}},true);
   world.addEventListener('dblclick',e=>{const target=e.target.closest('[data-canvas-item]');if(!target||e.target.closest('textarea,button'))return;e.preventDefault();e.stopImmediatePropagation();edit(target.dataset.canvasItem);},true);
   document.addEventListener('keydown',e=>{
-    if(getState().display!=='canvas'||getState().mode==='gather'||e.target.closest('input,textarea,select,[contenteditable="true"],[data-project-flow],[data-resize-frame],[data-frame-head],.detail-panel,[data-instance]')||document.querySelector('dialog[open]'))return;
+    if(getState().display!=='canvas'||getState().mode==='gather'||e.target.closest('input,textarea,select,[contenteditable="true"],[data-project-flow],[data-resize-frame],[data-frame-head],[data-color-menu],[data-color-trigger],.detail-panel,[data-instance]')||document.querySelector('dialog[open]'))return;
     if(drag&&e.key!=='Escape'){stop(e);return;}
     if(e.key==='Escape'&&(drag||selected||kinds.has(getState().tool))){if(drag)finishDrag(null,true);clear();setTool('select');stop(e);return;}
     if(!e.metaKey&&!e.ctrlKey&&!e.altKey&&['t','n','l','a'].includes(e.key.toLowerCase())){setTool({t:'text',n:'note',l:'line',a:'arrow'}[e.key.toLowerCase()]);stop(e);return;}

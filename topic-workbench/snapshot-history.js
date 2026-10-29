@@ -61,9 +61,10 @@ function showTab(showRecords){
 }
 function renderCanvas(){
   world.replaceChildren();
-  for(const frame of model.frames){
-    const el=document.createElement('section');el.className='frame';el.dataset.frame=frame.id;el.dataset.tone=frame.tone||'sand';el.style.setProperty('--frame-color',color(frame.color));
-    Object.assign(el.style,{left:frame.x+'px',top:frame.y+'px',width:frame.w+'px',height:frame.h+'px'});el.innerHTML=snapshotFrameMarkup(frame,model.data);world.append(el);
+  const frameLayer=document.createElement('div');frameLayer.className='canvas-frame-layer';world.append(frameLayer);
+  for(const [index,frame] of model.frames.entries()){
+    const el=document.createElement('section');el.className='frame';el.dataset.frame=frame.id;el.dataset.tone=frame.tone||'sand';el.style.setProperty('--frame-color',color(frame.color));if(/^#[0-9a-f]{6}$/i.test(frame.backgroundColor||''))el.style.setProperty('--frame-background',frame.backgroundColor);
+    Object.assign(el.style,{left:frame.x+'px',top:frame.y+'px',width:frame.w+'px',height:frame.h+'px',zIndex:String(index+1)});el.innerHTML=snapshotFrameMarkup(frame,model.data);frameLayer.append(el);
   }
   for(const instance of model.instances){
     const project=model.byId.get(instance.pid),el=document.createElement('article');el.className='project-card'+(project.kind==='direction'?' direction-card':'');el.dataset.instance=instance.id;el.dataset.pid=project.id;el.tabIndex=0;

@@ -43,7 +43,7 @@ export function createCanvasItem(type, point, options = {}) {
   const defaults = lineTypes.has(type)
     ? {x2:point.x+180,y2:point.y,color:'#78736b',strokeWidth:2}
     : type === 'note'
-      ? {w:240,h:180,text:'',color:'#f7e8ab',fontSize:18}
+      ? {w:240,h:180,text:'',color:'#eee5d5',fontSize:18}
       : {w:260,h:72,text:'',color:'#37352f',fontSize:24};
   const item = {...defaults,...options,id:options.id ?? `canvas-${globalThis.crypto.randomUUID()}`,type,x:point.x,y:point.y};
   validateCanvasItems([item]);

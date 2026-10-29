@@ -1,0 +1,11 @@
+.canvas-frame-layer{position:absolute;inset:0;z-index:0;pointer-events:none}
+.canvas-frame-layer .frame{background:var(--frame-background,color-mix(in srgb,var(--frame-color,#b8afa0) 8%,#fff))!important;border-color:color-mix(in srgb,var(--frame-background,var(--frame-color,#b8afa0)) 75%,#aaa69c)!important}
+.world>.project-card{z-index:2}
+.world>.project-card.dragging{z-index:8}
+.world>.canvas-reference-lines{z-index:1}
+.frame-style-controls,.frame-background-control{display:inline-flex;align-items:center;gap:8px}
+.frame-style-controls{gap:12px}
+.frame-background-control{padding-right:12px;border-right:1px solid #e8e6df;color:#716e65}
+#selectedFrameColor{display:inline-flex;align-items:center}
+.selection-actions button:disabled{opacity:.35;cursor:default}
+@media(max-width:760px){.frame-style-controls{gap:5px}.frame-background-control{padding-right:6px}.selection-actions{max-width:calc(100% - 24px);gap:6px;flex-wrap:wrap;justify-content:center}}

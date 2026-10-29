@@ -1,0 +1,17 @@
+.preset-color-control{overflow:visible!important;vertical-align:middle}
+.preset-color-trigger{display:grid!important;place-items:center;width:100%;height:100%;min-width:20px;min-height:22px;margin:0!important;padding:3px!important;border:0!important;background:transparent;border-radius:4px;cursor:pointer}
+.preset-color-trigger:hover,.preset-color-trigger[aria-expanded=true]{background:#e9e6df}
+.preset-color-dot{display:block;width:11px!important;height:11px!important;border-radius:3px;border:1px solid #0000001a;pointer-events:none}
+.preset-color-trigger:focus-visible{outline:2px solid #95a9b5;outline-offset:2px}
+.preset-color-menu{position:fixed;inset:auto;margin:0;padding:5px;width:168px;max-height:calc(100dvh - 16px);overflow:auto;border:1px solid #dedbd4;border-radius:7px;background:#fff;color:#4e4b44;box-shadow:0 6px 24px #37352f1a;z-index:2000;font:12px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}
+.preset-color-menu::backdrop{background:transparent}
+.preset-color-option{display:flex!important;align-items:center;gap:10px;width:100%;padding:7px 8px!important;border:0;background:transparent;border-radius:4px;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.preset-color-option:hover,.preset-color-option:focus-visible{background:#f2f1ed;outline:none}
+.preset-color-sample{width:17px;height:17px;flex:none;border:1px solid #00000012;border-radius:4px}
+.preset-color-check{margin-left:auto;visibility:hidden;color:#66645c;font-size:12px}
+.preset-color-option[aria-checked=true] .preset-color-check{visibility:visible}
+.canvas-item-tools .preset-color-control{width:28px;flex-basis:28px;height:28px;background:#fff;border:1px solid #e0dcd3;border-radius:4px}
+.frame-head .preset-color-control{opacity:1}
+.frame-head .preset-color-trigger{min-width:0;min-height:0}
+.tag-row .preset-color-control{height:30px;width:28px;flex-basis:28px}
+@media(max-width:760px){.preset-color-option{min-height:38px}.preset-color-menu{width:180px}}
