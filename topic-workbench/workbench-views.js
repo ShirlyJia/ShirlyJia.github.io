@@ -75,7 +75,7 @@ export function createWorkbenchViews(api) {
     const overdue=deliveryCases(state).filter(r=>r.state.kind==='overdue'&&!r.removed).length;
     $('deliveryCount').textContent=overdue;$('deliveryCount').hidden=!overdue;
     $('deliveryReminder').hidden=!overdue||state.display!=='boards';$('deliveryReminder').textContent=overdue+' 项计划已超过承诺交付日 · 查看延期记录 →';
-    for(const [id,selected] of [['homeNav',state.display==='boards'&&!state.activeBoard],['canvasNav',state.display==='canvas'],['resultsNav',state.display==='results'],['deliveryNav',state.display==='delivery']]){
+    for(const [id,selected] of [['canvasNav',['canvas','list'].includes(state.display)],['resultsNav',state.display==='results'],['deliveryNav',state.display==='delivery']]){
       $(id).classList.toggle('active',selected);selected?$(id).setAttribute('aria-current','page'):$(id).removeAttribute('aria-current');
     }
   }
@@ -94,7 +94,8 @@ export function createWorkbenchViews(api) {
     if(state.display==='delivery'){view.innerHTML=deliveryPageMarkup(state,{filter:state.deliveryFilter,query:state.deliveryQuery});return;}
     if(state.display==='results'){renderResults(view);return;}
     const board=boardById(state.activeBoard);
-    $('pageTitle').textContent=board?board.name:'推进总览';
+    if(!board){view.hidden=true;return;}
+    $('pageTitle').textContent=board.name;
     if(board){
       view.innerHTML='<header class="board-page-head"><div><span class="section-kicker">行动看板</span><h2>'+colorControl(board.color,'data-board-color',board.id,'调整看板颜色')+'<button class="board-title" data-board-title="'+esc(board.id)+'" data-board-rename="'+esc(board.id)+'" aria-label="修改看板名称：'+esc(board.name)+'" title="点击修改名称">'+esc(board.name)+'</button></h2></div><div class="board-actions"><button data-board-edit="'+esc(board.id)+'">编辑说明</button><button data-delete-board="'+esc(board.id)+'" aria-label="删除看板：'+esc(board.name)+'">删除</button><button class="primary" data-board-members="'+esc(board.id)+'">＋ 项目</button></div></header><textarea class="board-note inline-text" data-board-note="'+esc(board.id)+'" aria-label="看板说明" placeholder="本看板要解决什么、需要准备什么…" rows="2">'+esc(board.notes)+'</textarea><div class="board-project-grid" id="activeBoardCards"></div>';
       const target=$('activeBoardCards'),rows=boardProjects(board).filter(matches);const hasOpen=boardProjects(board).length>0;
@@ -108,14 +109,6 @@ export function createWorkbenchViews(api) {
       if(!rows.length)target.innerHTML='<div class="view-empty"><strong>'+(!board.projectIds.length?'尚未加入项目':hasOpen?'没有匹配的项目':'本板项目已全部结束')+'</strong><p>'+(!board.projectIds.length?'选择项目加入；同一项目可以出现在多个看板。':hasOpen?'清除筛选后查看全部。':'结项记录可在成果与历史中查看。')+'</p>'+(!board.projectIds.length?'<button data-board-members="'+esc(board.id)+'">＋ 选择项目</button>':'')+'</div>';
       return;
     }
-    view.innerHTML='<div class="overview-heading"><div><h2>行动看板</h2></div><button data-create-board>＋ 新建看板</button></div><div class="quick-board-grid" id="quickBoardGrid"></div><div class="section-row"><h2>进行中的项目</h2></div><div class="overview-projects" id="overviewProjects"></div>';
-    $('quickBoardGrid').innerHTML=[...state.quickBoards].sort((a,b)=>a.rank-b.rank).map(b=>{
-      const rows=boardProjects(b).filter(p=>matches(p));
-      return '<section class="quick-board" data-quick-board="'+esc(b.id)+'" style="--board-color:'+esc(b.color)+'"><header><div class="quick-board-heading"><span class="nav-color" style="background:'+esc(b.color)+'"></span><button class="board-title" data-board-title="'+esc(b.id)+'" data-board-rename="'+esc(b.id)+'" aria-label="修改看板名称：'+esc(b.name)+'" title="点击修改名称"><strong>'+esc(b.name)+'</strong></button><small>'+b.projectIds.length+'</small></div><div class="quick-board-actions">'+colorControl(b.color,'data-board-color',b.id,'调整'+b.name+'颜色')+'<button data-board-open="'+esc(b.id)+'" aria-label="进入看板：'+esc(b.name)+'">进入 ↗</button><button data-delete-board="'+esc(b.id)+'" aria-label="删除看板：'+esc(b.name)+'" title="删除看板，项目保留；可撤销">删除</button></div></header><p>'+esc(b.notes)+'</p><div class="quick-projects">'+rows.slice(0,4).map(p=>'<button data-project-highlight="'+esc(p.id)+'" data-project-open="'+esc(p.id)+'"><span class="priority" data-priority="'+esc(p.priority)+'">'+esc(p.priority==='待定'?'—':p.priority||'—')+'</span><span>'+esc(p.name)+'</span></button>').join('')+'</div>'+(rows.length>4?'<button class="more-link" data-board-open="'+esc(b.id)+'">查看全部 '+rows.length+' 项 →</button>':'')+(!b.projectIds.length?'<button class="board-empty-add" data-board-members="'+esc(b.id)+'">＋ 选择项目加入</button>':'')+'</section>';
-    }).join('') || '<div class="board-start-empty"><p>还没有行动看板</p><button data-create-board>空白新建</button><button data-import-frames>从分组导入</button></div>';
-    const target=$('overviewProjects'),open=sortProjectsByPriority(state.projects.filter(p=>!isClosedProject(p)&&matches(p)));
-    open.forEach(p=>{const card=cardElement(p);card.addEventListener('click',e=>{if(!e.target.closest('select,input,button'))openProject(p.id);});target.append(card);});
-    if(!open.length)target.innerHTML='<p class="muted">没有匹配的项目。</p>';
   }
   function renderResults(view){
     const state=getState(),allEnded=state.projects.filter(isClosedProject),ended=sortProjectsByPriority(allEnded.filter(matches));
@@ -209,7 +202,7 @@ export function createWorkbenchViews(api) {
           getState().quickBoards.push(boardFromFrame(getState(),frameId,{id,rank:nextBoardRank(),color:presetIndex<0?color:palette[presetIndex]}));
         }
       },'已导入 '+selected.length+' 个分组',{rollbackOnSaveFailure:true});
-      if(ok!==false)navigate('boards',ids.length===1?ids[0]:null);return ok;
+      if(ok!==false)navigate('boards',ids[0]);return ok;
     },'导入为看板');
     $('editorSubmit').disabled=!rows;
   }
