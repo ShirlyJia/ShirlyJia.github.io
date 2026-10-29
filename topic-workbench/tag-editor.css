@@ -1,0 +1,18 @@
+.filter-token{position:relative}
+.filter-tag[data-tag]{cursor:grab;user-select:none}
+.filter-tag[data-tag]:active{cursor:grabbing}
+.tag-name-editor{box-sizing:border-box;flex:none;min-width:90px;max-width:330px;margin:0;padding:4px 7px;border:1px solid #b7c5cb;border-radius:4px;outline:none;background:#fff;font:inherit;font-size:11px;line-height:1.5;color:#37352f}
+.tag-name-editor[aria-invalid=true],.tag-row input[aria-invalid=true]{border-color:#bb8175;background:#fff8f5}
+.tag-row[data-tag-row]{position:relative;cursor:grab;touch-action:pan-y}
+.tag-row[data-tag-row] input{cursor:text}
+.tag-dragging{opacity:.4}
+.tag-drop-before:before,.tag-drop-after:after{content:"";position:absolute;pointer-events:none;border-radius:2px;background:#7c96a4}
+.filter-token.tag-drop-before:before{left:-5px;top:2px;bottom:2px;width:2px}
+.filter-token.tag-drop-after:after{right:-5px;top:2px;bottom:2px;width:2px}
+.tag-row.tag-drop-before:before{left:0;right:0;top:0;height:2px}
+.tag-row.tag-drop-after:after{left:0;right:0;bottom:0;height:2px}
+.tag-row[tabindex]:focus-visible{outline:2px solid #a6becd;outline-offset:3px;border-radius:4px}
+
+.filter-tag[data-tag]{touch-action:none}
+.tag-drag-preview{position:fixed;z-index:2001;pointer-events:none;padding:7px 11px;border:1px solid #bdc8ce;border-radius:5px;background:#fff;color:#4e4b44;font:12px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;box-shadow:0 4px 14px #37352f14;white-space:nowrap}
+.tag-list.tag-sorting .color-control{width:0;flex-basis:0;opacity:0;pointer-events:none}
