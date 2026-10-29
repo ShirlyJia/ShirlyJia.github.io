@@ -1,4 +1,5 @@
 /** Small shared editor. Rich HTML is optional; plain text stays available to cards/search. */
+import {safeImageWidth,mountImageResize} from './rich-image-resize.js';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c]));
 const supportedImages = /^image\/(png|jpeg|webp|gif)$/i;
 const imageData = /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/i;
@@ -26,6 +27,7 @@ export function richHTML(html, plain = '') {
       const src = safeRichImage(node.getAttribute('src'));
       if (!src) return;
       const img = document.createElement('img'); img.src = src; img.alt = node.getAttribute('alt') || '图片'; img.draggable = false;
+      const width=safeImageWidth(node.getAttribute('width'));if(width!==null)img.setAttribute('width',width);
       parent.append(img); return;
     }
     if (!allowTags.has(node.tagName)) {
@@ -73,14 +75,14 @@ export function readRichEditor(editor) { const html = richHTML(editor.innerHTML)
 export function setRichEditor(editor, {text = '', html = ''} = {}) {
   if (!editor) return;
   const mounted = mounts.get(editor);
-  if (mounted) { mounted.revision++; mounted.range = null; mounted.image = null; }
+  if (mounted) { mounted.resize?.cancel();mounted.revision++; mounted.range = null; mounted.image = null; }
   editor.innerHTML = richHTML(html, text); updateEmpty(editor); updateImageTools(editor);
 }
 export function richHasContent({text = '', html = ''} = {}) { return Boolean(text.trim() || /<img\b/i.test(html)); }
 function updateEmpty(editor) { editor.dataset.empty = String(!editor.textContent.trim() && !editor.querySelector('img,hr')); }
 const tool = (command, title, label, extra = '') => `<button type="button" data-rich-command="${command}" title="${title}" aria-label="${title}" ${extra}>${label}</button>`;
 export function richEditorMarkup({value = '', html = '', label = '内容', placeholder = '输入内容，可直接粘贴图片', attrs = ''} = {}) {
-  return `<div class="rich-editor"><div class="rich-toolbar" role="toolbar" aria-label="${esc(label)}格式">${tool('bold','加粗','<b>B</b>')}${tool('italic','斜体','<i>I</i>')}${tool('heading','小标题','H')}${tool('insertUnorderedList','项目符号','☷')}${tool('insertOrderedList','编号列表','1.')}${tool('link','插入链接','链接')}${tool('image','插入图片','图片')}${tool('removeFormat','清除格式','T×')}<span class="rich-paste-hint">可粘贴图片</span></div><div class="rich-editor-input rich-content" contenteditable="true" role="textbox" aria-multiline="true" aria-label="${esc(label)}" data-placeholder="${esc(placeholder)}" spellcheck="false" ${attrs}>${richHTML(html, value)}</div><div class="rich-image-tools" hidden><span>已选中图片</span><button type="button" data-rich-command="removeImage">删除图片</button></div><input class="rich-image-picker" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden><div class="rich-link-popover" hidden><label>链接地址<input type="url" placeholder="https://…" aria-label="链接地址"></label><button type="button" data-rich-link-save>应用</button><button type="button" data-rich-link-cancel>取消</button></div><p class="rich-editor-message" role="status" hidden></p></div>`;
+  return `<div class="rich-editor"><div class="rich-toolbar" role="toolbar" aria-label="${esc(label)}格式">${tool('bold','加粗','<b>B</b>')}${tool('italic','斜体','<i>I</i>')}${tool('heading','小标题','H')}${tool('insertUnorderedList','项目符号','☷')}${tool('insertOrderedList','编号列表','1.')}${tool('link','插入链接','链接')}${tool('image','插入图片','图片')}${tool('removeFormat','清除格式','T×')}<span class="rich-paste-hint">可粘贴图片</span></div><div class="rich-editor-input rich-content" contenteditable="true" role="textbox" aria-multiline="true" aria-label="${esc(label)}" data-placeholder="${esc(placeholder)}" spellcheck="false" ${attrs}>${richHTML(html, value)}</div><div class="rich-image-tools" hidden><label>宽度 <input type="number" min="24" max="4096" step="1" data-rich-image-width aria-label="图片宽度"> px</label><button type="button" data-rich-command="resetImageSize">恢复原尺寸</button><button type="button" data-rich-command="removeImage">删除图片</button></div><input class="rich-image-picker" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden><div class="rich-link-popover" hidden><label>链接地址<input type="url" placeholder="https://…" aria-label="链接地址"></label><button type="button" data-rich-link-save>应用</button><button type="button" data-rich-link-cancel>取消</button></div><p class="rich-editor-message" role="status" hidden></p></div>`;
 }
 function editorRange(editor) {
   const selection = window.getSelection();
@@ -97,6 +99,7 @@ function updateImageTools(editor) {
   const controls = editor.closest('.rich-editor')?.querySelector('.rich-image-tools');
   if (controls) controls.hidden = !image || !editor.contains(image);
   editor.querySelectorAll('img').forEach(img => img.classList.toggle('rich-image-selected', img === image));
+  state?.resize?.sync();
 }
 function notify(editor) { editor.dispatchEvent(new Event('input', {bubbles:true})); }
 function edit(editor, operation) { const before=mounts.get(editor)?.inputs;operation();if(mounts.get(editor)?.inputs===before)notify(editor); }
@@ -140,6 +143,7 @@ export function mountRichEditors(root, {onChange, onError} = {}) {
     const listen = (target,event,fn,options={}) => target.addEventListener(event,fn,{...options,signal:controller.signal});
     const message = (text, error = false) => { const node = wrapper.querySelector('.rich-editor-message'); node.textContent = text; node.hidden = !text; node.classList.toggle('error', error); if (error) onError?.(text,editor); };
     state.message = message;
+    state.resize=mountImageResize(editor,{getImage:()=>state.image,notify:()=>notify(editor),message,signal:controller.signal});
     const remember = () => { const range = editorRange(editor); if (range) state.range = range; };
     const addImages = async (files, accompaniment = '') => {
       if (state.pending) { message('图片正在处理中，请稍候。',true); return; }
@@ -157,10 +161,11 @@ export function mountRichEditors(root, {onChange, onError} = {}) {
       } catch(error) { if (editor.isConnected) message(error.message || '图片插入失败，请重试。',true); }
       finally { state.pending=0; delete editor.dataset.richPending; }
     };
-    listen(editor,'input',()=>{state.inputs++;updateEmpty(editor);remember();onChange?.(readRichEditor(editor),editor);});
+    listen(editor,'input',()=>{state.inputs++;updateEmpty(editor);updateImageTools(editor);remember();onChange?.(readRichEditor(editor),editor);});
     listen(editor,'compositionstart',()=>state.composing=true); listen(editor,'compositionend',()=>{state.composing=false;remember();const before=state.inputs;queueMicrotask(()=>{if(editor.isConnected&&state.inputs===before)notify(editor);});});
     listen(editor,'keyup',remember); listen(editor,'mouseup',remember); listen(editor,'focus',remember);
     listen(editor,'click',event=>{state.image=event.target.tagName==='IMG'?event.target:null; updateImageTools(editor);});
+    listen(document,'pointerdown',event=>{if(state.image&&!wrapper.contains(event.target)&&!state.resize.active){state.image=null;updateImageTools(editor);}});
     listen(editor,'keydown',event=>{
       event.stopPropagation();
       if (!state.composing && state.image && ['Backspace','Delete'].includes(event.key)) {
@@ -191,6 +196,7 @@ export function mountRichEditors(root, {onChange, onError} = {}) {
       if(command==='image'){remember();wrapper.querySelector('.rich-image-picker').click();return;}
       if(command==='link'){remember();const popover=wrapper.querySelector('.rich-link-popover');popover.hidden=false;popover.querySelector('input').value='';popover.querySelector('input').focus();return;}
       if(command==='removeImage'){if(state.image){const range=document.createRange();range.selectNode(state.image);selectRange(editor,range);edit(editor,()=>document.execCommand('delete'));state.image=null;updateImageTools(editor);}return;}
+      if(command==='resetImageSize'){state.resize.reset();return;}
       selectRange(editor,state.range);
       edit(editor,()=>{if(command==='heading')document.execCommand('formatBlock',false,'h3');else if(command==='removeFormat'){document.execCommand('removeFormat',false,null);document.execCommand('formatBlock',false,'p');}else document.execCommand(command,false,null);});
       remember();
@@ -211,8 +217,8 @@ export function mountRichEditors(root, {onChange, onError} = {}) {
 }
 export function flushRichEditors(root) {
   const editors = root.matches?.('.rich-editor-input') ? [root] : Array.from(root.querySelectorAll('.rich-editor-input'));
-  const pending=editors.find(editor=>mounts.get(editor)?.pending||mounts.get(editor)?.composing);
-  if(pending){mounts.get(pending)?.message('请等待输入或图片处理完成后再切换。',true);return false;}
+  const pending=editors.find(editor=>mounts.get(editor)?.pending||mounts.get(editor)?.composing||mounts.get(editor)?.resize?.active);
+  if(pending){const state=mounts.get(pending);state?.message(state.resize?.active?'请先松开图片缩放手柄。':'请等待输入或图片处理完成后再切换。',true);return false;}
   return true;
 }
 export function destroyRichEditors(root) {
