@@ -11,12 +11,13 @@
 .board-create-tabs button{flex:1;padding:9px 12px;border-radius:4px;color:#817c72;font-size:13px;}
 .board-create-tabs button[aria-pressed="true"]{background:#fff;color:#37352f;box-shadow:0 1px 3px #37352f12;}
 .board-import-hint{font-size:12px;color:#8b857b;line-height:1.7;margin:0 0 16px;}
-.frame-import-options{max-height:360px;overflow:auto;}
-.frame-import-option{gap:12px;padding:13px 10px;align-items:center;}
+.member-options.frame-import-options{max-height:360px;overflow:auto;}
+.member-option.frame-import-option{gap:12px;padding:13px 10px;align-items:center;}
+.frame-import-option>input[type="checkbox"]{width:14px;height:14px;min-width:14px;flex:0 0 14px;padding:0;margin:0;}
 .frame-import-copy{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1;}
 .frame-import-copy strong{font-size:13px;font-weight:550;}
 .frame-import-copy small{font-size:11px;line-height:1.6;color:#969187;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.frame-import-count{flex:none;font-size:11px;color:#969187;}
+.frame-import-option>.frame-import-count{flex:none;font-size:11px;color:#969187;white-space:nowrap;}
 .nav-symbol {width:15px;text-align:center;}
 .nav-color {display:inline-block;width:7px;height:7px;border-radius:2px;flex:none;}
 .sidebar-item>span:nth-child(2) {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
