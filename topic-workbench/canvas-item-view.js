@@ -49,7 +49,7 @@ export function renderCanvasItem(item,{selected=false}={}){
   }else{
     const note=type==='note',color=safeColor(item.color,note?'#fff3bf':'#37352f');
     Object.assign(element.style,{left:finite(item.x)+'px',top:finite(item.y)+'px',width:Math.max(1,finite(item.w,240))+'px',height:Math.max(1,finite(item.h,160))+'px',fontSize:clamp(finite(item.fontSize,note?18:24),10,64)+'px',color:note?contrastText(color):color});
-    if(note)element.style.backgroundColor=color;
+    if(note)element.style.setProperty('--note-color',color);
     element.title='双击编辑内容，拖动移动';
     const content=document.createElement('div');content.className='canvas-item-text';content.textContent=typeof item.text==='string'?item.text:'';
     content.dataset.placeholder=note?'双击写便签…':'双击输入文字…';element.append(content);
