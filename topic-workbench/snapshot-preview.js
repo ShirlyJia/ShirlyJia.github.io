@@ -125,7 +125,7 @@ function canvasHTML(data, projectById, tagById) {
   const frameSVG = frames.map(frame => {
     const tone = color(frame.color, {sand:'#d8cfbb',blue:'#c4ced4',green:'#cbd0c5'}[frame.tone] || '#d7d5cd');
     const hasBackground=/^#[0-9a-f]{6}$/i.test(text(frame.backgroundColor)),background=hasBackground?color(frame.backgroundColor):tone;
-    return `<g transform="translate(${n(frame.x)} ${n(frame.y)})"><title>${esc(frame.name || '未命名分组')}</title><rect width="${n(frame.w)}" height="${n(frame.h)}" rx="6" fill="${background}" fill-opacity="${hasBackground?1:0.15}" stroke="${tone}" stroke-width="1.5"/><text x="2" y="-11" font-size="13" font-weight="600" fill="#73726e">${esc(wrap(frame.name || '未命名分组',40,1)[0])}</text></g>`;
+    return `<g transform="translate(${n(frame.x)} ${n(frame.y)})"><title>${esc(frame.name || '未命名分组')}</title><rect width="${n(frame.w)}" height="${n(frame.h)}" rx="6" fill="color-mix(in srgb,${background} ${hasBackground?35:2.8}%,#fff)" stroke="${tone}" stroke-width="1.5"/><text x="2" y="-11" font-size="13" font-weight="600" fill="#73726e">${esc(wrap(frame.name || '未命名分组',40,1)[0])}</text></g>`;
   }).join('');
   const cardSVG = instances.map(instance => {
     const project = projectById.get(instance.pid), title = text(project.name) || '未命名项目';

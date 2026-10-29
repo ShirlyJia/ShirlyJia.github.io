@@ -1,5 +1,5 @@
 .canvas-frame-layer{position:absolute;inset:0;z-index:0;pointer-events:none}
-.canvas-frame-layer .frame{background:var(--frame-background,color-mix(in srgb,var(--frame-color,#b8afa0) 8%,#fff))!important;border-color:color-mix(in srgb,var(--frame-background,var(--frame-color,#b8afa0)) 75%,#aaa69c)!important}
+.canvas-frame-layer .frame{background:color-mix(in srgb,var(--frame-background,color-mix(in srgb,var(--frame-color,#b8afa0) 8%,#fff)) 35%,#fff)!important;border-color:color-mix(in srgb,var(--frame-background,var(--frame-color,#b8afa0)) 75%,#aaa69c)!important}
 .world>.project-card{z-index:2}
 .world>.project-card.dragging{z-index:8}
 .world>.canvas-reference-lines{z-index:1}
