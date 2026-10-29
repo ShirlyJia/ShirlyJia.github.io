@@ -1,0 +1,129 @@
+/* More breathing room around controls and documents; canvas coordinates stay intact. */
+.sidebar {padding-left:10px;padding-right:10px;}
+.sidebar-head {gap:10px;margin-bottom:28px;}
+.sidebar-section {margin-bottom:28px;}
+.sidebar-label {padding-bottom:10px;}
+.sidebar-item {min-height:38px;padding:8px 10px;gap:10px;}
+.sidebar-item + .sidebar-item {margin-top:3px;}
+.sidebar-footer {padding-top:16px;}
+.app-header {gap:15px;}
+.database-toolbar {gap:24px;}
+.view-tabs {gap:24px;}
+.filterbar {column-gap:18px;}
+.tag-list {gap:10px;}
+.filter-tag {gap:7px;padding:5px 8px;}
+.filter-controls {gap:12px;}
+.segment button {padding-left:9px;padding-right:9px;}
+
+.workbench-view {padding:32px 40px 72px;}
+.overview-heading,.board-page-head {margin-bottom:28px;gap:24px;}
+.overview-heading p {margin-top:8px;}
+.section-row {margin:36px 0 20px;}
+.quick-board-grid {gap:24px;}
+.quick-board {padding:22px 24px;}
+.quick-board > header {gap:12px;}
+.quick-board-heading {gap:10px;}
+.quick-board-actions {gap:6px;}
+.quick-board > p {margin:14px 0 20px;line-height:1.85;}
+.quick-board > p:empty {display:none;}
+.quick-projects {gap:10px;}
+.quick-projects > button {gap:12px;padding:7px 0;}
+.quick-board > .quick-projects {margin-top:16px;}
+.quick-board > p + .quick-projects {margin-top:0;}
+.board-empty-add {padding-top:16px;}
+.overview-projects,.board-project-grid,.outcome-grid {gap:22px;}
+.workbench-view .project-card,.mobile-list .project-card,.gather-cards .project-card {padding:20px;}
+.workbench-view .card-tags,.mobile-list .card-tags,.gather-cards .card-tags {gap:6px;margin-top:12px;}
+.workbench-view .card-note,.mobile-list .card-note,.gather-cards .card-note {margin-top:14px;line-height:1.7;}
+.workbench-view .card-footer,.mobile-list .card-footer,.gather-cards .card-footer {margin-top:14px;gap:9px;}
+.workbench-view .card-reference,.mobile-list .card-reference,.gather-cards .card-reference {margin-top:12px;}
+.board-note {margin-bottom:30px;}
+.board-project-context {padding:0 20px 18px;}
+.board-project-actions {gap:12px;margin-bottom:6px;}
+.outcome-card {padding:24px;}
+.outcome-card h3 {margin:16px 0 12px;}
+.outcome-card footer {margin-top:24px;padding-top:16px;}
+body.list-view .mobile-list {gap:22px;padding-top:28px;padding-bottom:56px;}
+.gather-cards {gap:16px;}
+
+.detail-top {padding:14px 30px 12px;gap:16px;}
+.detail-body {padding:0 32px 48px;}
+.detail-title-tools {margin-top:12px;gap:14px;}
+.detail-toolbar {gap:8px;}
+.inline-title {margin-top:12px;margin-bottom:18px;}
+.detail-edit-properties {gap:16px 22px;margin-bottom:18px;}
+.detail-edit-properties > label {gap:9px;}
+.detail-tags {gap:8px;margin-bottom:22px;}
+.project-content-section,.project-content-section.comment-pool {margin-top:28px;padding-top:22px;}
+.project-content-section:first-of-type {margin-top:0;padding-top:8px;}
+.project-content-section.custom-section {padding-top:22px;}
+.project-section-head {gap:8px;margin-bottom:12px;}
+.section-tools {gap:4px;}
+.detail-section {margin-top:28px;padding-top:22px;}
+.detail-section h3 {margin-bottom:16px;}
+.detail-section:has(.material-row) {margin-top:28px;}
+.detail-body .inline-field {margin:18px 0;}
+.detail-body .inline-title {margin:12px -8px 18px;}
+.relation-row {padding:16px;margin:12px 0;}
+.relation-row .relation-context {margin-top:12px;}
+.relation-row .inline-field {margin-bottom:0;}
+.material-row {gap:10px;padding:12px 14px;margin:10px 0;}
+.inline-plan {padding:12px 16px 16px;margin:16px 0;}
+.inline-plan .inline-field {margin:10px 0;}
+.plan-options {gap:18px;margin:14px 0;}
+.comment-compose-actions {padding-top:8px;padding-bottom:10px;gap:14px;}
+.comment-entry {padding:20px 0 14px;}
+.comment-entry .inline-field {margin:8px 0 0;}
+.detail-section-additions {gap:16px;margin:26px 0;}
+.detail-actions {gap:12px;margin-top:32px;}
+
+@media (min-width:761px) and (max-width:1100px) {
+  .app-header {gap:10px;}
+  .database-toolbar {gap:14px;}
+  .view-tabs {gap:18px;}
+  .filterbar {column-gap:12px;}
+  .tag-list {gap:7px;}
+  .filter-controls {gap:8px;}
+  .workbench-view {padding:28px 28px 60px;}
+  .quick-board {padding:20px;}
+  .quick-board-grid {gap:20px;}
+}
+
+@media (max-width:760px) {
+  .sidebar-item {min-height:42px;}
+  .sidebar-section {margin-bottom:24px;}
+  .app-header {gap:6px;}
+  .database-toolbar {gap:8px;}
+  .view-tabs {gap:12px;}
+  .view-tabs button {padding-left:3px;padding-right:3px;}
+  .filterbar {column-gap:8px;row-gap:5px;}
+  .tag-list {gap:7px;}
+  .filter-controls {gap:8px;}
+  .filter-tag {padding:5px 7px;}
+  .workbench-view {padding:22px 18px 44px;}
+  .overview-heading,.board-page-head {gap:12px;margin-bottom:22px;}
+  .section-row {margin:30px 0 16px;}
+  .quick-board-grid,.overview-projects,.board-project-grid,.outcome-grid {gap:18px;}
+  .quick-board,.outcome-card {padding:18px;}
+  .quick-board > p {margin:12px 0 16px;}
+  .quick-projects {gap:8px;}
+  .quick-projects > button {padding:6px 0;}
+  .workbench-view .project-card,.mobile-list .project-card,.gather-cards .project-card {padding:18px;}
+  .mobile-list,body.list-view .mobile-list {gap:16px;padding:20px 18px 36px;}
+  .board-project-context {padding:0 18px 16px;}
+  .detail-top {padding:8px 18px 6px;gap:10px;}
+  .detail-body {padding:0 22px 40px;}
+  .detail-toolbar {gap:5px;}
+  .detail-edit-properties {gap:12px 16px;}
+  .project-content-section,.project-content-section.comment-pool,.detail-section {margin-top:24px;padding-top:18px;}
+  .project-content-section:first-of-type {margin-top:0;padding-top:6px;}
+  .project-content-section.custom-section {padding-top:18px;}
+  .project-section-head {gap:3px;margin-bottom:10px;}
+  .section-tools {gap:2px;}
+  .detail-body .inline-field {margin:14px 0;}
+  .inline-plan {padding:10px 12px 14px;margin:14px 0;}
+  .inline-plan .inline-field {margin:8px 0;}
+  .comment-entry .inline-field {margin:8px 0 0;}
+  .relation-row {padding:14px;}
+  .material-row {padding:10px 12px;}
+}

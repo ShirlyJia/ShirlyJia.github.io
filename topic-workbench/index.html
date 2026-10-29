@@ -13,6 +13,9 @@
   <link rel="stylesheet" href="delivery.css">
   <link rel="stylesheet" href="workbench.css">
   <link rel="stylesheet" href="canvas-items.css">
+  <link rel="stylesheet" href="canvas-references.css">
+  <link rel="stylesheet" href="workspace-polish.css">
+  <link rel="stylesheet" href="detail-panel.css">
 </head>
 <body>
   <a class="sr-only skip-link" href="#viewport">跳到画板</a>
@@ -25,19 +28,20 @@
       <button class="sidebar-item" id="canvasNav"><span class="nav-symbol">▱</span><span>自由画板</span></button>
       <button class="sidebar-item" id="resultsNav"><span class="nav-symbol">◈</span><span>成果与历史</span><small id="resultsCount">0</small></button>
       <button class="sidebar-item" id="deliveryNav"><span class="nav-symbol">◷</span><span>延期记录</span><small id="deliveryCount" class="delivery-nav-count" hidden>0</small></button>
+      <a class="sidebar-item" href="snapshots.html"><span class="nav-symbol">▣</span><span>历史快照</span></a>
       <a class="sidebar-item" href="meetings.html"><span class="nav-symbol">▤</span><span>会议记录</span><small>↗</small></a>
     </nav>
     <nav class="sidebar-section" aria-label="行动看板"><div class="sidebar-label label-actions"><span>行动看板</span><button data-create-board title="新建行动看板">＋</button></div><div id="quickBoardNav"></div></nav>
     <div id="frameNav" hidden></div>
-    <div class="sidebar-footer"><span class="prototype">本地工作台</span><p>本机保存</p><button id="exportData" class="plain-button reset-button">导出备份 ↗</button></div>
+    <div class="sidebar-footer"><button id="openSettings" class="settings-button">⚙ 设置</button></div>
   </aside>
   <div class="app-shell">
   <header class="app-header">
     <button id="toggleSidebar" class="icon-button" aria-label="切换侧栏" aria-expanded="true" title="切换侧栏"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4" width="14" height="12" rx="2"/><path d="M8 4v12"/></svg></button>
-    <div class="breadcrumb"><span>工作台</span><span aria-hidden="true">/</span><span>议题画板</span></div>
-    <div class="header-spacer"></div><button id="saveStatus" class="save-status" title="保存状态">正在载入…</button><button class="plain-button" id="undo" disabled>撤销</button><button class="plain-button" id="snapshots">快照</button><button class="plain-button" id="reviewIssues">待核对</button><button class="plain-button" id="help" title="操作说明与快捷键">帮助</button>
+
+    <div class="header-spacer"></div><button id="saveStatus" class="save-status" title="保存状态">正在载入…</button><button class="plain-button" id="undo" disabled>撤销</button><button class="plain-button" id="snapshots">保存快照</button><button class="plain-button" id="reviewIssues">待核对</button><button class="plain-button" id="help" title="操作说明与快捷键">帮助</button>
   </header>
-  <section class="page-heading" aria-labelledby="pageTitle"><h1 id="pageTitle">议题画板</h1><p>模型 · 工程化 · 落地</p><p id="shareNotice" hidden>分享版 · 修改仅保存在当前浏览器，不会同步给其他人。</p><p id="loadCaption" role="status">正在载入项目…</p></section>
+  <section class="page-heading" aria-labelledby="pageTitle"><h1 id="pageTitle">议题画板</h1><p id="loadCaption" role="status">正在载入项目…</p></section>
   <button id="deliveryReminder" class="delivery-reminder" hidden></button>
   <section class="database-toolbar" aria-label="视图与搜索">
     <div class="view-tabs" role="group" aria-label="项目展示方式"><button id="boardsView" aria-pressed="false">推进看板</button><button id="canvasView" class="active" aria-pressed="true"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4" width="5" height="12" rx="1"/><rect x="11" y="4" width="6" height="8" rx="1"/></svg>画板</button><button id="listView" aria-pressed="false"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 5h10M7 10h10M7 15h10M3 5h.5M3 10h.5M3 15h.5"/></svg>项目列表</button></div>
@@ -68,21 +72,22 @@
     <div id="canvasItemTools" class="canvas-item-tools" role="toolbar" aria-label="画板元素样式" hidden></div>
     <div id="canvasToolHint" class="canvas-tool-hint" role="status" hidden></div>
     <div class="zoom-controls"><button id="zoomOut" aria-label="缩小">−</button><span id="zoomValue" class="zoom-value">100%</span><button id="zoomIn" aria-label="放大">+</button><button id="fit" class="fit">全览</button></div>
-    <div id="selectionActions" class="selection-actions" hidden><span id="selectionCount" class="selected-count"></span><button id="groupSelection">成组</button><button id="referenceSelection">添加引用</button><button id="clearSelection">取消</button></div>
+    <div id="selectionActions" class="selection-actions" hidden><span id="selectionCount" class="selected-count"></span><button id="groupSelection">成组</button><button id="duplicateSelection">复制</button><button id="referenceSelection">放到分组</button><button id="clearSelection">取消</button></div>
     <div id="searchEmpty" class="empty" hidden><strong>没有匹配的项目</strong><p>试试其他标题，或清除标签筛选。</p></div>
     <div id="mobileList" class="mobile-list"></div>
     <div id="workbenchView" class="workbench-view" hidden></div>
     <div id="gatherMask" class="gather-mask" hidden></div>
     <section id="gatherPanel" class="gather-panel" hidden aria-label="临时聚集结果"><div class="gather-head"><div><h2 id="gatherTitle">临时聚集</h2><p id="gatherSummary"></p></div><button id="scatter">散回原位 ↗</button></div><div id="gatherCards" class="gather-cards"></div></section>
-    <aside id="detail" class="detail-panel" hidden aria-label="项目详情"><div class="detail-top"><span>项目详情 · 直接编辑</span><button id="jumpComments" class="detail-comment-shortcut" title="跳到评论池">评论池 ↓</button><button id="detailSaveStatus" class="detail-save-status" title="保存状态，点击重试">已保存</button><button id="closeDetail" aria-label="关闭项目详情">×</button></div><div id="detailBody" class="detail-body"></div></aside>
+    <aside id="detail" class="detail-panel" hidden aria-label="项目详情"><div id="detailResize" class="detail-resize-handle" tabindex="0" role="separator" aria-orientation="vertical" aria-label="调整项目详情宽度" title="拖动调整宽度，双击恢复默认"></div><div class="detail-top"><span>项目详情</span><button id="jumpComments" class="detail-comment-shortcut" title="跳到评论池">评论池 ↓</button><button id="detailSaveStatus" class="detail-save-status" title="保存状态，点击重试">已保存</button><button id="closeDetail" aria-label="关闭项目详情">×</button></div><div id="detailBody" class="detail-body"></div></aside>
     <div id="toast" class="toast" role="status" hidden></div>
   </main>
   </div>
-  <dialog id="nameDialog"><form id="nameForm"><h2 id="nameTitle">命名讨论框</h2><p>这是临时讨论范围，可调整、取消；不改变项目身份。</p><label class="sr-only" for="frameName">讨论框名称</label><input id="frameName" maxlength="30" placeholder="例如：降显存、机理融合、1230" required><div class="dialog-actions"><button type="button" id="cancelName">取消</button><button class="primary" type="submit">确定</button></div></form></dialog>
-  <dialog id="helpDialog"><h2>项目只维护一份</h2><p>画框是展示分组；主小项目是长期关联。同一项目可引用到多个位置、挂到多个主项目下，结果始终共享。</p><div class="shortcut-list"><span>选择 / 框选</span><kbd>V · Shift 多选</kbd><span>移动画布</span><kbd>H · 空格 + 拖动</kbd><span>绘制讨论框</span><kbd>F</kbd><span>调整分组大小</span><kbd>拖动四边 / 四角</kbd><span>整体移动分组</span><kbd>拖动分组标题</kbd><span>文字 / 便签</span><kbd>T / N · 双击编辑</kbd><span>线条 / 箭头</span><kbd>L / A · Shift 约束方向</kbd><span>复制 / 删除选中元素</span><kbd>⌘ / Ctrl + D · Delete</kbd><span>选中卡片成组</span><kbd>G</kbd><span>缩放</span><kbd>⌘ / Ctrl + 滚轮</kbd><span>返回</span><kbd>Esc</kbd></div><p>初始分组、标签与新增关联是整理草案，可自由调整。标签支持高亮、聚集；行动看板可随时调整成员。项目详情中可调整内容、标签、主小关联、计划和材料。</p><p>当前内容存于此浏览器，可导出备份。跨设备同步、成员权限与团队留言尚未接入。</p><div class="dialog-actions"><button id="closeHelp" class="primary">知道了</button></div></dialog>
+  <dialog id="nameDialog"><form id="nameForm"><h2 id="nameTitle">命名讨论框</h2><label class="sr-only" for="frameName">讨论框名称</label><input id="frameName" maxlength="30" placeholder="例如：降显存、机理融合、1230" required><div class="dialog-actions"><button type="button" id="cancelName">取消</button><button class="primary" type="submit">确定</button></div></form></dialog>
+  <dialog id="helpDialog"><h2>项目只维护一份</h2><p>画框是展示分组；主小项目是长期关联。同一项目可引用到多个位置、挂到多个主项目下，结果始终共享。</p><div class="shortcut-list"><span>选择 / 框选</span><kbd>V · Shift 多选</kbd><span>移动画布</span><kbd>H · 空格 + 拖动</kbd><span>绘制讨论框</span><kbd>F</kbd><span>调整分组大小</span><kbd>拖动四边 / 四角</kbd><span>整体移动分组</span><kbd>拖动分组标题</kbd><span>文字 / 便签</span><kbd>T / N · 双击编辑</kbd><span>线条 / 箭头</span><kbd>L / A · Shift 约束方向</kbd><span>复制 / 删除选中元素</span><kbd>⌘ / Ctrl + D · Delete</kbd><span>选中卡片成组</span><kbd>G</kbd><span>缩放</span><kbd>⌘ / Ctrl + 滚轮</kbd><span>返回</span><kbd>Esc</kbd></div><p>当前内容存于此浏览器，可导出备份。跨设备同步、成员权限与团队留言尚未接入。</p><div class="dialog-actions"><button id="closeHelp" class="primary">知道了</button></div></dialog>
   <dialog id="editorDialog" class="editor-dialog"><form id="editorForm"><header class="editor-head"><h2 id="editorTitle"></h2><button type="button" data-close-editor aria-label="关闭编辑">×</button></header><div id="editorFields"></div><p id="editorError" class="form-error" role="alert" hidden></p><footer class="dialog-actions"><button type="button" data-close-editor>取消</button><button id="editorSubmit" class="primary" type="submit">保存</button></footer></form></dialog>
-  <dialog id="tagDialog" class="editor-dialog"><header class="editor-head"><h2>管理分类标签</h2><button id="closeTags" aria-label="关闭标签管理">×</button></header><p class="muted">标签表示问题大类，与分组名称独立。可自由新增、改名、换色及排序。</p><form id="newTagForm" class="inline-form"><label class="sr-only" for="newTagName">新标签名称</label><input id="newTagName" placeholder="新标签名称" maxlength="40" required><label class="sr-only" for="newTagColor">标签颜色</label><input id="newTagColor" type="color" value="#8a8982"><button class="primary" type="submit">新增</button></form><div id="tagRows"></div><p class="muted">删除后可用顶部「撤销」恢复。</p></dialog>
+  <dialog id="tagDialog" class="editor-dialog"><header class="editor-head"><h2>管理分类标签</h2><button id="closeTags" aria-label="关闭标签管理">×</button></header><form id="newTagForm" class="inline-form"><label class="sr-only" for="newTagName">新标签名称</label><input id="newTagName" placeholder="新标签名称" maxlength="40" required><label class="sr-only" for="newTagColor">标签颜色</label><input id="newTagColor" type="color" value="#8a8982"><button class="primary" type="submit">新增</button></form><div id="tagRows"></div><p class="muted">删除后可用顶部「撤销」恢复。</p></dialog>
   <dialog id="previewDialog" class="preview-dialog"><header class="editor-head"><h2 id="previewTitle">资料</h2><div><a id="previewOriginal" target="_blank" rel="noopener noreferrer">打开原文 ↗</a><button id="closePreview" aria-label="关闭资料预览">×</button></div></header><p class="muted">如受登录或网站限制未能显示，请打开原文查看、编辑。</p><iframe id="previewFrame" title="资料预览" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" referrerpolicy="no-referrer"></iframe></dialog>
+  <dialog id="settingsDialog" class="workspace-settings"><header><h2>数据与备份</h2><button id="closeSettings" aria-label="关闭设置">×</button></header><p>修改与快照保存在当前浏览器，不会同步给其他设备或成员。</p><p>备份包含项目、画板与图片；会议资料在会议页单独备份。</p><div class="settings-links"><button id="exportData" class="primary">导出备份</button><a href="snapshots.html">查看历史快照 →</a></div></dialog>
   <script type="module" src="app.js"></script>
 </body>
 </html>

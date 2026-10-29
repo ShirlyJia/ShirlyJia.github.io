@@ -1,0 +1,9 @@
+.canvas-reference-lines{position:absolute;left:0;top:0;width:1px;height:1px;overflow:visible;pointer-events:none;color:#aaa79f}
+.canvas-reference-line{fill:none;stroke:currentColor;stroke-width:1;stroke-opacity:.48;stroke-linecap:round;pointer-events:none;transition:stroke-opacity .15s,stroke .15s}
+.canvas-reference-line.is-active{stroke:#8a9faa;stroke-width:1.4;stroke-opacity:.85}
+.canvas-reference-line.is-dimmed{stroke-opacity:.12}
+.world .card-copy{position:absolute;right:calc(var(--canvas-copy-size,22px) + var(--canvas-copy-offset,2px));top:var(--canvas-copy-offset,2px);z-index:2;display:grid;place-items:center;width:var(--canvas-copy-size,22px);height:var(--canvas-copy-size,22px);padding:0;border-radius:4px;color:#87847c;background:#fff;opacity:0;pointer-events:none}
+.world .project-card:hover .card-copy,.world .project-card:focus-within .card-copy{opacity:1;pointer-events:auto}
+.world .card-copy:hover{color:#4e4b44;background:#f2f1ed}
+.world .card-copy svg{width:65%;height:65%}
+@media(prefers-reduced-motion:reduce){.canvas-reference-line{transition:none}}

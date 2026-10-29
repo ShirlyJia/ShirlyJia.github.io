@@ -249,3 +249,21 @@ export function renderSnapshotPreview(snap) {
   const frameNotes = list(data.frames).filter(frame => present(frame.rationale));
   return `<div class="snapshot-preview"><header class="snapshot-preview-head"><strong>${esc(snap.name || '未命名快照')}</strong><p class="muted">只读${timestamp ? ' · '+esc(timestamp) : ''} · ${projects.length} 个项目。展示保存时的内容。</p></header><section class="snapshot-section"><h3>当时的画板布局</h3>${canvasHTML(data,projectById,tagById)}${annotationTextHTML(data)}${frameNotes.length ? `<details class="snapshot-frame-notes"><summary>分组说明</summary>${frameNotes.map(frame => paragraph(frame.name || '未命名分组',frame.rationale)).join('')}</details>` : ''}</section><section class="snapshot-section"><h3>当时的行动看板</h3>${boardsHTML(data,projectById,tagById)}</section>${deliveryHistoryHTML(data)}<section class="snapshot-section"><h3>项目清单</h3><p class="snapshot-caption muted">展开查看当时的问题陈述、评论、栏目、计划与资料。</p>${projectsHTML(data,projects,projectById,tagById)}</section></div>`;
 }
+
+/** Full historical project content for the standalone canvas drawer. */
+export function renderSnapshotProjectDetails(snap,projectId){
+  if(!snap?.data)return '';
+  const data=snap.data,projects=list(data.projects),projectById=new Map(projects.map(p=>[p.id,p]));
+  const project=projectById.get(projectId);if(!project)return '';
+  const tags=new Map(list(data.tags).map(t=>[t.id,t]));
+  return '<div class="snapshot-preview snapshot-project-detail">'+projectsHTML(data,[project],projectById,tags)+'</div>';
+}
+
+export function renderSnapshotRecords(snap){
+  if(!snap?.data)return '';
+  const data=snap.data,projects=list(data.projects),byId=new Map(projects.map(p=>[p.id,p])),tags=new Map(list(data.tags).map(t=>[t.id,t]));
+  const notes=list(data.frames).filter(f=>present(f.rationale));
+  return '<div class="snapshot-preview"><section class="snapshot-section"><h3>行动看板</h3>'+boardsHTML(data,byId,tags)+'</section>'+deliveryHistoryHTML(data)+
+    '<section class="snapshot-section"><h3>项目记录</h3>'+projectsHTML(data,projects,byId,tags)+'</section>'+annotationTextHTML(data)+
+    (notes.length?'<section class="snapshot-section"><h3>分组说明</h3>'+notes.map(f=>paragraph(f.name||'未命名分组',f.rationale)).join('')+'</section>':'')+'</div>';
+}

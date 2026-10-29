@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>历史快照 · 基模-落地牵引项目管理</title>
+  <link rel="stylesheet" href="style.css"><link rel="stylesheet" href="editor.css"><link rel="stylesheet" href="rich-text.css"><link rel="stylesheet" href="delivery.css"><link rel="stylesheet" href="workbench.css"><link rel="stylesheet" href="canvas-items.css"><link rel="stylesheet" href="canvas-references.css"><link rel="stylesheet" href="detail-panel.css"><link rel="stylesheet" href="snapshot-history.css">
+</head>
+<body class="snapshot-history-page">
+  <aside class="history-sidebar" aria-label="历史快照">
+    <a class="history-back" href="./">← 返回工作台</a>
+    <h1>历史快照</h1>
+    <label class="sr-only" for="snapshotSearch">搜索快照</label><input id="snapshotSearch" type="search" placeholder="搜索快照…" autocomplete="off">
+    <nav id="snapshotList" aria-label="已保存快照"></nav>
+    <p id="snapshotListEmpty" class="history-list-empty" hidden>暂无快照</p>
+  </aside>
+  <main class="history-main">
+    <header class="history-header"><div><h2 id="snapshotTitle">历史快照</h2><p id="snapshotDate"></p></div><span class="history-readonly">只读</span><div class="history-tabs" role="tablist" aria-label="快照内容"><button id="showCanvas" disabled role="tab" aria-selected="true">画板</button><button id="showRecords" disabled role="tab" aria-selected="false">项目记录</button></div><div class="history-actions"><button id="exportSnapshot" disabled>导出</button><button id="deleteSnapshot" disabled>删除</button></div></header>
+    <p id="historyStatus" class="history-status" role="status" hidden></p>
+    <section id="historyWorkspace" class="history-workspace" aria-label="快照内容">
+      <div id="historyViewport" class="viewport" tabindex="0" aria-label="历史画板，拖动空白处平移，按住 Command 或 Ctrl 滚轮缩放"><div id="historyWorld" class="world"></div></div>
+      <section id="historyRecords" class="history-records" hidden></section>
+      <div id="historyEmpty" class="history-empty" hidden><h2 id="historyEmptyTitle">还没有保存的快照</h2><p id="historyEmptyText">在工作台点击「保存快照」，即可留存当时的画板。</p><a href="./">返回工作台</a></div>
+      <div id="historyZoom" class="zoom-controls"><button id="historyZoomOut" aria-label="缩小">−</button><span id="historyZoomValue" class="zoom-value">100%</span><button id="historyZoomIn" aria-label="放大">+</button><button id="historySavedView" title="恢复保存时的画板视角">原视角</button><button id="historyFit" class="fit">全览</button></div>
+      <aside id="historyDetail" class="history-detail" aria-label="历史项目详情" hidden><div id="historyDetailResize" class="detail-resize-handle" role="separator" aria-label="调整历史详情宽度" aria-orientation="vertical" tabindex="0"></div><header><span>项目详情 · 只读</span><button id="historyCloseDetail" aria-label="关闭项目详情">×</button></header><div id="historyDetailBody"></div></aside>
+    </section>
+  </main>
+  <dialog id="deleteSnapshotDialog" class="history-delete-dialog"><form id="deleteSnapshotForm"><h2 id="deleteSnapshotTitle">删除快照？</h2><p>仅删除这份历史快照，当前画板不变。此操作无法撤销，可先导出留存。</p><p id="deleteSnapshotError" class="form-error" role="alert" hidden></p><div class="dialog-actions"><button id="cancelDeleteSnapshot" type="button">取消</button><button class="history-delete-confirm" type="submit">删除快照</button></div></form></dialog>
+  <script type="module" src="snapshot-history.js"></script>
+</body>
+</html>

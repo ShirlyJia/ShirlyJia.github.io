@@ -1,0 +1,19 @@
+.detail-panel,.project-detail-open .detail-panel{width:var(--detail-width,560px);overflow:visible}
+.detail-resize-handle{position:absolute;z-index:5;left:-6px;top:0;bottom:0;width:12px;cursor:ew-resize;touch-action:none;outline:none}
+.detail-resize-handle:after{content:"";position:absolute;top:50%;left:5px;height:54px;width:3px;border-radius:3px;background:#c6c3bd;opacity:0;transition:opacity .12s}
+.detail-resize-handle:hover:after,.detail-resize-handle:focus-visible:after,.detail-resizing .detail-resize-handle:after{opacity:1}
+.detail-resize-handle:focus-visible{outline:2px solid #b7c7cd;outline-offset:-4px}
+.detail-resizing,.detail-resizing *{cursor:ew-resize!important;user-select:none!important}
+.workspace-settings{width:440px;max-width:calc(100vw - 32px);padding:28px;border:1px solid #e5e3df;border-radius:8px}
+.workspace-settings header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+.workspace-settings h2{font-size:18px;margin:0}
+.workspace-settings header button{font-size:24px}
+.workspace-settings p{font-size:13px;line-height:1.8;color:#77736b}
+.workspace-settings .settings-links{display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-top:24px}
+.sidebar-footer .settings-button{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;font-size:12px;color:#77736b;border-radius:4px}
+.sidebar-footer .settings-button:hover{background:#efeeeb}
+.page-heading #loadCaption:empty{display:none}
+.app-shell>.page-heading{min-height:84px;padding-top:22px;padding-bottom:16px}
+.detail-top>span{white-space:nowrap}
+@media(min-width:761px){.project-detail-open .workbench-view,.project-detail-open.list-view .mobile-list{right:var(--detail-width,560px)}.project-detail-open .gather-panel{left:calc((100% - var(--detail-width,560px))/2);max-width:calc(100% - var(--detail-width,560px) - 28px)}}
+@media(max-width:760px){.detail-panel,.project-detail-open .detail-panel{width:100%}.detail-resize-handle{display:none}.app-shell>.page-heading{min-height:60px;padding-top:10px;padding-bottom:10px}.detail-top{gap:8px}}
