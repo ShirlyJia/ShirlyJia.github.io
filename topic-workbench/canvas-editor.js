@@ -123,7 +123,7 @@ export function createCanvasEditor({world,viewport,getState,mutate,save,toWorld,
   world.addEventListener('click',e=>{if(e.target.closest('[data-canvas-item]')){e.stopPropagation();if(suppressClick)return;const item=e.target.closest('[data-canvas-item]');if(!e.target.closest('textarea,input,button'))select(item.dataset.canvasItem);}},true);
   world.addEventListener('dblclick',e=>{const target=e.target.closest('[data-canvas-item]');if(!target||e.target.closest('textarea,button'))return;e.preventDefault();e.stopImmediatePropagation();edit(target.dataset.canvasItem);},true);
   document.addEventListener('keydown',e=>{
-    if(getState().display!=='canvas'||getState().mode==='gather'||e.target.closest('input,textarea,select,[contenteditable="true"],[data-project-flow]')||document.querySelector('dialog[open]'))return;
+    if(getState().display!=='canvas'||getState().mode==='gather'||e.target.closest('input,textarea,select,[contenteditable="true"],[data-project-flow],[data-resize-frame]')||document.querySelector('dialog[open]'))return;
     if(drag&&e.key!=='Escape'){stop(e);return;}
     if(e.key==='Escape'&&(drag||selected||kinds.has(getState().tool))){if(drag)finishDrag(null,true);clear();setTool('select');stop(e);return;}
     if(!e.metaKey&&!e.ctrlKey&&!e.altKey&&['t','n','l','a'].includes(e.key.toLowerCase())){setTool({t:'text',n:'note',l:'line',a:'arrow'}[e.key.toLowerCase()]);stop(e);return;}
