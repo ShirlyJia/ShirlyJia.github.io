@@ -132,6 +132,7 @@ export function createPersistence({ key = 'topic-workbench-v2', onStatus } = {})
     if (data.projectContentVersion !== undefined && data.projectContentVersion !== 1) fail('projectContentVersion 必须为 1');
     if (data.domainTagVersion !== undefined && data.domainTagVersion !== 1) fail('domainTagVersion 必须为 1');
     if (data.workbenchVersion !== undefined && data.workbenchVersion !== 1) fail('workbenchVersion 必须为 1');
+    if (data.frameBoardSyncVersion !== undefined && data.frameBoardSyncVersion !== 1) fail('frameBoardSyncVersion 必须为 1');
     if (data.sourceDetachedVersion !== undefined && data.sourceDetachedVersion !== 1) fail('sourceDetachedVersion 必须为 1');
     sourceShape(data.source, 'source');
     validateDelivery(data);
@@ -257,6 +258,18 @@ export function createPersistence({ key = 'topic-workbench-v2', onStatus } = {})
         color(board.color, `${path}.color`);
         finite(board.rank, `${path}.rank`);
         if (typeof board.notes !== 'string') fail(`${path}.notes 必须是字符串`);
+        if(board.sourceFrameId!==undefined&&board.sourceFrameId!==null)text(board.sourceFrameId,`${path}.sourceFrameId`);
+        if(board.frameSync!==undefined){
+          const baseline=board.frameSync,syncPath=`${path}.frameSync`;
+          record(baseline,syncPath);text(baseline.name,`${syncPath}.name`);color(baseline.color,`${syncPath}.color`);
+          array(baseline.projectIds,`${syncPath}.projectIds`);
+          references(baseline.projectIds,new Set(baseline.projectIds),`${syncPath}.projectIds`);
+          references(baseline.emphasisIds,new Set(baseline.projectIds),`${syncPath}.emphasisIds`);
+          record(baseline.contexts,`${syncPath}.contexts`);
+          for(const [pid,context] of Object.entries(baseline.contexts)){
+            if(!baseline.projectIds.includes(pid)||typeof context!=='string')fail(`${syncPath}.contexts 无效`);
+          }
+        }
         references(board.projectIds, projectIds, `${path}.projectIds`);
         references(board.emphasisIds, new Set(board.projectIds), `${path}.emphasisIds`);
         if (board.contexts !== undefined) {

@@ -5,7 +5,7 @@ import {DETAIL_SECTION_TITLES, detailLayout, detailSectionTitle, visibleDetailSe
 import {applyDomainTags} from './category-tags.js';
 import {createSnapshotStore} from './snapshot-store.js';
 import {findScheduleConflicts,findContentOverlaps} from './workbench-review.js';
-import { enrichWorkbench, isClosedProject, sortProjectsByPriority, collectDirectionResults } from './workbench-model.js';
+import { enrichWorkbench, isClosedProject, sortProjectsByPriority, collectDirectionResults, syncFrameBoards } from './workbench-model.js';
 import { createWorkbenchViews, colorControl } from './workbench-views.js';
 import { createPersistence } from './persistence.js';
 import { detachSourceMetadata } from './source-detach.js';
@@ -45,16 +45,16 @@ $('saveStatus').title='修改保存在当前浏览器；数据与备份见设置
 const storage = createPersistence({key:storageKey('topic-workbench-v2'),onStatus: result => {
   if (result?.ok === false || result?.success === false) setSaveStatus(false);
 }});
-function documentData() { return {schemaVersion:2, workbenchVersion:state.workbenchVersion, domainTagVersion:state.domainTagVersion, projectContentVersion:state.projectContentVersion, quickBoards:state.quickBoards, deliveryEvents:state.deliveryEvents||[], sourceDetachedVersion:state.sourceDetachedVersion, projects:state.projects, tags:state.tagDefinitions, relations:state.relations, frames:state.frames, instances:state.instances, canvasItems:state.canvasItems||[], view:state.view}; }
+function documentData() { return {schemaVersion:2, workbenchVersion:state.workbenchVersion, frameBoardSyncVersion:state.frameBoardSyncVersion, domainTagVersion:state.domainTagVersion, projectContentVersion:state.projectContentVersion, quickBoards:state.quickBoards, deliveryEvents:state.deliveryEvents||[], sourceDetachedVersion:state.sourceDetachedVersion, projects:state.projects, tags:state.tagDefinitions, relations:state.relations, frames:state.frames, instances:state.instances, canvasItems:state.canvasItems||[], view:state.view}; }
 function setSaveStatus(ok) { dirty = !ok; const saved='已本机保存';$('saveStatus').textContent = ok ? saved : '未保存 · 点击重试'; $('saveStatus').classList.toggle('unsaved',!ok);$('detailSaveStatus').textContent=ok?saved:'未保存 · 重试';$('detailSaveStatus').classList.toggle('unsaved',!ok); }
-function save(history = true) { try { storage.commit(documentData(),{recordHistory:history||dirty}); setSaveStatus(true); $('undo').disabled = !storage.canUndo(); return true; } catch (e) {setSaveStatus(false); toast(e.name==='QuotaExceededError'?'浏览器存储空间不足，修改尚未保存。请先导出备份，再减少图片或清理旧快照后重试。':'保存失败：'+e.message+'。请重试或导出备份。'); return false;} }
+function save(history = true) { try { const synced=syncFrameBoards(state);storage.commit(documentData(),{recordHistory:history||dirty});if(synced)workbench?.renderNav();setSaveStatus(true); $('undo').disabled = !storage.canUndo(); return true; } catch (e) {setSaveStatus(false); toast(e.name==='QuotaExceededError'?'浏览器存储空间不足，修改尚未保存。请先导出备份，再减少图片或清理旧快照后重试。':'保存失败：'+e.message+'。请重试或导出备份。'); return false;} }
 function restoreData(data) {const {tags,...rest}=data;state = {...state,...rest,canvasItems:data.canvasItems||[],tagDefinitions:tags}; indexData();}
 function indexData() {projects=state.projects; byId=Object.fromEntries(projects.map(p=>[p.id,p]));tagById=Object.fromEntries(state.tagDefinitions.map(t=>[t.id,t]));}
 function mutate(fn, message='', options={}) {
   if(!flushRichEditors($('detailBody')))return false;
   if(canvasEditor?.flush()===false)return false;
   const before=clone(documentData());
-  try {reconcileDelivery(state);fn();recordDeliveryLifecycle(state,before);reconcileDelivery(state);storage.validate(documentData());} catch(e) {restoreData(before);toast(e.message);return false;}
+  try {reconcileDelivery(state);fn();syncFrameBoards(state);recordDeliveryLifecycle(state,before);reconcileDelivery(state);storage.validate(documentData());} catch(e) {restoreData(before);toast(e.message);return false;}
   indexData(); const saved=save();
   if(!saved&&options.rollbackOnSaveFailure){restoreData(before);renderAll({...options,keepDetail:true});return false;}
   renderAll(options);if(message&&saved)toast(message);return true;
@@ -673,7 +673,7 @@ async function boot(){
   deliveryController=createDeliveryController({getState:()=>state,mutate,flush:flushInline,editor,field,area,check,openProject:openDetail,navigate,toast,storageKey});
   indexData();canvasEditor=createCanvasEditor({world,viewport,getState:()=>state,mutate,save,toWorld,setTool,isPanning:e=>space||state.tool==='pan'||e.button===1,clearProjects:()=>{state.selected.clear();state.selectedFrames.clear();renderSelection();},closeDetail,toast,onEditing:()=>{dirty=true;$('saveStatus').textContent='正在编辑…';}});workbench=createWorkbenchViews({getState:()=>state,update:mutate,openProject:openDetail,cardElement,navigate,editor,field,area,matches,afterRender:syncActiveProject});bindEvents();
   const compact=matchMedia('(min-width:761px) and (max-width:1100px)').matches;if(compact)document.body.classList.add('sidebar-collapsed');
-  renderAll();setDisplay(state.display);save(false);
+  renderAll();setDisplay(state.display);save(loaded.fromStorage&&!loaded.data.frameBoardSyncVersion&&data.quickBoards.some(board=>board.sourceFrameId));
   try { snapshots.list(); } catch(error) { toast(error.message); }
   const linkedProject=new URLSearchParams(location.search).get('project');if(linkedProject&&byId[linkedProject])openDetail(linkedProject);
   $('toggleSidebar').setAttribute('aria-expanded',String(!mobile()&&!compact));

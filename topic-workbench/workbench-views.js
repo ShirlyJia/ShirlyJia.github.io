@@ -97,7 +97,7 @@ export function createWorkbenchViews(api) {
     if(!board){view.hidden=true;return;}
     $('pageTitle').textContent=board.name;
     if(board){
-      view.innerHTML='<header class="board-page-head"><div><span class="section-kicker">行动看板</span><h2>'+colorControl(board.color,'data-board-color',board.id,'调整看板颜色')+'<button class="board-title" data-board-title="'+esc(board.id)+'" data-board-rename="'+esc(board.id)+'" aria-label="修改看板名称：'+esc(board.name)+'" title="点击修改名称">'+esc(board.name)+'</button></h2></div><div class="board-actions"><button data-board-edit="'+esc(board.id)+'">编辑说明</button><button data-delete-board="'+esc(board.id)+'" aria-label="删除看板：'+esc(board.name)+'">删除</button><button class="primary" data-board-members="'+esc(board.id)+'">＋ 项目</button></div></header><textarea class="board-note inline-text" data-board-note="'+esc(board.id)+'" aria-label="看板说明" placeholder="本看板要解决什么、需要准备什么…" rows="2">'+esc(board.notes)+'</textarea><div class="board-project-grid" id="activeBoardCards"></div>';
+      view.innerHTML='<header class="board-page-head"><div><span class="section-kicker">行动看板'+(board.sourceFrameId?' · 随分组更新':'')+'</span><h2>'+colorControl(board.color,'data-board-color',board.id,'调整看板颜色')+'<button class="board-title" data-board-title="'+esc(board.id)+'" data-board-rename="'+esc(board.id)+'" aria-label="修改看板名称：'+esc(board.name)+'" title="点击修改名称">'+esc(board.name)+'</button></h2></div><div class="board-actions"><button data-board-edit="'+esc(board.id)+'">编辑说明</button><button data-delete-board="'+esc(board.id)+'" aria-label="删除看板：'+esc(board.name)+'">删除</button><button class="primary" data-board-members="'+esc(board.id)+'">＋ 项目</button></div></header><textarea class="board-note inline-text" data-board-note="'+esc(board.id)+'" aria-label="看板说明" placeholder="本看板要解决什么、需要准备什么…" rows="2">'+esc(board.notes)+'</textarea><div class="board-project-grid" id="activeBoardCards"></div>';
       const target=$('activeBoardCards'),rows=boardProjects(board).filter(matches);const hasOpen=boardProjects(board).length>0;
       rows.forEach(p=>{
         const wrap=document.createElement('div');wrap.className='board-project'+(board.emphasisIds.includes(p.id)?' emphasized':'');wrap.style.setProperty('--board-color',board.color);
@@ -180,7 +180,7 @@ export function createWorkbenchViews(api) {
         const id='board-'+crypto.randomUUID();
         const ok=update(()=>{
           const name=form.get('name').trim();if(!name)throw Error('请填写看板名称');
-          getState().quickBoards.push({id,name,color:form.get('color'),notes:form.get('notes').trim(),projectIds:[],emphasisIds:[],contexts:{},rank:nextBoardRank()});
+          getState().quickBoards.push({id,name,color:form.get('color'),notes:form.get('notes').trim(),projectIds:[],emphasisIds:[],contexts:{},rank:nextBoardRank(),sourceFrameId:null});
         },'看板已新建',{rollbackOnSaveFailure:true});
         if(ok!==false)navigate('boards',id);return ok;
       },'创建看板');
@@ -189,13 +189,16 @@ export function createWorkbenchViews(api) {
     const state=getState();
     const rows=state.frames.map(frame=>{
       const board=boardFromFrame(state,frame.id,{id:'preview'}),names=board.projectIds.map(id=>state.projects.find(p=>p.id===id)?.name).filter(Boolean);
-      return '<label class="member-option frame-import-option" data-search-text="'+esc(frame.name+' '+names.join(' '))+'"><input type="checkbox" name="frame" value="'+esc(frame.id)+'"'+(creationDraft.frames.includes(frame.id)?' checked':'')+'><span class="frame-import-copy"><strong>'+esc(frame.name)+'</strong><small>'+esc(names.slice(0,3).join('、'))+(names.length>3?'…':'')+'</small></span><span class="frame-import-count">'+names.length+' 项</span></label>';
+      const linked=state.quickBoards.some(b=>b.sourceFrameId===frame.id);
+      return '<label class="member-option frame-import-option" data-search-text="'+esc(frame.name+' '+names.join(' '))+'"><input type="checkbox" name="frame" value="'+esc(frame.id)+'"'+(creationDraft.frames.includes(frame.id)?' checked':'')+'><span class="frame-import-copy"><strong>'+esc(frame.name)+'</strong><small>'+esc(names.slice(0,3).join('、'))+(names.length>3?'…':'')+'</small></span><span class="frame-import-count">'+(linked?'已关联 · ':'')+names.length+' 项</span></label>';
     }).join('');
-    editor('新建行动看板',tabs+(rows?'<p class="board-import-hint">每个分组生成一个看板，沿用项目、备注与重点。</p><label class="member-search">搜索分组<input type="search" data-member-search placeholder="分组或项目名称"></label><div class="member-options frame-import-options">'+rows+'</div>':'<p class="board-import-hint">画板里还没有分组，可先空白新建。</p>'),form=>{
+    editor('新建行动看板',tabs+(rows?'<p class="board-import-hint">导入后随分组更新，保留本板单独填写的备注与重点。</p><label class="member-search">搜索分组<input type="search" data-member-search placeholder="分组或项目名称"></label><div class="member-options frame-import-options">'+rows+'</div>':'<p class="board-import-hint">画板里还没有分组，可先空白新建。</p>'),form=>{
       const selected=[...new Set(form.getAll('frame'))];if(!selected.length)throw Error('请选择至少一个分组');
       const ids=[];
       const ok=update(()=>{
         for(const frameId of selected){
+          const linked=getState().quickBoards.find(board=>board.sourceFrameId===frameId);
+          if(linked){ids.push(linked.id);continue;}
           const frame=getState().frames.find(f=>f.id===frameId),color=frame?.backgroundColor||frame?.color;
           const presetIndex=colorChoices('surface').findIndex(p=>p.value===color);
           const id='board-'+crypto.randomUUID();ids.push(id);

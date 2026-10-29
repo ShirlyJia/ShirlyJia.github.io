@@ -1,3 +1,4 @@
+import {COLOR_PRESETS} from './color-presets.js';
 /** Optional workbench views over schema-v2 project facts. No storage or remote writes. */
 const resolvedOutcomes = new Set(['已解决', '已交付', '已完成']);
 const stoppedOutcomes = new Set(['已结束未解决', '停止推进', '不再推进', '暂停终止']);
@@ -40,15 +41,16 @@ export function enrichWorkbench(input) {
   }
   data.tags.forEach((tag, index) => { if (!has(tag, 'rank')) tag.rank = index; });
   data.frames.forEach(frame => { if (!has(frame, 'color')) frame.color = toneColors[frame.tone] || '#e5e5de'; });
+  syncFrameBoards(data, {migrateLegacy:data.frameBoardSyncVersion !== 1});
+  data.frameBoardSyncVersion = 1;
   data.workbenchVersion = 1;
   return data;
 }
 
 /** Import a frame's placement references without copying or changing project facts. */
-export function boardFromFrame(data, frameId, {id, rank = 0, color} = {}) {
+function frameBoardContent(data, frameId) {
   const frame = data.frames.find(frame => frame.id === frameId);
   if (!frame) throw Error('分组已不存在，请重新选择');
-  if (typeof id !== 'string' || !id.trim()) throw Error('新看板缺少 ID');
   const projects = new Set(data.projects.map(project => project.id));
   const instances = new Map(data.instances.map(instance => [instance.id, instance]));
   const projectIds = [], emphasisIds = [], notes = new Map();
@@ -63,8 +65,63 @@ export function boardFromFrame(data, frameId, {id, rank = 0, color} = {}) {
       notes.get(pid).add(placement.context.trim());
     }
   }
-  return {id, name:frame.name, color:color || frame.backgroundColor || frame.color || '#74736c', rank,
-    projectIds, emphasisIds, contexts:Object.fromEntries([...notes].map(([pid, values]) => [pid, [...values].join('\n\n')])), notes:''};
+  const surface=frame.backgroundColor || frame.color || '#74736c';
+  return {name:frame.name,color:COLOR_PRESETS.find(p=>p.surface.toLowerCase()===surface.toLowerCase())?.accent||surface,
+    projectIds, emphasisIds, contexts:Object.fromEntries([...notes].map(([pid, values]) => [pid, [...values].join('\n\n')]))};
+}
+
+/** Keep the last source projection so later canvas edits preserve board-only changes. */
+export function boardFromFrame(data, frameId, {id, rank = 0, color} = {}) {
+  if (typeof id !== 'string' || !id.trim()) throw Error('新看板缺少 ID');
+  const content=frameBoardContent(data,frameId);
+  return {id,...clone(content),color:color||content.color,rank,notes:'',sourceFrameId:frameId,frameSync:content};
+}
+
+/** In-place reconciliation is part of the same save/undo transaction as canvas edits. */
+export function syncFrameBoards(data,{migrateLegacy=false}={}) {
+  const frames=new Map(data.frames.map(frame=>[frame.id,frame])),boards=data.quickBoards||[];
+  const known=new Set(data.projects.map(project=>project.id));
+  let changed=false;
+  for(const board of boards){
+    const before=JSON.stringify(board);
+    if(migrateLegacy&&!has(board,'sourceFrameId')){
+      // Old imports did not store their source. Only reconnect unambiguous names.
+      const candidates=data.frames.filter(frame=>frame.name===board.name);
+      if(candidates.length===1&&boards.filter(other=>other.name===board.name).length===1){
+        board.sourceFrameId=candidates[0].id;
+        const source=frameBoardContent(data,board.sourceFrameId);
+        // Legacy imports have no baseline: preserve their existing discussion edits.
+        board.frameSync=clone({name:board.name,color:board.color,projectIds:board.projectIds,
+          emphasisIds:source.emphasisIds.filter(pid=>board.projectIds.includes(pid)),
+          contexts:Object.fromEntries(Object.entries(source.contexts).filter(([pid])=>board.projectIds.includes(pid)))});
+      }
+    }
+    if(board.sourceFrameId){
+      if(!frames.has(board.sourceFrameId)){
+        // Removing a frame never deletes the board or its discussion history.
+        board.sourceFrameId=null;delete board.frameSync;
+      }else{
+        const next=frameBoardContent(data,board.sourceFrameId),previous=board.frameSync||clone(board);
+        for(const field of ['name','color'])if(board[field]===previous[field])board[field]=next[field];
+        const previousMembers=new Set(previous.projectIds),nextMembers=new Set(next.projectIds);
+        board.projectIds=[...new Set(board.projectIds.filter(pid=>known.has(pid)&&(!previousMembers.has(pid)||nextMembers.has(pid))))];
+        for(const pid of next.projectIds)if(!previousMembers.has(pid)&&!board.projectIds.includes(pid))board.projectIds.push(pid);
+        const emphasis=new Set(board.emphasisIds),oldEmphasis=new Set(previous.emphasisIds),newEmphasis=new Set(next.emphasisIds);
+        board.contexts||={};
+        for(const pid of board.projectIds){
+          if(emphasis.has(pid)===oldEmphasis.has(pid)){if(newEmphasis.has(pid))emphasis.add(pid);else emphasis.delete(pid);}
+          if((board.contexts[pid]||'')===(previous.contexts?.[pid]||'')){
+            if(next.contexts[pid])board.contexts[pid]=next.contexts[pid];else delete board.contexts[pid];
+          }
+        }
+        board.emphasisIds=board.projectIds.filter(pid=>emphasis.has(pid));
+        board.contexts=Object.fromEntries(Object.entries(board.contexts).filter(([pid])=>board.projectIds.includes(pid)));
+        board.frameSync=next;
+      }
+    }
+    if(JSON.stringify(board)!==before)changed=true;
+  }
+  return changed;
 }
 
 /** Project priority stays the only priority. Unknown values retain their input order. */
