@@ -77,6 +77,24 @@ export function boardFromFrame(data, frameId, {id, rank = 0, color} = {}) {
   return {id,...clone(content),color:color||content.color,rank,notes:'',sourceFrameId:frameId,frameSync:content};
 }
 
+function setBoardFrameLink(data,board,frameId){
+  if(!frameId){board.sourceFrameId=null;delete board.frameSync;return;}
+  const source=frameBoardContent(data,frameId);
+  board.sourceFrameId=frameId;
+  // No previous source baseline: preserve existing discussion edits on retained projects.
+  board.frameSync=clone({name:board.name,color:board.color,projectIds:board.projectIds,
+    emphasisIds:source.emphasisIds.filter(pid=>board.projectIds.includes(pid)),
+    contexts:Object.fromEntries(Object.entries(source.contexts).filter(([pid])=>board.projectIds.includes(pid)))});
+}
+
+/** Explicit repair for old imports whose source was renamed or is ambiguous. */
+export function linkBoardToFrame(data,boardId,frameId){
+  const board=data.quickBoards.find(board=>board.id===boardId);
+  if(!board)throw Error('看板已不存在');
+  if((board.sourceFrameId||'')===(frameId||''))return false;
+  setBoardFrameLink(data,board,frameId);syncFrameBoards(data);return true;
+}
+
 /** In-place reconciliation is part of the same save/undo transaction as canvas edits. */
 export function syncFrameBoards(data,{migrateLegacy=false}={}) {
   const frames=new Map(data.frames.map(frame=>[frame.id,frame])),boards=data.quickBoards||[];
@@ -88,12 +106,7 @@ export function syncFrameBoards(data,{migrateLegacy=false}={}) {
       // Old imports did not store their source. Only reconnect unambiguous names.
       const candidates=data.frames.filter(frame=>frame.name===board.name);
       if(candidates.length===1&&boards.filter(other=>other.name===board.name).length===1){
-        board.sourceFrameId=candidates[0].id;
-        const source=frameBoardContent(data,board.sourceFrameId);
-        // Legacy imports have no baseline: preserve their existing discussion edits.
-        board.frameSync=clone({name:board.name,color:board.color,projectIds:board.projectIds,
-          emphasisIds:source.emphasisIds.filter(pid=>board.projectIds.includes(pid)),
-          contexts:Object.fromEntries(Object.entries(source.contexts).filter(([pid])=>board.projectIds.includes(pid)))});
+        setBoardFrameLink(data,board,candidates[0].id);
       }
     }
     if(board.sourceFrameId){

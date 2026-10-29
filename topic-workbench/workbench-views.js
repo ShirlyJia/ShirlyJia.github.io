@@ -2,7 +2,7 @@ import {colorPickerMarkup,colorChoices} from './color-presets.js';
 import {deliveryCases} from './delivery-model.js';
 import {deliveryPageMarkup} from './delivery-view.js';
 import {setProjectClosed} from './project-flow.js';
-import {isClosedProject, sortProjectsByPriority, outcomeKind, boardFromFrame} from './workbench-model.js';
+import {isClosedProject, sortProjectsByPriority, outcomeKind, boardFromFrame, linkBoardToFrame} from './workbench-model.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $ = id => document.getElementById(id);
@@ -213,9 +213,13 @@ export function createWorkbenchViews(api) {
     if(!flush())return;
     if(!id){creationDraft=null;createBoardEditor(mode);return;}
     const b=boardById(id)||{};
-    editor('看板设置',boardFields(b)+'<button type="button" class="danger-link" data-delete-board="'+esc(id)+'">删除看板，保留项目</button>',form=>update(()=>{
+    const sourceField='<label class="form-field"><span>关联分组</span><select name="sourceFrameId"><option value="">独立看板</option>'+getState().frames.map(frame=>'<option value="'+esc(frame.id)+'"'+(b.sourceFrameId===frame.id?' selected':'')+'>'+esc(frame.name)+'</option>').join('')+'</select><small>关联后项目随分组更新；选择独立看板可停止同步。</small></label>';
+    editor('看板设置',boardFields(b)+sourceField+'<button type="button" class="danger-link" data-delete-board="'+esc(id)+'">删除看板，保留项目</button>',form=>update(()=>{
       const values={name:form.get('name').trim(),color:form.get('color'),notes:form.get('notes').trim()};if(!values.name)throw Error('请填写看板名称');
-      Object.assign(boardById(id),values);
+      const board=boardById(id),previous={name:board.name,color:board.color};
+      const changed=linkBoardToFrame(getState(),id,form.get('sourceFrameId'));
+      for(const field of ['name','color'])if(!changed||!board.sourceFrameId||values[field]!==previous[field])board[field]=values[field];
+      board.notes=values.notes;
     },'看板已保存'));
   }
   $('workbenchView').addEventListener('keydown',event=>{
