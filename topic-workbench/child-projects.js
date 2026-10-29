@@ -1,13 +1,39 @@
 import {readProjectFlow,setCurrentFlowNode} from './project-flow.js';
+import {isClosedProject} from './workbench-model.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const treeIcon='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="7.5" y="2" width="5" height="4" rx="1"/><path d="M10 6v4M4 13v-3h12v3"/><rect x="1.5" y="13" width="5" height="4" rx="1"/><rect x="13.5" y="13" width="5" height="4" rx="1"/></svg>';
 
 /** The badge carries relationship metadata without using preview text space. */
-export function childBadgeMarkup(count,pid,{readonly=false}={}){
-  if(!Number.isInteger(count)||count<1)return '';
+export function childBadgeMarkup(count,pid,{readonly=false,expandable=false,expanded=false}={}){
+  if(!Number.isInteger(count)||count<0||(!count&&!expandable))return '';
+  if(expandable){
+    const label=(expanded?'收起':'展开')+'小项目'+(count?'（'+count+'）':''),content='<svg class="child-tree-chevron'+(expanded?' is-expanded':'')+'" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m6 4 4 4-4 4"/></svg>'+(count?'<span class="child-project-count">'+(count>99?'99+':count)+'</span>':'');
+    return readonly?'<span class="child-project-badge" title="'+count+' 个小项目">'+content+'</span>':'<button type="button" class="child-project-badge" data-toggle-children="'+esc(pid)+'" aria-expanded="'+expanded+'" aria-label="'+label+'" title="'+label+'">'+content+'</button>';
+  }
   const label=count+' 个小项目',content=treeIcon+'<span class="child-project-count">'+(count>99?'99+':count)+'</span>';
   return readonly?'<span class="child-project-badge" title="'+label+'" aria-label="'+label+'">'+content+'</span>':'<button type="button" class="child-project-badge" data-open-children="'+esc(pid)+'" aria-label="查看'+label+'" title="'+label+'">'+content+'</button>';
+}
+
+/** Direct children are a view over shared facts, including completed projects. */
+export function childProjectRows(pid,data){
+  const projects=new Map((data.projects||[]).map(project=>[project.id,project])),children=new Map();
+  for(const relation of data.relations||[]){
+    if(relation.main!==pid||relation.child===pid||!projects.has(relation.child))continue;
+    const previous=children.get(relation.child);
+    children.set(relation.child,{project:projects.get(relation.child),draft:!!relation.draft&&(!previous||previous.draft)});
+  }
+  return [...children.values()];
+}
+
+export function childTreeMarkup(children,{readonly=false}={}){
+  if(!children.length)return readonly?'':'<div class="child-project-tree"><button type="button" class="child-tree-add" data-tree-add>＋ 添加小项目</button></div>';
+  return '<ul class="child-project-tree" aria-label="关联小项目">'+children.map(({project,draft})=>{
+    const closed=isClosedProject(project),label=project.name+(closed?' · 已结束':'')+(draft?' · 关联待确认':'');
+    const attributes='class="child-tree-link" data-project-highlight="'+esc(project.id)+'" title="'+esc(label)+'" aria-label="'+esc(label)+'"';
+    const content='<span class="child-tree-dot" aria-hidden="true"></span><span class="child-tree-title">'+esc(project.name)+'</span>'+(closed?'<small>已结束</small>':'');
+    return '<li'+(draft?' class="is-draft"':'')+'>'+(readonly?'<span role="button" tabindex="0" data-pid="'+esc(project.id)+'" '+attributes+'>'+content+'</span>':'<button type="button" data-tree-project="'+esc(project.id)+'" '+attributes+'>'+content+'</button>')+'</li>';
+  }).join('')+'</ul>';
 }
 
 export function childSectionActionsMarkup(){

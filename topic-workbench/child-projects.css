@@ -1,6 +1,27 @@
 .child-project-badge{position:absolute;top:8px;right:8px;z-index:3;display:flex;align-items:center;justify-content:center;gap:3px;min-width:26px;height:21px;padding:2px 4px;border:0;border-radius:4px;background:#f4f3f0;color:#8a867e;font-size:10px;line-height:1;white-space:nowrap}
 button.child-project-badge:hover,button.child-project-badge:focus-visible{color:#5e747f;background:#edf1f2}
 .child-project-badge svg{width:12px;height:12px;flex:none}
+.child-tree-chevron{transition:transform .16s ease}
+.child-tree-chevron.is-expanded{transform:rotate(90deg)}
+.child-project-tree{list-style:none;margin:13px 0 0;padding:11px 0 0;border-top:1px solid #eeede8;text-align:left}
+.child-project-tree>li{position:relative;padding:0 0 3px 18px}
+.child-project-tree>li::before{content:"";position:absolute;left:4px;top:0;bottom:0;border-left:1px solid #d9d7d0}
+.child-project-tree>li:last-child::before{height:16px;bottom:auto}
+.child-project-tree>li::after{content:"";position:absolute;left:4px;top:16px;width:13px;border-top:1px solid #d9d7d0}
+.child-project-tree>li.is-draft::after{border-top-style:dashed}
+.child-tree-link{position:relative;display:flex;align-items:baseline;gap:7px;width:100%;min-height:32px;padding:6px 7px;border-radius:4px;background:transparent;color:#625f57;text-align:left;font-size:12px;line-height:1.65;cursor:pointer}
+.child-tree-title{flex:1;min-width:0;overflow-wrap:anywhere}
+.child-tree-link>small{flex:none;font-size:10px;color:#999489}
+.child-tree-dot{position:absolute;left:-17px;top:12px;width:7px;height:7px;border:1px solid #b8b4aa;border-radius:50%;background:#fff;box-shadow:0 0 0 2px #fff}
+.child-tree-link:hover,.child-tree-link:focus-visible{background:#f4f3ef;color:#37352f}
+.child-tree-link.is-active-project{background:#eaf0f2;color:#426473}
+.child-tree-link.is-active-project .child-tree-dot{border-color:#6d8b98;background:#6d8b98}
+.child-tree-add{padding:5px 7px;color:#8a857a;font-size:11px;border-radius:4px;background:transparent}
+.child-tree-add:hover,.child-tree-add:focus-visible{background:#f4f3ef;color:#555148}
+.world>.project-card:has(.child-project-tree){z-index:4}
+.world>.project-card:has(.child-project-tree):hover,.world>.project-card:has(.child-project-tree):focus-within{z-index:5}
+.world>.project-card.dragging{z-index:8}
+@media(prefers-reduced-motion:reduce){.child-tree-chevron{transition:none}}
 .project-card:has(.child-project-badge) .detail-arrow{visibility:hidden;pointer-events:none}
 .world .child-project-badge{--child-badge-width:min(calc(var(--canvas-copy-size,22px)*1.4),34px);top:var(--canvas-copy-offset,2px);right:var(--canvas-copy-offset,2px);width:var(--child-badge-width);height:min(var(--canvas-copy-size,22px),24px);min-width:0;gap:2px;padding:0;font-size:min(calc(var(--canvas-copy-size,22px)*.44),10px)}
 .world .child-project-badge svg{width:min(calc(var(--canvas-copy-size,22px)*.55),14px);height:min(calc(var(--canvas-copy-size,22px)*.55),14px)}

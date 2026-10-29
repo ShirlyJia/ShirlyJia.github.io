@@ -236,6 +236,7 @@ export function createPersistence({ key = 'topic-workbench-v2', onStatus } = {})
       if (!projectIds.has(instance.pid)) fail(`instances[${index}] 引用的项目不存在`);
       finite(instance.x, `instances[${index}].x`);
       finite(instance.y, `instances[${index}].y`);
+      if (instance.childrenExpanded !== undefined && typeof instance.childrenExpanded !== 'boolean') fail(`instances[${index}].childrenExpanded 必须是布尔值`);
     });
     data.frames.forEach((frame, index) => {
       const path = `frames[${index}]`;

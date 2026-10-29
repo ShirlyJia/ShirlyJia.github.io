@@ -21,7 +21,7 @@ import {previewDeliveryUndo, applyDeliveryUndo} from './delivery-undo.js';
 import {resizeFrameBounds, frameResizeEdges, frameEdgeNames} from './frame-resize.js';
 import {mountDetailResize} from './detail-panel.js';
 import {wheelDelta, enclosedFrameIds, moveSelection} from './canvas-gesture.js';
-import {childBadgeMarkup, childSectionActionsMarkup, createChildProject, parentProjectHintMarkup} from './child-projects.js';
+import {childBadgeMarkup, childProjectRows, childTreeMarkup, childSectionActionsMarkup, createChildProject, parentProjectHintMarkup} from './child-projects.js';
 import {colorPickerMarkup, installColorPickers} from './color-presets.js';
 import {moveFramesToEdge} from './frame-layers.js';
 import {orderedTags,renameTag,moveTag,tagFilterMarkup,mountTagEditor} from './tag-editor.js';
@@ -38,6 +38,7 @@ const textValue = value => typeof value === 'string' ? value : typeof value === 
 const pageIcon = '<svg class="page-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 2h7l4 4v12H5zM12 2v5h4M8 11h5M8 14h4"/></svg>';
 let workbench = null, canvasEditor = null, flowEditor = null, deliveryController = null, tagEditor = null;
 const inlineTimers = new Map();
+const expandedDirectionTrees = new Set();
 let state, projects = [], byId = {}, tagById = {}, lastEditor, editorInstance, gesture = null, space = false, toastTimer, pendingFrame, clickSuppressed = false, lastFrameClick, dirty = false;
 const viewport = $('viewport'), world = $('world');
 $('saveStatus').title='修改保存在当前浏览器；数据与备份见设置';
@@ -72,15 +73,23 @@ function projectInstances(pid){return state.instances.filter(i=>i.pid===pid);}
 function rankedTagIds(ids){return [...ids].sort((a,b)=>(tagById[a]?.rank??Infinity)-(tagById[b]?.rank??Infinity));}
 function tagMarkup(id,removable=false){const t=tagById[id];if(!t)return '';return '<span class="card-tag" style="--tag-color:'+esc(t.color)+'">'+esc(t.name)+(removable?colorControl(t.color,'data-tag-color',id,'调整'+t.name+'颜色')+'<button data-detach-tag="'+esc(id)+'" aria-label="移除此项目的'+esc(t.name)+'标签">×</button>':'')+'</span>';}
 function cardMarkup(p,{instance=null}={}){
-  const nodes=visibleNodes(p),node=nodes.find(n=>n.focus)||nodes.find(n=>n.owner||n.targetDate||n.estimatedDate),childCount=state.relations.filter(r=>r.main===p.id).length;
+  const nodes=visibleNodes(p),node=nodes.find(n=>n.focus)||nodes.find(n=>n.owner||n.targetDate||n.estimatedDate),children=childProjectRows(p.id,state);
+  const expandable=p.kind==='direction',expanded=expandable&&(instance?instance.childrenExpanded===true:expandedDirectionTrees.has(p.id));
   const priority=displayPriority(p),eyebrow=[p.kind==='direction'?'方向':'',p.outcome].filter(Boolean).map(esc).join(' · ');
-  return childBadgeMarkup(childCount,p.id)+(eyebrow||instance?.focus?'<div class="card-eyebrow">'+eyebrow+(instance?.focus?'<span class="focus-mark">★ 本处重点</span>':'')+'</div>':'')+'<div class="card-heading">'+pageIcon+'<h3 class="card-title">'+esc(p.name)+'</h3>'+(instance?'<button class="card-copy" data-copy-instance="'+esc(instance.id)+'" title="复制到画板（⌘ / Ctrl + D）" aria-label="复制'+esc(p.name)+'到画板"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M13 5V3H3v10h2"/></svg></button>':'')+'<button class="detail-arrow" data-open="'+esc(p.id)+'" aria-label="查看'+esc(p.name)+'详情">↗</button></div>'+
+  return childBadgeMarkup(children.length,p.id,{expandable,expanded})+(eyebrow||instance?.focus?'<div class="card-eyebrow">'+eyebrow+(instance?.focus?'<span class="focus-mark">★ 本处重点</span>':'')+'</div>':'')+'<div class="card-heading">'+pageIcon+'<h3 class="card-title">'+esc(p.name)+'</h3>'+(instance?'<button class="card-copy" data-copy-instance="'+esc(instance.id)+'" title="复制到画板（⌘ / Ctrl + D）" aria-label="复制'+esc(p.name)+'到画板"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M13 5V3H3v10h2"/></svg></button>':'')+'<button class="detail-arrow" data-open="'+esc(p.id)+'" aria-label="查看'+esc(p.name)+'详情">↗</button></div>'+
   (true?'<div class="card-tags">'+priorityControl(p,true)+rankedTagIds(p.tagIds).slice(0,3).map(t=>tagMarkup(t)).join('')+(p.tagIds.length>3?'<span class="card-tag">+'+(p.tagIds.length-3)+'</span>':'')+'</div>':'')+
   (p.description?'<p class="card-note">'+esc(displayDescription(p.description))+'</p>':'')+
   deliveryCardMarkup(p)+(node?.owner&&!node.targetDate&&!node.estimatedDate?'<div class="card-footer">'+esc(node.owner)+'</div>':'')+
-  ((projectInstances(p.id).length>1||instance?.context)?'<div class="card-reference">'+(projectInstances(p.id).length>1?'<span>'+projectInstances(p.id).length+' 处引用</span>':'')+(instance?.context?'<span title="'+esc(instance.context)+'">有本处备注</span>':'')+'</div>':'');
+  ((projectInstances(p.id).length>1||instance?.context)?'<div class="card-reference">'+(projectInstances(p.id).length>1?'<span>'+projectInstances(p.id).length+' 处引用</span>':'')+(instance?.context?'<span title="'+esc(instance.context)+'">有本处备注</span>':'')+'</div>':'')+(expanded?childTreeMarkup(children):'');
 }
-function cardElement(p,instance=null){const el=document.createElement('article');el.className='project-card'+(p.kind==='direction'?' direction-card':'');el.dataset.pid=p.id;el.tabIndex=0;el.setAttribute('aria-label',p.name+'，按回车查看详情');if(instance){el.dataset.instance=instance.id;el.style.left=instance.x+'px';el.style.top=instance.y+'px';}el.innerHTML=cardMarkup(p,{instance});el.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.target.closest('button,select,input,textarea,a,[contenteditable="true"]')){e.preventDefault();e.stopPropagation();openDetail(p.id,instance?.id);}});return el;}
+function cardElement(p,instance=null){const el=document.createElement('article');el.className='project-card'+(p.kind==='direction'?' direction-card':'');el.dataset.pid=p.id;el.tabIndex=0;el.setAttribute('aria-label',p.name+'，按回车查看详情');if(instance){el.dataset.instance=instance.id;el.style.left=instance.x+'px';el.style.top=instance.y+'px';}el.innerHTML=cardMarkup(p,{instance});el.addEventListener('click',e=>{
+  const action=e.target.closest('[data-toggle-children],[data-tree-project],[data-tree-add]');if(!action)return;e.stopPropagation();if(clickSuppressed||!flushInline())return;
+  if(action.hasAttribute('data-tree-project')){openDetail(action.dataset.treeProject);return;}
+  if(action.hasAttribute('data-tree-add')){childProjectEditor(p.id);return;}
+  const current=instance?state.instances.find(i=>i.id===instance.id):null,project=byId[p.id];if(!project||project.kind!=='direction'||instance&&!current)return;
+  if(current){current.childrenExpanded=!current.childrenExpanded;save(false);}else if(expandedDirectionTrees.has(p.id))expandedDirectionTrees.delete(p.id);else expandedDirectionTrees.add(p.id);
+  el.innerHTML=cardMarkup(project,{instance:current});syncActiveProject();el.querySelector('[data-toggle-children]')?.focus({preventScroll:true});
+});el.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.target.closest('button,select,input,textarea,a,[contenteditable="true"]')){e.preventDefault();e.stopPropagation();openDetail(p.id,instance?.id);}});return el;}
 let hoveredProject = null;
 function renderReferenceLines(){
   if(!state)return;world.querySelector('.canvas-reference-lines')?.remove();

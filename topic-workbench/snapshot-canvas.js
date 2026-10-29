@@ -2,7 +2,7 @@ import {isClosedProject} from './workbench-model.js';
 import {displayPriority, displayDescription, visibleNodes} from './presentation.js';
 import {deliveryCardMarkup} from './delivery-view.js';
 import {canvasItemBounds} from './canvas-items.js';
-import {childBadgeMarkup} from './child-projects.js';
+import {childBadgeMarkup,childProjectRows,childTreeMarkup} from './child-projects.js';
 
 const list=value=>Array.isArray(value)?value:[];
 const finite=Number.isFinite;
@@ -32,16 +32,17 @@ export function snapshotDay(createdAt){
 export function snapshotCardMarkup(project,instance,snapshot){
   const data=snapshot.data,priority=displayPriority(project),tags=new Map(list(data.tags).map(t=>[t.id,t]));
   const nodes=visibleNodes({...project,planNodes:list(project.planNodes)}),node=nodes.find(n=>n.focus)||nodes.find(n=>n.owner||n.targetDate||n.estimatedDate);
-  const children=list(data.relations).filter(r=>r.main===project.id).length,references=list(data.instances).filter(i=>i.pid===project.id).length;
+  const children=childProjectRows(project.id,data),references=list(data.instances).filter(i=>i.pid===project.id).length;
+  const expandable=project.kind==='direction',expanded=expandable&&instance.childrenExpanded===true;
   const eyebrow=[project.kind==='direction'?'方向':'',project.outcome].filter(Boolean).map(esc).join(' · ');
   const tagIds=list(project.tagIds),tagHTML=tagIds.slice(0,3).map(id=>tags.get(id)).filter(Boolean).map(t=>'<span class="card-tag" style="--tag-color:'+color(t.color)+'">'+esc(t.name)+'</span>').join('');
-  return childBadgeMarkup(children,project.id,{readonly:true})+(eyebrow||instance.focus?'<div class="card-eyebrow">'+eyebrow+(instance.focus?'<span class="focus-mark">★ 本处重点</span>':'')+'</div>':'')+
+  return childBadgeMarkup(children.length,project.id,{readonly:true,expandable,expanded})+(eyebrow||instance.focus?'<div class="card-eyebrow">'+eyebrow+(instance.focus?'<span class="focus-mark">★ 本处重点</span>':'')+'</div>':'')+
     '<div class="card-heading">'+pageIcon+'<h3 class="card-title">'+esc(project.name)+'</h3><span class="detail-arrow" aria-hidden="true">↗</span></div>'+
     '<div class="card-tags">'+(priority?'<span class="priority priority-editor" data-priority="'+esc(priority)+'">'+esc(priority)+'</span>':'')+tagHTML+(tagIds.length>3?'<span class="card-tag">+'+(tagIds.length-3)+'</span>':'')+'</div>'+
     (project.description?'<p class="card-note">'+esc(displayDescription(project.description))+'</p>':'')+
     deliveryCardMarkup({...project,planNodes:list(project.planNodes)},{today:snapshotDay(snapshot.createdAt)})+
     (node?.owner&&!node.targetDate&&!node.estimatedDate?'<div class="card-footer">'+esc(node.owner)+'</div>':'')+
-    ((references>1||instance.context)?'<div class="card-reference">'+(references>1?'<span>'+references+' 处引用</span>':'')+(instance.context?'<span title="'+esc(instance.context)+'">有本处备注</span>':'')+'</div>':'');
+    ((references>1||instance.context)?'<div class="card-reference">'+(references>1?'<span>'+references+' 处引用</span>':'')+(instance.context?'<span title="'+esc(instance.context)+'">有本处备注</span>':'')+'</div>':'')+(expanded?childTreeMarkup(children,{readonly:true}):'');
 }
 
 export function snapshotFrameMarkup(frame,data){
