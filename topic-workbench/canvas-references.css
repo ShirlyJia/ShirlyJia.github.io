@@ -5,6 +5,5 @@
 .world .card-copy{position:absolute;right:calc(var(--canvas-copy-size,22px) + var(--canvas-copy-offset,2px));top:var(--canvas-copy-offset,2px);z-index:2;display:grid;place-items:center;width:var(--canvas-copy-size,22px);height:var(--canvas-copy-size,22px);padding:0;border-radius:4px;color:#87847c;background:#fff;opacity:0;pointer-events:none}
 .world .project-card:hover .card-copy,.world .project-card:focus-within .card-copy{opacity:1;pointer-events:auto}
 .world .card-copy:hover{color:#4e4b44;background:#f2f1ed}
-.world.overview .card-copy{width:min(calc(var(--canvas-copy-size,22px)*.64),46px);height:min(calc(var(--canvas-copy-size,22px)*.64),46px);right:calc(min(calc(var(--canvas-copy-size,22px)*.64),46px) + var(--canvas-copy-offset,2px)*2)}
 .world .card-copy svg{width:65%;height:65%}
 @media(prefers-reduced-motion:reduce){.canvas-reference-line{transition:none}}

@@ -34,7 +34,7 @@ function listSnapshots(){
   $('snapshotListEmpty').hidden=visible.length>0;$('snapshotListEmpty').textContent=q?'没有匹配的快照':'暂无快照';
 }
 function applyView(){
-  world.style.transform=`translate(${view.x}px,${view.y}px) scale(${view.z})`;world.classList.toggle('overview',view.z<.55);world.style.setProperty('--canvas-copy-size',22/view.z+'px');world.style.setProperty('--canvas-copy-offset',2/view.z+'px');$('historyZoomValue').textContent=Math.round(view.z*100)+'%';renderReferenceLines();
+  world.style.transform=`translate(${view.x}px,${view.y}px) scale(${view.z})`;world.style.setProperty('--canvas-copy-size',22/view.z+'px');world.style.setProperty('--canvas-copy-offset',2/view.z+'px');$('historyZoomValue').textContent=Math.round(view.z*100)+'%';renderReferenceLines();
 }
 function renderReferenceLines(){
   world.querySelector('.canvas-reference-lines')?.remove();if(!model)return;const boxes=new Map();

@@ -16,20 +16,9 @@ export function isClosedProject(project) {
   return outcomeKind(project) !== 'open';
 }
 
-function initialBoards(projects) {
-  const localMemoryDirections = projects.filter(project => project.name === '降显存' && project.kind === 'direction' &&
-    (!project.source?.sourceUrl || ['local', 'user-direction'].includes(project.source?.sourceKind))).map(project => project.id);
-  return [
-    {id: 'board-committed', name: '已承诺交付', color: '#6f8192', projectIds: [], notes: '跟进已承诺事项的交付范围、验证结果与时间。', rank: 0, emphasisIds: []},
-    {id: 'board-next-meeting', name: '下次会前补齐', color: '#9b8b78', projectIds: ['7135469627', '7018500789'], notes: '下次讨论前补齐业务背景、数据和影响；会上确认下一步与时间。', rank: 1, emphasisIds: []},
-    {id: 'board-business', name: '待业务补充对齐', color: '#858d80', projectIds: [], notes: '补齐业务场景、落地数据与影响，再对齐下一步。', rank: 2, emphasisIds: []},
-    {id: 'board-1230', name: '1230迭代讨论', color: '#92839d', projectIds: ['6961865664', '7134500575', ...localMemoryDirections], notes: '讨论知识融合、非结构化与降显存的范围、方案和排期。', rank: 3, emphasisIds: []}
-  ];
-}
-
 /**
- * Clone and enrich old v2 records. An existing board array, even [], is the user's
- * own selection. Version 1 prevents deleted default boards from being recreated.
+ * Clone and enrich old v2 records. Boards are created only by the user.
+ * Existing boards, including an empty array, are never replaced with presets.
  */
 export function enrichWorkbench(input) {
   const data = clone(input);
@@ -37,7 +26,7 @@ export function enrichWorkbench(input) {
     throw Error('工作台迁移需要有效的 schemaVersion 2 数据');
   }
   if (data.workbenchVersion !== undefined && data.workbenchVersion !== 1) throw Error('不支持此 workbenchVersion');
-  if (!has(data, 'quickBoards')) data.quickBoards = data.workbenchVersion === 1 ? [] : initialBoards(data.projects);
+  if (!has(data, 'quickBoards')) data.quickBoards = [];
   if (!Array.isArray(data.quickBoards)) throw Error('quickBoards 必须是数组');
   const knownIds = new Set(data.projects.map(project => project.id));
   for (const board of data.quickBoards) {
@@ -53,6 +42,29 @@ export function enrichWorkbench(input) {
   data.frames.forEach(frame => { if (!has(frame, 'color')) frame.color = toneColors[frame.tone] || '#e5e5de'; });
   data.workbenchVersion = 1;
   return data;
+}
+
+/** Import a frame's placement references without copying or changing project facts. */
+export function boardFromFrame(data, frameId, {id, rank = 0, color} = {}) {
+  const frame = data.frames.find(frame => frame.id === frameId);
+  if (!frame) throw Error('分组已不存在，请重新选择');
+  if (typeof id !== 'string' || !id.trim()) throw Error('新看板缺少 ID');
+  const projects = new Set(data.projects.map(project => project.id));
+  const instances = new Map(data.instances.map(instance => [instance.id, instance]));
+  const projectIds = [], emphasisIds = [], notes = new Map();
+  for (const placementId of frame.members) {
+    const placement = instances.get(placementId);
+    if (!placement || !projects.has(placement.pid)) continue;
+    const pid = placement.pid;
+    if (!projectIds.includes(pid)) projectIds.push(pid);
+    if (placement.focus && !emphasisIds.includes(pid)) emphasisIds.push(pid);
+    if (typeof placement.context === 'string' && placement.context.trim()) {
+      if (!notes.has(pid)) notes.set(pid, new Set());
+      notes.get(pid).add(placement.context.trim());
+    }
+  }
+  return {id, name:frame.name, color:color || frame.backgroundColor || frame.color || '#74736c', rank,
+    projectIds, emphasisIds, contexts:Object.fromEntries([...notes].map(([pid, values]) => [pid, [...values].join('\n\n')])), notes:''};
 }
 
 /** Project priority stays the only priority. Unknown values retain their input order. */

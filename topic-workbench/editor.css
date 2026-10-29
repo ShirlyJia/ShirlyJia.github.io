@@ -31,13 +31,6 @@
 .frame-head {top:-32px;height:28px;}
 .frame-head strong {font-size:14px;font-weight:550;color:#66635d;}
 .frame-head button {font-size:11px;}
-.world.overview .frame-head strong {font-size:27px;line-height:1.1;color:#53504b;}
-.world.overview .frame-head {top:-38px;height:32px;}
-.world.overview .frame-head button {display:none;}
-.world.overview .card-eyebrow,.world.overview .card-tags,.world.overview .card-note,.world.overview .card-footer,.world.overview .card-reference {display:none;}
-.world.overview .card-title {font-size:22px;-webkit-line-clamp:3;}
-.world.overview .project-card {min-height:148px;display:flex;align-items:center;}
-.world.overview .page-icon {display:none;}
 .canvas-help {font-size:10px;}
 .detail-panel {width:480px;z-index:40;}
 .detail-body {padding:0 30px 40px;}
@@ -138,10 +131,6 @@ body.list-view .project-card,.gather-cards .project-card {max-height:none;min-he
 .viewport.frame-resizing *{cursor:inherit!important}
 .project-card {max-height:none;}
 .save-status.unsaved {display:inline-block!important;}
-.world.overview .frame-head {top:-48px;height:42px;}
-.world.overview .frame-head strong {font-size:38px;}
-.world.overview .frame-count {font-size:24px;}
-.world.overview .card-title {font-size:27px;line-height:1.4;}
 
 
 /* Show information when it exists; keep optional editing one click away. */

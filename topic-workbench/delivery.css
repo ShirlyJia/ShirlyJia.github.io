@@ -13,7 +13,6 @@
 .delivery-card-context{display:flex;align-items:center;gap:7px;color:#9a9389;font-size:10px;margin-top:5px;min-width:0}
 .delivery-card-context>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:63%}.delivery-other-count{margin-left:auto;white-space:nowrap}
 .delivery-tone-overdue.delivery-card-date{border-top-color:#edd4cd}.delivery-tone-overdue.delivery-card-date time{color:#a84b3f}
-.world.overview .delivery-card-date{display:none}
 .delivery-plan{margin:10px 0 6px;padding:12px;border:1px solid var(--delivery-line);border-radius:5px;background:#fff;font-variant-numeric:tabular-nums}
 .delivery-plan-date{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .delivery-plan-date>div{min-width:0}.delivery-eyebrow{display:block;color:#8d877d;font-size:10px;line-height:1.5;margin-bottom:3px}
@@ -64,7 +63,6 @@
 .delivery-screen .page-heading{padding-bottom:16px}
 .delivery-reminder{margin-top:12px;cursor:pointer;text-align:left;width:fit-content;max-width:100%}
 .delivery-reminder[hidden],.delivery-nav-count[hidden]{display:none!important}
-.world.overview .delivery-card-date{display:none}
 .delivery-undo-list{padding-left:18px;color:#6e695f;font-size:13px;line-height:1.8}
 @media(max-width:760px){.delivery-reminder{width:100%;font-size:12px}.delivery-screen .workbench-view{padding-top:16px}}
 .detail-delivery-summary{margin:0 0 14px;padding:10px 12px;border:1px solid #e8e5df;background:#fcfbf9;border-radius:5px}

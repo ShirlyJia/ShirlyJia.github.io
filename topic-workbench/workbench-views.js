@@ -2,7 +2,7 @@ import {colorPickerMarkup,colorChoices} from './color-presets.js';
 import {deliveryCases} from './delivery-model.js';
 import {deliveryPageMarkup} from './delivery-view.js';
 import {setProjectClosed} from './project-flow.js';
-import {isClosedProject, sortProjectsByPriority, outcomeKind} from './workbench-model.js';
+import {isClosedProject, sortProjectsByPriority, outcomeKind, boardFromFrame} from './workbench-model.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $ = id => document.getElementById(id);
@@ -15,7 +15,7 @@ export function createWorkbenchViews(api) {
   const {getState,update,openProject,cardElement,navigate,editor,field,area,matches} = api;
   const boardById = id => getState().quickBoards.find(b=>b.id===id);
   const pendingText = new Map(), composing = new WeakSet();
-  let flushingText = false, deferredRender = false, renameSession = null;
+  let flushingText = false, deferredRender = false, renameSession = null, creationDraft = null;
   function textIdentity(el){
     if(!el?.matches?.('[data-board-note],[data-board-context]'))return null;
     const kind=el.hasAttribute('data-board-note')?'note':'context';
@@ -70,7 +70,7 @@ export function createWorkbenchViews(api) {
   };
   function renderNav(){
     const state=getState();
-    $('quickBoardNav').innerHTML=[...state.quickBoards].sort((a,b)=>a.rank-b.rank).map(b=>'<button class="sidebar-item'+(state.activeBoard===b.id?' current':'')+'" data-board-open="'+esc(b.id)+'"><span class="nav-color" style="background:'+esc(b.color)+'"></span><span>'+esc(b.name)+'</span><small>'+b.projectIds.length+'</small></button>').join('');
+    $('quickBoardNav').innerHTML=[...state.quickBoards].sort((a,b)=>a.rank-b.rank).map(b=>'<button class="sidebar-item'+(state.activeBoard===b.id?' current':'')+'" data-board-open="'+esc(b.id)+'"><span class="nav-color" style="background:'+esc(b.color)+'"></span><span>'+esc(b.name)+'</span><small>'+b.projectIds.length+'</small></button>').join('') || '<button class="sidebar-item board-start" data-create-board>新建或导入分组</button>';
     $('resultsCount').textContent=state.projects.filter(isClosedProject).length;
     const overdue=deliveryCases(state).filter(r=>r.state.kind==='overdue'&&!r.removed).length;
     $('deliveryCount').textContent=overdue;$('deliveryCount').hidden=!overdue;
@@ -112,7 +112,7 @@ export function createWorkbenchViews(api) {
     $('quickBoardGrid').innerHTML=[...state.quickBoards].sort((a,b)=>a.rank-b.rank).map(b=>{
       const rows=boardProjects(b).filter(p=>matches(p));
       return '<section class="quick-board" data-quick-board="'+esc(b.id)+'" style="--board-color:'+esc(b.color)+'"><header><div class="quick-board-heading"><span class="nav-color" style="background:'+esc(b.color)+'"></span><button class="board-title" data-board-title="'+esc(b.id)+'" data-board-rename="'+esc(b.id)+'" aria-label="修改看板名称：'+esc(b.name)+'" title="点击修改名称"><strong>'+esc(b.name)+'</strong></button><small>'+b.projectIds.length+'</small></div><div class="quick-board-actions">'+colorControl(b.color,'data-board-color',b.id,'调整'+b.name+'颜色')+'<button data-board-open="'+esc(b.id)+'" aria-label="进入看板：'+esc(b.name)+'">进入 ↗</button><button data-delete-board="'+esc(b.id)+'" aria-label="删除看板：'+esc(b.name)+'" title="删除看板，项目保留；可撤销">删除</button></div></header><p>'+esc(b.notes)+'</p><div class="quick-projects">'+rows.slice(0,4).map(p=>'<button data-project-highlight="'+esc(p.id)+'" data-project-open="'+esc(p.id)+'"><span class="priority" data-priority="'+esc(p.priority)+'">'+esc(p.priority==='待定'?'—':p.priority||'—')+'</span><span>'+esc(p.name)+'</span></button>').join('')+'</div>'+(rows.length>4?'<button class="more-link" data-board-open="'+esc(b.id)+'">查看全部 '+rows.length+' 项 →</button>':'')+(!b.projectIds.length?'<button class="board-empty-add" data-board-members="'+esc(b.id)+'">＋ 选择项目加入</button>':'')+'</section>';
-    }).join('');
+    }).join('') || '<div class="board-start-empty"><p>还没有行动看板</p><button data-create-board>空白新建</button><button data-import-frames>从分组导入</button></div>';
     const target=$('overviewProjects'),open=sortProjectsByPriority(state.projects.filter(p=>!isClosedProject(p)&&matches(p)));
     open.forEach(p=>{const card=cardElement(p);card.addEventListener('click',e=>{if(!e.target.closest('select,input,button'))openProject(p.id);});target.append(card);});
     if(!open.length)target.innerHTML='<p class="muted">没有匹配的项目。</p>';
@@ -167,25 +167,74 @@ export function createWorkbenchViews(api) {
     const b=boardById(id);if(!b)return;
     editor('添加项目 · '+b.name,'<label class="member-search">搜索项目<input type="search" data-member-search placeholder="输入标题"></label><div class="member-options">'+sortProjectsByPriority(getState().projects).map(p=>'<label class="member-option"><input type="checkbox" name="member" value="'+esc(p.id)+'"'+(b.projectIds.includes(p.id)?' checked':'')+'><span>'+esc(p.name)+'</span><small>'+esc(p.priority==='待定'?'':p.priority)+'</small></label>').join('')+'</div>',form=>update(()=>{const current=boardById(id);current.projectIds=form.getAll('member');current.emphasisIds=current.emphasisIds.filter(pid=>current.projectIds.includes(pid));current.contexts=Object.fromEntries(Object.entries(current.contexts||{}).filter(([pid])=>current.projectIds.includes(pid)));},'看板项目已更新'));
   }
-  function boardEditor(id){
+  const nextBoardRank=()=>Math.max(-1,...getState().quickBoards.map(board=>board.rank))+1;
+  function boardFields(b={}){
+    return field('name','名称',b.name,'text','required maxlength="60"')+'<div class="form-field"><span>颜色</span>'+colorPickerMarkup(b.color||palette[0],'data-board-draft-color','draft','选择看板颜色',{name:'color'})+'</div>'+area('notes','看板说明',b.notes,3);
+  }
+  function rememberCreationDraft(){
+    if(!creationDraft)return;
+    const fields=$('editorFields');
+    if(fields.querySelector('[name="name"]')){
+      for(const key of ['name','color','notes'])creationDraft[key]=fields.querySelector('[name="'+key+'"]').value;
+    }else creationDraft.frames=[...fields.querySelectorAll('[name="frame"]:checked')].map(el=>el.value);
+  }
+  function createBoardEditor(mode='blank'){
+    creationDraft||={name:'',color:palette[0],notes:'',frames:[]};
+    $('editorSubmit').disabled=false;
+    const tabs='<div class="board-create-tabs" role="group" aria-label="看板创建方式"><button type="button" data-board-create-mode="blank" aria-pressed="'+(mode==='blank')+'">空白新建</button><button type="button" data-board-create-mode="frames" aria-pressed="'+(mode==='frames')+'">从分组导入</button></div>';
+    if(mode==='blank'){
+      editor('新建行动看板',tabs+boardFields(creationDraft),form=>{
+        const id='board-'+crypto.randomUUID();
+        const ok=update(()=>{
+          const name=form.get('name').trim();if(!name)throw Error('请填写看板名称');
+          getState().quickBoards.push({id,name,color:form.get('color'),notes:form.get('notes').trim(),projectIds:[],emphasisIds:[],contexts:{},rank:nextBoardRank()});
+        },'看板已新建',{rollbackOnSaveFailure:true});
+        if(ok!==false)navigate('boards',id);return ok;
+      },'创建看板');
+      return;
+    }
+    const state=getState();
+    const rows=state.frames.map(frame=>{
+      const board=boardFromFrame(state,frame.id,{id:'preview'}),names=board.projectIds.map(id=>state.projects.find(p=>p.id===id)?.name).filter(Boolean);
+      return '<label class="member-option frame-import-option" data-search-text="'+esc(frame.name+' '+names.join(' '))+'"><input type="checkbox" name="frame" value="'+esc(frame.id)+'"'+(creationDraft.frames.includes(frame.id)?' checked':'')+'><span class="frame-import-copy"><strong>'+esc(frame.name)+'</strong><small>'+esc(names.slice(0,3).join('、'))+(names.length>3?'…':'')+'</small></span><span class="frame-import-count">'+names.length+' 项</span></label>';
+    }).join('');
+    editor('新建行动看板',tabs+(rows?'<p class="board-import-hint">每个分组生成一个看板，沿用项目、备注与重点。</p><label class="member-search">搜索分组<input type="search" data-member-search placeholder="分组或项目名称"></label><div class="member-options frame-import-options">'+rows+'</div>':'<p class="board-import-hint">画板里还没有分组，可先空白新建。</p>'),form=>{
+      const selected=[...new Set(form.getAll('frame'))];if(!selected.length)throw Error('请选择至少一个分组');
+      const ids=[];
+      const ok=update(()=>{
+        for(const frameId of selected){
+          const frame=getState().frames.find(f=>f.id===frameId),color=frame?.backgroundColor||frame?.color;
+          const presetIndex=colorChoices('surface').findIndex(p=>p.value===color);
+          const id='board-'+crypto.randomUUID();ids.push(id);
+          getState().quickBoards.push(boardFromFrame(getState(),frameId,{id,rank:nextBoardRank(),color:presetIndex<0?color:palette[presetIndex]}));
+        }
+      },'已导入 '+selected.length+' 个分组',{rollbackOnSaveFailure:true});
+      if(ok!==false)navigate('boards',ids.length===1?ids[0]:null);return ok;
+    },'导入为看板');
+    $('editorSubmit').disabled=!rows;
+  }
+  function boardEditor(id,mode='blank'){
     if(!flush())return;
+    if(!id){creationDraft=null;createBoardEditor(mode);return;}
     const b=boardById(id)||{};
-    editor(id?'看板设置':'新建行动看板',field('name','名称',b.name,'text','required maxlength="60"')+'<div class="form-field"><span>颜色</span>'+colorPickerMarkup(b.color||palette[0],'data-board-draft-color',id||'new','选择看板颜色',{name:'color'})+'</div>'+area('notes','看板说明',b.notes,3)+(id?'<button type="button" class="danger-link" data-delete-board="'+esc(id)+'">删除看板，保留项目</button>':''),form=>update(()=>{
+    editor('看板设置',boardFields(b)+'<button type="button" class="danger-link" data-delete-board="'+esc(id)+'">删除看板，保留项目</button>',form=>update(()=>{
       const values={name:form.get('name').trim(),color:form.get('color'),notes:form.get('notes').trim()};if(!values.name)throw Error('请填写看板名称');
-      if(id)Object.assign(boardById(id),values);else getState().quickBoards.push({id:'board-'+crypto.randomUUID(),...values,projectIds:[],emphasisIds:[],contexts:{},rank:Math.max(-1,...getState().quickBoards.map(board=>board.rank))+1});
+      Object.assign(boardById(id),values);
     },'看板已保存'));
   }
   $('workbenchView').addEventListener('keydown',event=>{
     if(event.target.closest('[data-board-title]')&&(event.code==='Space'||event.key===' '))event.stopPropagation();
   });
   document.addEventListener('click',e=>{
-    const b=e.target.closest('[data-board-open],[data-board-members],[data-board-edit],[data-board-rename],[data-create-board],[data-project-open],[data-board-remove],[data-board-star],[data-delete-board],[data-record-result],[data-reopen-project]');if(!b)return;
+    const b=e.target.closest('[data-board-open],[data-board-members],[data-board-edit],[data-board-rename],[data-create-board],[data-import-frames],[data-board-create-mode],[data-project-open],[data-board-remove],[data-board-star],[data-delete-board],[data-record-result],[data-reopen-project]');if(!b)return;
     if(b.hasAttribute('data-board-open')){navigate('boards',b.dataset.boardOpen);return;}
     if(b.hasAttribute('data-project-open')){openProject(b.dataset.projectOpen);return;}
     if(b.hasAttribute('data-board-members')){membersEditor(b.dataset.boardMembers);return;}
     if(b.hasAttribute('data-board-rename')){renameBoard(b.dataset.boardRename,b);return;}
     if(b.hasAttribute('data-board-edit')){boardEditor(b.dataset.boardEdit);return;}
     if(b.hasAttribute('data-create-board')){boardEditor();return;}
+    if(b.hasAttribute('data-import-frames')){boardEditor(null,'frames');return;}
+    if(b.hasAttribute('data-board-create-mode')){rememberCreationDraft();createBoardEditor(b.dataset.boardCreateMode);return;}
     if(b.hasAttribute('data-delete-board')){removeBoard(b.dataset.deleteBoard);return;}
     if(b.hasAttribute('data-record-result')){const ended=sortProjectsByPriority(getState().projects.filter(isClosedProject));if(!ended.length)return;editor('为已结束项目补充成果','<div class="member-options">'+ended.map(p=>'<label class="member-option"><input type="radio" name="pid" required value="'+esc(p.id)+'"><span>'+esc(p.name)+'</span></label>').join('')+'</div>',f=>{openProject(f.get('pid'));document.querySelector('[data-inline="result"]')?.focus();},'打开项目');return;}
     if(b.hasAttribute('data-reopen-project')){update(()=>{const p=getState().projects.find(p=>p.id===b.dataset.reopenProject);setProjectClosed(p,false);},'已恢复跟进，历史结果保留');return;}
@@ -199,7 +248,7 @@ export function createWorkbenchViews(api) {
   });
   document.addEventListener('input',e=>{
     if(textIdentity(e.target))saveText(e.target);
-    if(e.target.matches('[data-member-search]')){$('editorFields').querySelectorAll('.member-option').forEach(row=>row.hidden=!row.textContent.toLowerCase().includes(e.target.value.toLowerCase()));}
+    if(e.target.matches('[data-member-search]')){$('editorFields').querySelectorAll('.member-option').forEach(row=>row.hidden=!(row.dataset.searchText||row.textContent).toLowerCase().includes(e.target.value.toLowerCase()));}
   });
   document.addEventListener('compositionstart',e=>{if(textIdentity(e.target))composing.add(e.target);});
   document.addEventListener('compositionend',e=>{if(!textIdentity(e.target))return;composing.delete(e.target);saveText(e.target);if(deferredRender)render();});

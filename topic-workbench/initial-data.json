@@ -3,57 +3,7 @@
   "workbenchVersion": 1,
   "domainTagVersion": 1,
   "projectContentVersion": 1,
-  "quickBoards": [
-    {
-      "id": "board-committed",
-      "name": "已承诺交付",
-      "color": "#6f8192",
-      "projectIds": [],
-      "notes": "跟进已承诺事项的交付范围、验证结果与时间。",
-      "rank": 0,
-      "emphasisIds": [],
-      "contexts": {}
-    },
-    {
-      "id": "board-next-meeting",
-      "name": "下次会前补齐",
-      "color": "#9b8b78",
-      "projectIds": [
-        "7135469627",
-        "7018500789"
-      ],
-      "notes": "下次讨论前补齐业务背景、数据和影响；会上确认下一步与时间。",
-      "rank": 1,
-      "emphasisIds": [],
-      "contexts": {
-        "7135469627": ""
-      }
-    },
-    {
-      "id": "board-business",
-      "name": "待业务补充对齐",
-      "color": "#858d80",
-      "projectIds": [],
-      "notes": "补齐业务场景、落地数据与影响，再对齐下一步。",
-      "rank": 2,
-      "emphasisIds": [],
-      "contexts": {}
-    },
-    {
-      "id": "board-1230",
-      "name": "1230迭代讨论",
-      "color": "#92839d",
-      "projectIds": [
-        "6961865664",
-        "7134500575",
-        "local-direction-lower-vram"
-      ],
-      "notes": "讨论知识融合、非结构化与降显存的范围、方案和排期。",
-      "rank": 3,
-      "emphasisIds": [],
-      "contexts": {}
-    }
-  ],
+  "quickBoards": [],
   "sourceDetachedVersion": 1,
   "projects": [
     {
