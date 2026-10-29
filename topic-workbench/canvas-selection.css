@@ -1,0 +1,5 @@
+.world .frame.selected{outline:calc(var(--frame-stroke,1px)*2) solid #a6becd;outline-offset:var(--frame-stroke,1px)}
+.world .frame.selected .frame-resize:before{opacity:1}
+.world .frame.selected>.frame-head strong{color:#4b6878}
+.frame-head:focus-visible{outline:calc(var(--frame-stroke,1px)*2) solid #b3c4cd;outline-offset:var(--frame-stroke,1px);border-radius:3px}
+.selection-actions button:disabled{opacity:.35;cursor:default}

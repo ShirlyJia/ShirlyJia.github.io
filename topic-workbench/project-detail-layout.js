@@ -1,7 +1,7 @@
 /** Project-owned presentation only: hiding a section never removes its content. */
 export const DETAIL_SECTION_TITLES = Object.freeze({
   description:'问题陈述', result:'成果记录', comments:'评论池',
-  children:'关联小项目', parents:'所属主项目', history:'这个方向积累的结果',
+  children:'小项目', parents:'所属主项目', history:'这个方向积累的结果',
   plans:'计划', materials:'资料'
 });
 

@@ -1,0 +1,15 @@
+.child-project-badge{position:absolute;top:8px;right:8px;z-index:3;display:flex;align-items:center;justify-content:center;gap:3px;min-width:26px;height:21px;padding:2px 4px;border:0;border-radius:4px;background:#f4f3f0;color:#8a867e;font-size:10px;line-height:1;white-space:nowrap}
+button.child-project-badge:hover,button.child-project-badge:focus-visible{color:#5e747f;background:#edf1f2}
+.child-project-badge svg{width:12px;height:12px;flex:none}
+.project-card:has(.child-project-badge) .detail-arrow{visibility:hidden;pointer-events:none}
+.world .child-project-badge{--child-badge-width:min(calc(var(--canvas-copy-size,22px)*1.4),34px);top:var(--canvas-copy-offset,2px);right:var(--canvas-copy-offset,2px);width:var(--child-badge-width);height:min(var(--canvas-copy-size,22px),24px);min-width:0;gap:2px;padding:0;font-size:min(calc(var(--canvas-copy-size,22px)*.44),10px)}
+.world .child-project-badge svg{width:min(calc(var(--canvas-copy-size,22px)*.55),14px);height:min(calc(var(--canvas-copy-size,22px)*.55),14px)}
+.world .project-card:has(.child-project-badge) .card-copy{right:calc(min(calc(var(--canvas-copy-size,22px)*1.4),34px) + var(--canvas-copy-offset,2px)*2)}
+.world.overview .child-project-badge{top:0;right:0;width:min(calc(var(--canvas-copy-size,22px)*.64),46px);height:min(calc(var(--canvas-copy-size,22px)*.64),46px);background:transparent;color:#aaa69e}
+.world.overview .child-project-badge svg{width:65%;height:65%}
+.world.overview .child-project-count{display:none}
+.world.overview .project-card:has(.child-project-badge) .card-copy{right:calc(min(calc(var(--canvas-copy-size,22px)*.64),46px) + var(--canvas-copy-offset,2px)*2)}
+.child-project-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:0 0 16px}
+.child-project-actions .text-action{padding:7px 9px;background:#faf9f7;border:1px solid #eeece7}
+.child-project-actions .text-action:hover{background:#f1f0ec;border-color:#dcd8cf}
+@media(max-width:760px){.child-project-actions{gap:8px}.child-project-actions .text-action{min-height:36px}.child-project-badge{right:10px;top:10px}}
