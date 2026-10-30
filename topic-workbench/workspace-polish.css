@@ -77,6 +77,42 @@ body.list-view .mobile-list {gap:22px;padding-top:28px;padding-bottom:56px;}
 .detail-section-additions {gap:16px;margin:26px 0;}
 .detail-actions {gap:12px;margin-top:32px;}
 
+/* Compact priorities and a quiet, directly editable comment stream. */
+.priority-editor:is([data-priority="P0"],[data-priority="P1"],[data-priority="P2"]){width:46px;min-width:46px;max-width:46px;flex:none;padding:2px 3px 2px 6px!important}
+.comment-pool #commentForm{padding:0;border:1px solid #e5e4df;border-radius:10px;background:#fafaf8;transition:border-color .15s}
+.comment-pool #commentForm:focus-within{border-color:#aaaFA8;background:#fff}
+.comment-pool #commentForm>.inline-field{margin:0}
+.comment-pool #commentForm>.inline-field>span{display:none}
+.comment-pool #commentForm .rich-editor{display:flex;flex-direction:column;border:0;background:transparent;border-radius:10px}
+.comment-pool #commentForm .rich-editor-input{order:0;min-height:100px;padding:16px 16px 12px;font-size:13px;line-height:1.8}
+.comment-pool #commentForm .rich-toolbar{order:1;padding:6px 10px;border-top:1px solid #eeede8;border-bottom:0;opacity:1;color:#8a8b83}
+.comment-pool #commentForm .rich-image-tools,.comment-pool #commentForm .rich-link-popover,.comment-pool #commentForm .rich-editor-message{order:2}
+.comment-pool #commentForm .comment-compose-actions{gap:12px;margin:0;padding:9px 14px 12px;border-top:1px solid #eeede8}
+.comment-pool .comment-compose-actions input{font-size:12px;padding:5px 0;color:#686b63}
+.comment-pool .comment-compose-actions button{display:flex;align-items:center;gap:9px;padding:6px 11px;border:1px solid #42483f;border-radius:6px;background:#42483f;color:#fff;font-size:12px;line-height:18px}
+.comment-pool .comment-compose-actions button:hover{background:#30382f;border-color:#30382f}
+.comment-pool .comment-compose-actions button span{font-size:14px;color:#d7dfd1}
+.comment-pool .comment-entries{display:flex;flex-direction:column;gap:20px;margin-top:22px}
+.comment-pool .comment-entries:empty{display:none}
+.comment-pool .comment-entry{position:relative;padding:14px 14px 12px;border:1px solid #eeede7;border-radius:9px;background:#fff}
+.comment-pool .comment-entry:hover,.comment-pool .comment-entry:focus-within{border-color:#dcded5}
+.comment-pool .comment-entry header{gap:9px;padding:0;min-height:28px}
+.comment-pool .comment-entry .comment-avatar{display:grid;place-items:center;width:28px;height:28px;flex:none;border:1px solid #e6e9e1;border-radius:8px;background:#f0f3ed;color:#737d6b;font-size:11px;font-weight:500}
+.comment-pool .comment-meta{display:flex;flex:1;min-width:0;align-items:baseline;gap:10px;flex-wrap:wrap}
+.comment-pool .comment-author{font-size:12px;color:#575c52;font-weight:550;overflow-wrap:anywhere}
+.comment-pool .comment-entry time{font-size:10px;color:#999c92;font-variant-numeric:tabular-nums}
+.comment-pool .comment-entry header>button{width:24px;height:24px;flex:none;border-radius:5px;font-size:16px;color:#a4a79d}
+.comment-pool .comment-entry header>button:hover{background:#f9eeea;color:#aa6554}
+.comment-pool .comment-entry>.inline-field{margin:9px 0 0 36px}
+.comment-pool .comment-entry .rich-editor{border:0;background:transparent;border-radius:4px}
+.comment-pool .comment-entry .rich-editor-input{min-height:28px;padding:0;font-size:13px;line-height:1.85}
+.comment-pool .comment-entry .rich-editor:hover .rich-editor-input{background:#fafaf7}
+.comment-pool .comment-entry .rich-toolbar{position:absolute;top:100%;left:-5px;z-index:4;width:max-content;max-width:calc(100% + 10px);padding:4px 5px;border:1px solid #e5e5de;border-radius:6px;background:#fff;box-shadow:0 3px 12px #37352f0a;opacity:0;visibility:hidden;pointer-events:none}
+.comment-pool .comment-entry .rich-editor:hover .rich-toolbar,.comment-pool .comment-entry .rich-editor:focus-within .rich-toolbar{opacity:1;visibility:visible;pointer-events:auto}
+.comment-pool .comment-entry .rich-paste-hint{display:none}
+@media(max-width:760px){.comment-pool #commentForm .rich-editor-input,.comment-pool .comment-entry .rich-editor-input{font-size:16px}.comment-pool .comment-entry>.inline-field{margin-left:0}.comment-pool .comment-meta{gap:4px 9px}.comment-pool .comment-entry header>button{opacity:1}}
+@media(prefers-reduced-motion:reduce){.comment-pool #commentForm{transition:none}}
+
 @media (min-width:761px) and (max-width:1100px) {
   .app-header {gap:10px;}
   .database-toolbar {gap:14px;}

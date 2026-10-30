@@ -1,3 +1,4 @@
+import {NOTE_YELLOW} from './canvas-items.js?v=20261030-detail';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const hex=value=>/^#[0-9a-f]{6}$/i.test(value||'');
 
@@ -14,6 +15,7 @@ export const COLOR_PRESETS=Object.freeze([
 ].map(Object.freeze));
 
 export function colorChoices(variant='accent'){
+  if(variant==='note')return [{name:'浅黄',value:NOTE_YELLOW},...colorChoices('surface')];
   const key=['accent','surface','ink'].includes(variant)?variant:'accent';
   return COLOR_PRESETS.map(p=>({name:p.name,value:p[key]}));
 }
@@ -21,7 +23,7 @@ export function colorChoices(variant='accent'){
 /** Keep existing custom colors intact until a user chooses a named replacement. */
 export function colorPickerMarkup(value,attribute,id,label,options={}){
   if(!/^data-[a-z][a-z0-9-]*$/.test(attribute))throw Error('颜色控件属性无效');
-  const variant=['accent','surface','ink'].includes(options.variant)?options.variant:'accent';
+  const variant=['accent','surface','ink','note'].includes(options.variant)?options.variant:'accent';
   const selected=hex(value)?value:colorChoices(variant)[0].value;
   const name=colorChoices(variant).find(p=>p.value.toLowerCase()===selected.toLowerCase())?.name||'当前颜色';
   const key=attribute+':'+id+':'+(options.inputId||'');

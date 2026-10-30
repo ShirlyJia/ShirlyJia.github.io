@@ -1,6 +1,19 @@
 /** Free canvas annotations are presentation objects, separate from project facts. */
 const types = new Set(['text','note','line','arrow']);
 const lineTypes = new Set(['line','arrow']);
+export const NOTE_YELLOW = '#f7e8ab';
+
+/** Restore existing notes once; later manual colour choices remain user-owned. */
+export function restoreYellowNotes(input) {
+  const data = JSON.parse(JSON.stringify(input));
+  if (data.schemaVersion !== 2) throw Error('便签样式需要 schemaVersion 2 数据');
+  if (data.canvasNoteStyleVersion !== undefined && data.canvasNoteStyleVersion !== 1) throw Error('不支持此便签样式版本');
+  if (data.canvasNoteStyleVersion === 1) return data;
+  if (data.canvasItems !== undefined) validateCanvasItems(data.canvasItems);
+  for (const item of data.canvasItems || []) if (item.type === 'note') item.color = NOTE_YELLOW;
+  data.canvasNoteStyleVersion = 1;
+  return data;
+}
 const finite = (value, label) => {
   if (!Number.isFinite(value)) throw Error(`${label} 必须为有限数值`);
 };
@@ -43,7 +56,7 @@ export function createCanvasItem(type, point, options = {}) {
   const defaults = lineTypes.has(type)
     ? {x2:point.x+180,y2:point.y,color:'#78736b',strokeWidth:2}
     : type === 'note'
-      ? {w:240,h:180,text:'',color:'#eee5d5',fontSize:18}
+      ? {w:240,h:180,text:'',color:NOTE_YELLOW,fontSize:18}
       : {w:260,h:72,text:'',color:'#37352f',fontSize:24};
   const item = {...defaults,...options,id:options.id ?? `canvas-${globalThis.crypto.randomUUID()}`,type,x:point.x,y:point.y};
   validateCanvasItems([item]);

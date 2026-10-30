@@ -1,5 +1,5 @@
-import {createCanvasEditor} from './canvas-editor.js';
-import {canvasItemBounds, translateCanvasItem} from './canvas-items.js';
+import {createCanvasEditor} from './canvas-editor.js?v=20261030-detail';
+import {canvasItemBounds, translateCanvasItem, restoreYellowNotes} from './canvas-items.js?v=20261030-detail';
 import {enrichProjectContent} from './project-content.js';
 import {DETAIL_SECTION_TITLES, detailLayout, detailSectionTitle, visibleDetailSections, moveDetailSection, setDetailSectionHidden, renameDetailSection, removeCustomSection, restoreCustomSection} from './project-detail-layout.js';
 import {applyDomainTags} from './category-tags.js';
@@ -7,7 +7,7 @@ import {createSnapshotStore} from './snapshot-store.js';
 import {findScheduleConflicts,findContentOverlaps} from './workbench-review.js';
 import { enrichWorkbench, isClosedProject, sortProjectsByPriority, collectDirectionResults, syncFrameBoards } from './workbench-model.js';
 import { createWorkbenchViews, colorControl } from './workbench-views.js';
-import { createPersistence } from './persistence.js';
+import { createPersistence } from './persistence.js?v=20261030-detail';
 import { detachSourceMetadata } from './source-detach.js';
 import { displayPriority, visibleNodes, nodeStatus, displayDescription } from './presentation.js';
 import {deployment, storageKey} from './deployment-config.js';
@@ -22,7 +22,7 @@ import {resizeFrameBounds, frameResizeEdges, frameEdgeNames} from './frame-resiz
 import {mountDetailResize} from './detail-panel.js';
 import {wheelDelta, enclosedFrameIds, moveSelection} from './canvas-gesture.js';
 import {childBadgeMarkup, childProjectRows, childTreeMarkup, childSectionActionsMarkup, createChildProject, parentProjectHintMarkup, parentCardMarkup} from './child-projects.js';
-import {colorPickerMarkup, installColorPickers} from './color-presets.js';
+import {colorPickerMarkup, installColorPickers} from './color-presets.js?v=20261030-detail';
 import {moveFramesToEdge} from './frame-layers.js';
 import {orderedTags,renameTag,moveTag,tagFilterMarkup,mountTagEditor} from './tag-editor.js';
 import {referenceLinesMarkup, clonePlacement} from './canvas-references.js';
@@ -45,7 +45,7 @@ $('saveStatus').title='修改保存在当前浏览器；数据与备份见设置
 const storage = createPersistence({key:storageKey('topic-workbench-v2'),onStatus: result => {
   if (result?.ok === false || result?.success === false) setSaveStatus(false);
 }});
-function documentData() { return {schemaVersion:2, workbenchVersion:state.workbenchVersion, frameBoardSyncVersion:state.frameBoardSyncVersion, domainTagVersion:state.domainTagVersion, projectContentVersion:state.projectContentVersion, quickBoards:state.quickBoards, deliveryEvents:state.deliveryEvents||[], sourceDetachedVersion:state.sourceDetachedVersion, projects:state.projects, tags:state.tagDefinitions, relations:state.relations, frames:state.frames, instances:state.instances, canvasItems:state.canvasItems||[], view:state.view}; }
+function documentData() { return {schemaVersion:2, workbenchVersion:state.workbenchVersion, frameBoardSyncVersion:state.frameBoardSyncVersion, domainTagVersion:state.domainTagVersion, projectContentVersion:state.projectContentVersion, canvasNoteStyleVersion:state.canvasNoteStyleVersion, quickBoards:state.quickBoards, deliveryEvents:state.deliveryEvents||[], sourceDetachedVersion:state.sourceDetachedVersion, projects:state.projects, tags:state.tagDefinitions, relations:state.relations, frames:state.frames, instances:state.instances, canvasItems:state.canvasItems||[], view:state.view}; }
 function setSaveStatus(ok) { dirty = !ok; const saved='已本机保存';$('saveStatus').textContent = ok ? saved : '未保存 · 点击重试'; $('saveStatus').classList.toggle('unsaved',!ok);$('detailSaveStatus').textContent=ok?saved:'未保存 · 重试';$('detailSaveStatus').classList.toggle('unsaved',!ok); }
 function save(history = true) { try { const synced=syncFrameBoards(state);storage.commit(documentData(),{recordHistory:history||dirty});if(synced)workbench?.renderNav();setSaveStatus(true); $('undo').disabled = !storage.canUndo(); return true; } catch (e) {setSaveStatus(false); toast(e.name==='QuotaExceededError'?'浏览器存储空间不足，修改尚未保存。请先导出备份，再减少图片或清理旧快照后重试。':'保存失败：'+e.message+'。请重试或导出备份。'); return false;} }
 function restoreData(data) {const {tags,...rest}=data;state = {...state,...rest,canvasItems:data.canvasItems||[],tagDefinitions:tags}; indexData();}
@@ -230,8 +230,12 @@ function detailRestoreMenu(p,available){
 }
 function commentPoolMarkup(p){
   const rows=[...(p.comments||[])].reverse();
-  const entries=rows.map(c=>{let time='';if(c.createdAt&&!Number.isNaN(Date.parse(c.createdAt)))time=new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(c.createdAt));return '<article class="comment-entry"><header><span>'+esc(c.author||'随手记录')+'</span>'+(time?'<time>'+esc(time)+'</time>':'')+'<button data-delete-comment="'+esc(c.id)+'" aria-label="删除这条记录">×</button></header>'+inlineText('body','记录内容',c.body,{comment:c.id,rows:2,autogrow:true,placeholder:'记录内容'})+'</article>';}).join('');
-  return '<form id="commentForm">'+inlineText('commentDraft','记录新信息',p.commentDraft||'',{placeholder:'想法、讨论、进展…也可以直接粘贴图片'})+'<div class="comment-compose-actions"><input data-inline="commentAuthor" aria-label="记录署名" placeholder="署名（选填）" value="'+esc(p.commentAuthor||'')+'"><button class="primary" type="submit">记一条</button></div></form><div class="comment-entries">'+entries+'</div>';
+  const entries=rows.map(c=>{
+    const author=c.author?.trim()||'随手记录';let time='';
+    if(c.createdAt&&!Number.isNaN(Date.parse(c.createdAt)))time=new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(c.createdAt));
+    return '<article class="comment-entry"><header><span class="comment-avatar" aria-hidden="true">'+esc(c.author?.trim()?Array.from(author)[0]:'记')+'</span><div class="comment-meta"><span class="comment-author">'+esc(author)+'</span>'+(time?'<time datetime="'+esc(c.createdAt)+'">'+esc(time)+'</time>':'')+'</div><button data-delete-comment="'+esc(c.id)+'" aria-label="删除这条记录" title="删除记录">×</button></header>'+inlineText('body','记录内容',c.body,{comment:c.id,rows:2,autogrow:true,placeholder:'记录内容'})+'</article>';
+  }).join('');
+  return '<form id="commentForm">'+inlineText('commentDraft','记录新信息',p.commentDraft||'',{placeholder:'记下想法、讨论或进展…'})+'<div class="comment-compose-actions"><input data-inline="commentAuthor" aria-label="记录署名" placeholder="署名（选填）" value="'+esc(p.commentAuthor||'')+'"><button class="primary" type="submit">记一条 <span aria-hidden="true">↗</span></button></div></form><div class="comment-entries" aria-label="已记录的信息">'+entries+'</div>';
 }
 function bindHoverMenus(){
   const timers=new WeakMap();
@@ -665,7 +669,7 @@ async function boot(){
   if(loaded.error){$('loadCaption').textContent='本地记录读取失败，原记录已保留';$('saveStatus').textContent='需要恢复';$('world').innerHTML='<div class="load-error"><h2>本地记录暂时无法读取</h2><p>'+esc(loaded.error)+'</p><p>原记录已保留。先导出原始备份，再处理恢复。</p><button id="downloadRaw">导出原始记录</button></div>';$('downloadRaw').onclick=()=>storage.download(localStorage.getItem(storageKey('topic-workbench-v2')));return;}
   if(!loaded.data.domainTagVersion&&loaded.fromStorage)localStorage.setItem(storageKey('topic-workbench-v2-before-domain-tags'),JSON.stringify(loaded.data));
   if(!loaded.data.projectContentVersion&&loaded.fromStorage)localStorage.setItem(storageKey('topic-workbench-v2-before-project-content'),JSON.stringify(loaded.data));
-  const enriched=detachSourceMetadata(enrichProjectContent(applyDomainTags(enrichWorkbench(loaded.data)))).data;
+  const enriched=restoreYellowNotes(detachSourceMetadata(enrichProjectContent(applyDomainTags(enrichWorkbench(loaded.data)))).data);
   if(!loaded.data.workbenchVersion&&loaded.fromStorage)localStorage.setItem(storageKey('topic-workbench-v2-before-workbench-upgrade'),JSON.stringify(loaded.data));
   const {tags,...data}=enriched;
   state={...data,canvasItems:data.canvasItems||[],tagDefinitions:tags,selected:new Set(),selectedFrames:new Set(),tags:new Set(),logic:'intersection',mode:'highlight',query:'',tool:'select',detail:null,detailInstance:null,display:'canvas',activeBoard:null,scopeFrame:null,deliveryFilter:'active',deliveryQuery:''};

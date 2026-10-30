@@ -1,5 +1,5 @@
-import {colorPickerMarkup} from './color-presets.js';
-import {createCanvasItem, canvasItemBounds, translateCanvasItem} from './canvas-items.js';
+import {colorPickerMarkup} from './color-presets.js?v=20261030-detail';
+import {createCanvasItem, canvasItemBounds, translateCanvasItem} from './canvas-items.js?v=20261030-detail';
 import {renderCanvasItem} from './canvas-item-view.js';
 
 const kinds=new Set(['text','note','line','arrow']);
@@ -38,7 +38,7 @@ export function createCanvasEditor({world,viewport,getState,mutate,save,toWorld,
     if(bar.hidden)return;
     const line=isLine(item);bar.innerHTML='';
     const name=document.createElement('span');name.className='canvas-tool-label';name.textContent=labels[item.type];bar.append(name);
-    bar.insertAdjacentHTML('beforeend',colorPickerMarkup(item.color,'data-canvas-style','color',item.type==='note'?'便签颜色':'画板元素颜色',{variant:item.type==='note'?'surface':'ink'}));
+    bar.insertAdjacentHTML('beforeend',colorPickerMarkup(item.color,'data-canvas-style','color',item.type==='note'?'便签颜色':'画板元素颜色',{variant:item.type==='note'?'note':'ink'}));
     const options=line?[[1,'细'],[2,'标准'],[4,'粗'],[6,'加粗']]:[[14,'14'],[18,'18'],[24,'24'],[32,'32'],[40,'40'],[56,'56']];
     const property=line?'strokeWidth':'fontSize',value=item[property];if(!options.some(([v])=>v===value))options.push([value,String(value)]);
     const size=document.createElement('select');size.setAttribute('aria-label',line?'线条粗细':'文字大小');size.dataset.canvasStyle=property;

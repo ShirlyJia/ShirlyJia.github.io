@@ -134,6 +134,7 @@ export function createPersistence({ key = 'topic-workbench-v2', onStatus } = {})
     if (data.workbenchVersion !== undefined && data.workbenchVersion !== 1) fail('workbenchVersion 必须为 1');
     if (data.frameBoardSyncVersion !== undefined && data.frameBoardSyncVersion !== 1) fail('frameBoardSyncVersion 必须为 1');
     if (data.sourceDetachedVersion !== undefined && data.sourceDetachedVersion !== 1) fail('sourceDetachedVersion 必须为 1');
+    if (data.canvasNoteStyleVersion !== undefined && data.canvasNoteStyleVersion !== 1) fail('canvasNoteStyleVersion 必须为 1');
     sourceShape(data.source, 'source');
     validateDelivery(data);
 
