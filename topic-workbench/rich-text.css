@@ -4,6 +4,19 @@
 .rich-editor:hover .rich-toolbar,.rich-editor:focus-within .rich-toolbar{opacity:1;border-color:#efefeb}
 .rich-toolbar button{min-width:27px;min-height:28px;margin:0;padding:3px 6px;border:0;border-radius:3px;background:transparent;color:inherit;font-family:inherit;font-size:12px;line-height:1.5;cursor:pointer}
 .rich-toolbar button:hover,.rich-toolbar button:focus-visible{background:#efefeb;color:#37352f}
+.rich-toolbar [data-rich-command=foreColor]{display:inline-flex;align-items:center;justify-content:center;gap:4px}
+.rich-color-letter{position:relative;line-height:16px;font-weight:600;padding-bottom:3px}
+.rich-color-letter:after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:1px;background:var(--rich-text-color,#37352f)}
+.rich-color-chevron{font-size:10px;color:#96978f}
+.rich-editor.rich-color-open .rich-toolbar,.comment-pool .comment-entry .rich-editor.rich-color-open .rich-toolbar{opacity:1;visibility:visible;pointer-events:auto}
+.rich-color-menu{position:fixed;inset:auto;z-index:2100;box-sizing:border-box;width:166px;max-height:calc(100dvh - 16px);margin:0;padding:5px;overflow:auto;border:1px solid #e3e3dc;border-radius:8px;background:#fff;color:#55584f;box-shadow:0 4px 18px #37352f12;font:12px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}
+.rich-color-menu::backdrop{background:transparent}
+.rich-color-menu button{display:flex;align-items:center;gap:10px;width:100%;min-height:32px;margin:0;padding:5px 8px;border:0;border-radius:4px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.rich-color-menu button:hover,.rich-color-menu button:focus-visible{outline:none;background:#f3f3ee}
+.rich-color-sample{display:grid;place-items:center;width:22px;height:22px;flex:none;border:1px solid #e8e8e2;border-radius:4px;background:#fafaf7;font-weight:600;font-size:13px}
+.rich-color-check{margin-left:auto;visibility:hidden;color:#777c6f}
+.rich-color-menu [aria-checked=true] .rich-color-check{visibility:visible}
+@media(pointer:coarse){.rich-color-menu button{min-height:38px}}
 .rich-paste-hint{margin-left:auto;font-size:10px;color:#a0a09a;padding:0 4px}
 .rich-editor-input{position:relative;display:block;min-height:90px;padding:8px 10px;outline:none;border:0;background:transparent;color:var(--ink,#37352f);font:inherit;line-height:1.85;overflow-wrap:anywhere;white-space:normal;cursor:text}
 .rich-editor-input[data-empty=true]:before{content:attr(data-placeholder);position:absolute;pointer-events:none;color:#a3a29b;max-width:calc(100% - 20px)}
