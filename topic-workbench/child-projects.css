@@ -36,4 +36,19 @@ button.child-project-badge:hover,button.child-project-badge:focus-visible{color:
 .parent-project-link>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .parent-project-link>small{flex:none;font-size:10px;color:#a19887;}
 .parent-project-link:hover,.parent-project-link:focus-visible{background:#eae9e3;color:#45423c;}
+.card-parent-marker{position:relative;max-width:100%;margin:5px 0 0;color:#8b867c;font-size:11px;line-height:1.6;cursor:default;}
+.card-parent-marker .card-parent-trigger{display:flex;align-items:center;gap:4px;max-width:100%;min-width:0;padding:2px 3px 2px 0;background:transparent;border:0;border-radius:3px;font:inherit;color:inherit;text-align:left;}
+.card-parent-trigger svg{width:13px;height:13px;flex:none;}
+.card-parent-label{flex:none;color:#9d978d;font-size:10px;}
+.card-parent-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.card-parent-trigger>small{flex:none;font-size:10px;color:#9d978d;}
+button.card-parent-trigger:hover,button.card-parent-trigger:focus-visible{background:#f5f4f0;color:#555f5a;}
+.card-parent-marker .card-parent-menu{left:0;right:auto;width:100%;min-width:0;top:100%;z-index:7;}
+.card-parent-menu>.text-action{display:flex;align-items:baseline;gap:8px;line-height:1.65;}
+.card-parent-menu>.text-action>span{flex:1;min-width:0;overflow-wrap:anywhere;}
+.card-parent-menu small{flex:none;font-size:10px;color:#9d978d;}
+.project-card:not(.dragging):has(.card-parent-marker:is([open],:hover,:focus-within)){z-index:6;}
+.board-project:has(.card-parent-marker:is([open],:hover,:focus-within)){position:relative;overflow:visible;z-index:6;}
+.outcome-card .card-parent-marker{margin:5px 0 8px;}
+.outcome-card:has(.card-parent-marker:is([open],:hover,:focus-within)){position:relative;z-index:6;}
 @media(max-width:760px){.child-project-actions{gap:8px}.child-project-actions .text-action{min-height:36px}.child-project-badge{right:10px;top:10px}}

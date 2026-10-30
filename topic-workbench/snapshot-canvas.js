@@ -2,7 +2,7 @@ import {isClosedProject} from './workbench-model.js';
 import {displayPriority, displayDescription, visibleNodes} from './presentation.js';
 import {deliveryCardMarkup} from './delivery-view.js';
 import {canvasItemBounds} from './canvas-items.js';
-import {childBadgeMarkup,childProjectRows,childTreeMarkup} from './child-projects.js';
+import {childBadgeMarkup,childProjectRows,childTreeMarkup,parentCardMarkup} from './child-projects.js';
 
 const list=value=>Array.isArray(value)?value:[];
 const finite=Number.isFinite;
@@ -38,7 +38,7 @@ export function snapshotCardMarkup(project,instance,snapshot){
   const tagIds=list(project.tagIds),tagHTML=tagIds.slice(0,3).map(id=>tags.get(id)).filter(Boolean).map(t=>'<span class="card-tag" style="--tag-color:'+color(t.color)+'">'+esc(t.name)+'</span>').join('');
   return childBadgeMarkup(children.length,project.id,{readonly:true,expandable,expanded})+(eyebrow||instance.focus?'<div class="card-eyebrow">'+eyebrow+(instance.focus?'<span class="focus-mark">★ 本处重点</span>':'')+'</div>':'')+
     '<div class="card-heading">'+pageIcon+'<h3 class="card-title">'+esc(project.name)+'</h3><span class="detail-arrow" aria-hidden="true">↗</span></div>'+
-    '<div class="card-tags">'+(priority?'<span class="priority priority-editor" data-priority="'+esc(priority)+'">'+esc(priority)+'</span>':'')+tagHTML+(tagIds.length>3?'<span class="card-tag">+'+(tagIds.length-3)+'</span>':'')+'</div>'+
+    parentCardMarkup(project.id,data,{readonly:true})+'<div class="card-tags">'+(priority?'<span class="priority priority-editor" data-priority="'+esc(priority)+'">'+esc(priority)+'</span>':'')+tagHTML+(tagIds.length>3?'<span class="card-tag">+'+(tagIds.length-3)+'</span>':'')+'</div>'+
     (project.description?'<p class="card-note">'+esc(displayDescription(project.description))+'</p>':'')+
     deliveryCardMarkup({...project,planNodes:list(project.planNodes)},{today:snapshotDay(snapshot.createdAt)})+
     (node?.owner&&!node.targetDate&&!node.estimatedDate?'<div class="card-footer">'+esc(node.owner)+'</div>':'')+

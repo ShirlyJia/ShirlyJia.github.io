@@ -1,3 +1,4 @@
+import {parentCardMarkup} from './child-projects.js';
 import {colorPickerMarkup,colorChoices} from './color-presets.js';
 import {deliveryCases} from './delivery-model.js';
 import {deliveryPageMarkup} from './delivery-view.js';
@@ -117,7 +118,7 @@ export function createWorkbenchViews(api) {
     if(!ended.length){target.innerHTML='<div class="view-empty"><strong>'+(allEnded.length?'没有匹配的结项记录':'还没有结项记录')+'</strong><p>'+(allEnded.length?'清除筛选后查看已结束项目。':'推进中的项目无需填写成果。可直接记录已结项目，或在项目详情中结束项目后补充成果，并保留在所属主项目中。')+'</p></div>';return;}
     for(const [kind,title] of [['resolved','已解决 / 已交付'],['stopped','已结束，问题未解决'],['ended','其他结项记录']]){
       const rows=ended.filter(p=>outcomeKind(p)===kind);if(!rows.length)continue;
-      target.insertAdjacentHTML('beforeend','<div class="section-row"><h3>'+title+'</h3><span>'+rows.length+' 项</span></div><div class="outcome-grid">'+rows.map(p=>'<article class="outcome-card" data-project-highlight="'+esc(p.id)+'"><header><span>'+esc(p.outcome||'已结束')+'</span><time>'+esc(p.closedAt||'')+'</time></header><button data-project-open="'+esc(p.id)+'"><h3>'+esc(p.name)+'</h3></button><p class="outcome-result">'+esc(p.result||'待补充结果')+'</p>'+(p.impact?'<p>'+esc(p.impact)+'</p>':'')+'<footer><span>'+p.materials.length+' 份资料</span><button data-project-open="'+esc(p.id)+'">查看与补充 →</button><button data-reopen-project="'+esc(p.id)+'">恢复跟进</button></footer></article>').join('')+'</div>');
+      target.insertAdjacentHTML('beforeend','<div class="section-row"><h3>'+title+'</h3><span>'+rows.length+' 项</span></div><div class="outcome-grid">'+rows.map(p=>'<article class="outcome-card" data-project-highlight="'+esc(p.id)+'"><header><span>'+esc(p.outcome||'已结束')+'</span><time>'+esc(p.closedAt||'')+'</time></header><button data-project-open="'+esc(p.id)+'"><h3>'+esc(p.name)+'</h3></button>'+parentCardMarkup(p.id,state)+'<p class="outcome-result">'+esc(p.result||'待补充结果')+'</p>'+(p.impact?'<p>'+esc(p.impact)+'</p>':'')+'<footer><span>'+p.materials.length+' 份资料</span><button data-project-open="'+esc(p.id)+'">查看与补充 →</button><button data-reopen-project="'+esc(p.id)+'">恢复跟进</button></footer></article>').join('')+'</div>');
     }
   }
 
