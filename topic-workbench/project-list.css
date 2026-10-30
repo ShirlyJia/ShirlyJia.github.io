@@ -30,7 +30,7 @@ body.list-view .filter-controls .segment{display:none}
 #mobileList .list-project-row .project-card:hover{border-color:#cecec5;box-shadow:0 2px 6px #37352f06}
 #mobileList .list-project-row .card-title{font-size:14px;line-height:1.55;-webkit-line-clamp:2}
 #mobileList .list-project-row .card-tags{margin-top:7px;gap:5px}
-#mobileList .list-project-row .card-note{margin-top:9px;line-height:1.7;font-size:12px;-webkit-line-clamp:3}
+#mobileList .list-project-row .card-note{margin-top:9px;line-height:1.7;font-size:12px;-webkit-line-clamp:2}
 #mobileList .list-project-row .card-eyebrow{margin-bottom:4px}
 #mobileList .list-project-row .card-reference{display:none}
 #mobileList .list-project-row .delivery-card-date{margin-top:10px;padding-top:8px}

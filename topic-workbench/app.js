@@ -27,7 +27,7 @@ import {colorPickerMarkup, installColorPickers} from './color-presets.js?v=20261
 import {moveFramesToEdge} from './frame-layers.js';
 import {orderedTags,renameTag,moveTag,tagFilterMarkup,tagProjectCounts,mountTagEditor} from './tag-editor.js?v=20261030-tag-counts';
 import {referenceLinesMarkup, clonePlacement} from './canvas-references.js';
-import {fitCardPreviews} from './card-preview.js';
+import {fitCardPreviews} from './card-preview.js?v=20261030-two-line-previews';
 import {createProjectList} from './project-list.js?v=20261030-grouped-list';
 import {directionFocusModel,directionIcon} from './direction-focus.js?v=20261030-direction2';
 

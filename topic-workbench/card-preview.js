@@ -1,5 +1,5 @@
 /** Reserve space for existing card metadata without moving any placements. */
-export function previewLines({height,noteHeight,lineHeight,space=Infinity,maxLines=4}){
+export function previewLines({height,noteHeight,lineHeight,space=Infinity,maxLines=2}){
   if(!Number.isFinite(lineHeight)||lineHeight<=0)return maxLines;
   return Math.max(1,Math.min(maxLines,Math.floor((space-height+noteHeight)/lineHeight)));
 }

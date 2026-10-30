@@ -4,7 +4,7 @@ import {snapshotCanvasModel, snapshotCardMarkup, snapshotFrameMarkup} from './sn
 import {renderSnapshotProjectDetails, renderSnapshotRecords} from './snapshot-preview.js?v=20261030-dates';
 import {renderCanvasItem} from './canvas-item-view.js';
 import {referenceLinesMarkup} from './canvas-references.js';
-import {fitCardPreviews} from './card-preview.js';
+import {fitCardPreviews} from './card-preview.js?v=20261030-two-line-previews';
 import {mountDetailResize} from './detail-panel.js';
 
 const $=id=>document.getElementById(id),viewport=$('historyViewport'),world=$('historyWorld');
