@@ -24,7 +24,7 @@ import {wheelDelta, enclosedFrameIds, moveSelection} from './canvas-gesture.js';
 import {childBadgeMarkup, childProjectRows, childTreeMarkup, childSectionActionsMarkup, createChildProject, parentProjectHintMarkup, parentCardMarkup} from './child-projects.js?v=20261030-direction2';
 import {colorPickerMarkup, installColorPickers} from './color-presets.js?v=20261030-detail';
 import {moveFramesToEdge} from './frame-layers.js';
-import {orderedTags,renameTag,moveTag,tagFilterMarkup,mountTagEditor} from './tag-editor.js';
+import {orderedTags,renameTag,moveTag,tagFilterMarkup,tagProjectCounts,mountTagEditor} from './tag-editor.js?v=20261030-tag-counts';
 import {referenceLinesMarkup, clonePlacement} from './canvas-references.js';
 import {directionFocusModel,directionIcon} from './direction-focus.js?v=20261030-direction2';
 
@@ -70,7 +70,8 @@ function mutateFlow(pid,fn,message,options){
 function toast(message) {$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,4000);}
 function mobileScope(){return state.frames.find(f=>f.id===state.scopeFrame)||null;}
 function matchesContent(p){const q=state.query.trim().toLowerCase(),tags=[...state.tags];return (!q||(p.name+' '+p.id+' '+p.summary+' '+p.description+' '+(p.result||'')+' '+(p.impact||'')+' '+(p.comments||[]).map(c=>c.body).join(' ')+' '+(p.customSections||[]).map(s=>s.title+' '+s.body).join(' ')).toLowerCase().includes(q))&&(!tags.length||(state.logic==='union'?tags.some(t=>p.tagIds.includes(t)):tags.every(t=>p.tagIds.includes(t))));}
-function matches(p){const scope=mobileScope();if(focusedDirection&&!focusedDirection.ids.has(p.id))return false;if(scope&&state.display==='list'&&!scope.members.some(id=>state.instances.some(i=>i.id===id&&i.pid===p.id)))return false;if(state.display==='results'&&!isClosedProject(p))return false;if(['canvas','list','boards'].includes(state.display)&&isClosedProject(p))return false;const board=state.display==='boards'&&state.quickBoards.find(b=>b.id===state.activeBoard);if(board&&!board.projectIds.includes(p.id))return false;return focusedDirection?.direction.id===p.id||matchesContent(p);}
+function matchesScope(p){const scope=mobileScope();if(focusedDirection&&!focusedDirection.ids.has(p.id))return false;if(scope&&state.display==='list'&&!scope.members.some(id=>state.instances.some(i=>i.id===id&&i.pid===p.id)))return false;if(state.display==='results'&&!isClosedProject(p))return false;if(['canvas','list','boards'].includes(state.display)&&isClosedProject(p))return false;const board=state.display==='boards'&&state.quickBoards.find(b=>b.id===state.activeBoard);if(board&&!board.projectIds.includes(p.id))return false;return true;}
+function matches(p){return matchesScope(p)&&(focusedDirection?.direction.id===p.id||matchesContent(p));}
 function matchesAnyFilter(){return !!focusedDirection||state.tags.size>0||state.query.trim().length>0||(state.display==='list'&&!!mobileScope());}
 function projectInstances(pid){return state.instances.filter(i=>i.pid===pid);}
 function rankedTagIds(ids){return [...ids].sort((a,b)=>(tagById[a]?.rank??Infinity)-(tagById[b]?.rank??Infinity));}
@@ -122,7 +123,11 @@ function renderWorld(options={}){
   for(const i of state.instances)if(!isClosedProject(byId[i.pid]))world.append(cardElement(byId[i.pid],i));
   canvasEditor?.render();renderFrameNav();applyView();applyFilter(options);renderSelection();
 }
-function renderTags(){const draft=tagEditor?.capture();$('tags').innerHTML=tagFilterMarkup(state.tagDefinitions,state.tags,colorControl);tagEditor?.restore(draft);}
+function renderTags(){const draft=tagEditor?.capture();$('tags').innerHTML=tagFilterMarkup(state.tagDefinitions,state.tags,colorControl,tagProjectCounts(projects.filter(matchesScope)));tagEditor?.restore(draft);}
+function renderTagCounts(){
+  const counts=tagProjectCounts(projects.filter(matchesScope));
+  $('tags').querySelectorAll('[data-tag]').forEach(button=>{const count=counts.get(button.dataset.tag)||0;button.querySelector('.filter-tag-count').textContent=count;button.setAttribute('aria-description',count+' 个项目');});
+}
 function renderDirectionFocus(){
   focusedDirection=directionFocusModel(state,state.focusDirection);
   if(state.focusDirection&&!focusedDirection){state.focusDirection=null;state.mode='highlight';}
@@ -141,7 +146,7 @@ function setDirectionFocus(id){
   closeDetail();state.focusDirection=id||null;state.scopeFrame=null;state.mode=id?'gather':'highlight';
   state.selected.clear();state.selectedFrames.clear();canvasEditor?.clear();applyFilter();$('gatherCards').scrollTop=0;renderSelection();
 }
-function applyFilter(options={}){renderDirectionFocus();const filtered=matchesAnyFilter();world.querySelectorAll('.project-card').forEach(el=>{const yes=matches(byId[el.dataset.pid]);el.classList.toggle('dimmed',filtered&&!yes);el.classList.toggle('match',filtered&&yes);el.classList.toggle('direction-match',!!focusedDirection&&yes);el.classList.toggle('direction-root',focusedDirection?.direction.id===el.dataset.pid);});$('logic').hidden=state.tags.size<2;$('clear').hidden=!state.tags.size&&!state.query.trim()&&!(state.display==='list'&&mobileScope())&&(state.mode!=='gather'||!!focusedDirection);const count=projects.filter(matches).length;$('canvasCount').textContent=projects.length+' 个项目 · '+state.frames.length+' 个分组'+(filtered?' · 匹配 '+count+' 项':'');$('searchEmpty').hidden=!filtered||count>0||state.mode==='gather';if(!options.keepMain){renderMobile();workbench?.render();}renderGather();syncActiveProject();for(const mode of ['highlight','gather']){$(mode).classList.toggle('active',state.mode===mode);$(mode).setAttribute('aria-pressed',String(state.mode===mode));}}
+function applyFilter(options={}){renderDirectionFocus();renderTagCounts();const filtered=matchesAnyFilter();world.querySelectorAll('.project-card').forEach(el=>{const yes=matches(byId[el.dataset.pid]);el.classList.toggle('dimmed',filtered&&!yes);el.classList.toggle('match',filtered&&yes);el.classList.toggle('direction-match',!!focusedDirection&&yes);el.classList.toggle('direction-root',focusedDirection?.direction.id===el.dataset.pid);});$('logic').hidden=state.tags.size<2;$('clear').hidden=!state.tags.size&&!state.query.trim()&&!(state.display==='list'&&mobileScope())&&(state.mode!=='gather'||!!focusedDirection);const count=projects.filter(matches).length;$('canvasCount').textContent=projects.length+' 个项目 · '+state.frames.length+' 个分组'+(filtered?' · 匹配 '+count+' 项':'');$('searchEmpty').hidden=!filtered||count>0||state.mode==='gather';if(!options.keepMain){renderMobile();workbench?.render();}renderGather();syncActiveProject();for(const mode of ['highlight','gather']){$(mode).classList.toggle('active',state.mode===mode);$(mode).setAttribute('aria-pressed',String(state.mode===mode));}}
 function renderMobile(){const el=$('mobileList');el.innerHTML='<div class="mobile-caption"><span>'+(mobileScope()?esc(mobileScope().name)+' · ':'全部项目 · ')+projects.filter(matches).length+' 项</span></div>';sortProjectsByPriority(projects.filter(matches)).forEach(p=>{const c=cardElement(p);c.addEventListener('click',e=>{if(!e.target.closest('select,input,button'))openDetail(p.id);});el.append(c);});}
 function gatheredCard(project){const el=cardElement(project);if(isClosedProject(project)&&project.result){let note=el.querySelector('.card-note');if(!note){note=document.createElement('p');note.className='card-note';el.append(note);}note.textContent=displayDescription(project.result);}el.addEventListener('click',e=>{if(!e.target.closest('select,input,button'))openDetail(project.id);});return el;}
 function renderDirectionGather(target){

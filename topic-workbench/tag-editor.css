@@ -31,6 +31,7 @@
   transition:background .15s ease,border-color .15s ease;
 }
 .filter-token .tag-dot{width:6px;height:6px;background:var(--tag-color);border-radius:50%}
+.filter-token .filter-tag-count{min-width:1ch;margin-left:1px;font-size:10px;font-weight:450;font-variant-numeric:tabular-nums;opacity:.65;text-align:right}
 .filter-token .filter-tag::after{
   content:"";box-sizing:border-box;flex:0 0 9px;width:9px;height:5px;margin-left:2px;
   border-left:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
