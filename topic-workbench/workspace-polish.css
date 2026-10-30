@@ -99,7 +99,10 @@ body.list-view .mobile-list {gap:22px;padding-top:28px;padding-bottom:56px;}
 .comment-pool .comment-entry header{gap:9px;padding:0;min-height:28px}
 .comment-pool .comment-entry .comment-avatar{display:grid;place-items:center;width:28px;height:28px;flex:none;border:1px solid #e6e9e1;border-radius:8px;background:#f0f3ed;color:#737d6b;font-size:11px;font-weight:500}
 .comment-pool .comment-meta{display:flex;flex:1;min-width:0;align-items:baseline;gap:10px;flex-wrap:wrap}
-.comment-pool .comment-author{font-size:12px;color:#575c52;font-weight:550;overflow-wrap:anywhere}
+.comment-pool .comment-title{box-sizing:border-box;flex:1;min-width:110px;max-width:100%;margin-left:-5px;padding:3px 5px;border:1px solid transparent;border-radius:4px;background:transparent;color:#575c52;font:inherit;font-size:12px;line-height:1.65;font-weight:550;text-overflow:ellipsis;cursor:text}
+.comment-pool .comment-title::placeholder{color:#8c9187;font-weight:500}
+.comment-pool .comment-title:hover{background:#f7f8f5;border-color:#e4e7df}
+.comment-pool .comment-title:focus{outline:none;border-color:#aebbac;background:#fff;box-shadow:0 0 0 2px #aebbac16}
 .comment-pool .comment-entry time{font-size:10px;color:#999c92;font-variant-numeric:tabular-nums}
 .comment-pool .comment-entry header>button{width:24px;height:24px;flex:none;border-radius:5px;font-size:16px;color:#a4a79d}
 .comment-pool .comment-entry header>button:hover{background:#f9eeea;color:#aa6554}
