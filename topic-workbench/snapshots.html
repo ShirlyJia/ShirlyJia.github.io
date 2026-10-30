@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="frame-layers.css">
   <link rel="stylesheet" href="tag-editor.css?v=20261030-tag-counts">
   <link rel="stylesheet" href="card-surfaces.css?v=20261030-neutral">
+  <link rel="stylesheet" href="date-styles.css?v=20261030-dates">
 </head>
 <body class="snapshot-history-page">
   <aside class="history-sidebar" aria-label="历史快照">
@@ -17,7 +18,7 @@
     <p id="snapshotListEmpty" class="history-list-empty" hidden>暂无快照</p>
   </aside>
   <main class="history-main">
-    <header class="history-header"><div><h2 id="snapshotTitle">历史快照</h2><p id="snapshotDate"></p></div><span class="history-readonly">只读</span><div class="history-tabs" role="tablist" aria-label="快照内容"><button id="showCanvas" disabled role="tab" aria-selected="true">画板</button><button id="showRecords" disabled role="tab" aria-selected="false">项目记录</button></div><div class="history-actions"><button id="exportSnapshot" disabled>导出</button><button id="deleteSnapshot" disabled>删除</button></div></header>
+    <header class="history-header"><div><h2 id="snapshotTitle">历史快照</h2><p id="snapshotDate" class="date-text"></p></div><span class="history-readonly">只读</span><div class="history-tabs" role="tablist" aria-label="快照内容"><button id="showCanvas" disabled role="tab" aria-selected="true">画板</button><button id="showRecords" disabled role="tab" aria-selected="false">项目记录</button></div><div class="history-actions"><button id="exportSnapshot" disabled>导出</button><button id="deleteSnapshot" disabled>删除</button></div></header>
     <p id="historyStatus" class="history-status" role="status" hidden></p>
     <section id="historyWorkspace" class="history-workspace" aria-label="快照内容">
       <div id="historyViewport" class="viewport" tabindex="0" aria-label="历史画板，拖动空白处平移，按住 Command 或 Ctrl 滚轮缩放"><div id="historyWorld" class="world"></div></div>
@@ -28,6 +29,6 @@
     </section>
   </main>
   <dialog id="deleteSnapshotDialog" class="history-delete-dialog"><form id="deleteSnapshotForm"><h2 id="deleteSnapshotTitle">删除快照？</h2><p>仅删除这份历史快照，当前画板不变。此操作无法撤销，可先导出留存。</p><p id="deleteSnapshotError" class="form-error" role="alert" hidden></p><div class="dialog-actions"><button id="cancelDeleteSnapshot" type="button">取消</button><button class="history-delete-confirm" type="submit">删除快照</button></div></form></dialog>
-  <script type="module" src="snapshot-history.js?v=20261030-comment-interactions"></script>
+  <script type="module" src="snapshot-history.js?v=20261030-dates"></script>
 </body>
 </html>

@@ -44,7 +44,7 @@ export function createDeliveryController({getState,mutate,flush,editor,field,are
     if(!start())return false;const found=locate(pid,nid);if(!found)return false;
     const {project,node}=found,state=deliveryState(project,node),tracked=!!node.delivery||!!(node.dateConfirmed&&node.estimatedDate);
     const existingDate=node.delivery?.committedDate||node.estimatedDate||'',oldEstimate=node.estimatedDate||'',oldConfirmed=!!node.dateConfirmed;
-    const previous=tracked&&existingDate?'<p class="delivery-previous-date">上次确认的交付日 <strong>'+esc(existingDate)+'</strong></p>':'';
+    const previous=tracked&&existingDate?'<p class="delivery-previous-date">上次确认的交付日 <strong><time>'+esc(existingDate)+'</time></strong></p>':'';
     const expected='<details class="delivery-expected-date"'+(node.targetDate?' open':'')+'><summary>期望日期（选填）</summary>'+field('targetDate','期望日期',node.targetDate||'','date')+'</details>';
     editor('调整交付日期',context(project,node)+previous+field('estimatedDate','承诺交付日',oldEstimate,'date')+check('dateConfirmed','交付日期已确认',oldConfirmed)+expected+reasonField('调整理由')+actorField(),form=>{
       const patch={estimatedDate:String(form.get('estimatedDate')||''),targetDate:String(form.get('targetDate')||''),dateConfirmed:form.has('dateConfirmed')};
@@ -58,7 +58,7 @@ export function createDeliveryController({getState,mutate,flush,editor,field,are
   function complete(pid,nid) {
     if(!start())return false;const found=locate(pid,nid);if(!found)return false;
     const {project,node}=found,state=deliveryState(project,node),existing=state.completedAt||'',completed=state.kind==='delivered';
-    const details=context(project,node)+(state.date?'<p class="delivery-previous-date">承诺交付日 <strong>'+esc(state.date)+'</strong></p>':'');
+    const details=context(project,node)+(state.date?'<p class="delivery-previous-date">承诺交付日 <strong><time>'+esc(state.date)+'</time></strong></p>':'');
     editor(completed?'更正交付记录':'记录已交付',details+field('completedAt','实际交付日期',existing||todayDate(),'date','required max="'+todayDate()+'"')+area('deliveryReason',completed?'更正理由':'交付说明（选填）','',3)+actorField(),form=>{
       const date=String(form.get('completedAt')||'');if(!date)throw Error('请填写实际交付日期。');
       if(completed&&date!==existing&&!String(form.get('deliveryReason')||'').trim())throw Error('请填写更正交付记录的理由。');

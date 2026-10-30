@@ -58,9 +58,9 @@ function tagsHTML(project, tagById) {
 }
 
 function metadataHTML(project) {
-  const values = [['类型',project.kind === 'direction' ? '方向' : ''],['优先级',project.priority],['状态',project.status],['结果状态',project.outcome],['结束日期',isClosedProject(project)?project.closedAt:'']];
+  const values = [['类型',project.kind === 'direction' ? '方向' : ''],['优先级',project.priority],['状态',project.status],['结果状态',project.outcome],['结束日期',isClosedProject(project)?project.closedAt:'',true]];
   const fields = values.filter(([,value]) => present(value));
-  return fields.length ? `<dl class="snapshot-meta">${fields.map(([label,value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>` : '';
+  return fields.length ? `<dl class="snapshot-meta">${fields.map(([label,value,isDate]) => `<div><dt>${esc(label)}</dt><dd>${isDate?`<time>${esc(value)}</time>`:esc(value)}</dd></div>`).join('')}</dl>` : '';
 }
 
 // Keep the preview defensive: old snapshots may omit annotations, and an
@@ -156,10 +156,10 @@ function plansHTML(project) {
   if (!plans.length) return '';
   const statuses = {doing:'进行中',not_started:'未开始',finished:'已完成',blocked:'受阻'};
   return `<section class="snapshot-project-section"><h4>当时的计划</h4><div class="snapshot-plans">${plans.map(plan => {
-    const fields = [['跟进人',plan.owner],['期望日期',plan.targetDate],['承诺交付日',plan.estimatedDate],['实际交付日',plan.delivery?.completedAt],['实际开始',plan.actualStart],['实际完成',plan.actualFinish],['状态',Object.hasOwn(statuses,text(plan.status)) ? statuses[plan.status] : plan.status]];
+    const fields = [['跟进人',plan.owner],['期望日期',plan.targetDate,true],['承诺交付日',plan.estimatedDate,true],['实际交付日',plan.delivery?.completedAt,true],['实际开始',plan.actualStart,true],['实际完成',plan.actualFinish,true],['状态',Object.hasOwn(statuses,text(plan.status)) ? statuses[plan.status] : plan.status]];
     const info = fields.filter(([,value]) => present(value));
     if (present(plan.estimatedDate)) info.push(['交付确认',plan.dateConfirmed === true ? '已确认' : '未确认']);
-    return `<article class="snapshot-plan"><strong>${esc(plan.title || '未命名计划')}</strong>${plan.focus ? '<span class="snapshot-badge">卡片展示</span>' : ''}${info.length ? `<dl class="snapshot-meta">${info.map(([label,value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>` : ''}${richParagraph('说明',plan.note,plan.richText?.note)}</article>`;
+    return `<article class="snapshot-plan"><strong>${esc(plan.title || '未命名计划')}</strong>${plan.focus ? '<span class="snapshot-badge">卡片展示</span>' : ''}${info.length ? `<dl class="snapshot-meta">${info.map(([label,value,isDate]) => `<div><dt>${esc(label)}</dt><dd>${isDate?`<time>${esc(value)}</time>`:esc(value)}</dd></div>`).join('')}</dl>` : ''}${richParagraph('说明',plan.note,plan.richText?.note)}</article>`;
   }).join('')}</div></section>`;
 }
 
@@ -231,7 +231,7 @@ function deliveryHistoryHTML(data){
   rows.sort((a,b)=>Number(b.some(e=>['overdue','rescheduled'].includes(e.kind)))-Number(a.some(e=>['overdue','rescheduled'].includes(e.kind)))||text(b.at(-1)?.at).localeCompare(text(a.at(-1)?.at)));
   return '<section class="snapshot-section"><h3>交付变更留档</h3>'+rows.map(events=>{
     const latest=events.at(-1),project=list(data.projects).find(p=>p.id===latest.projectId),node=list(project?.planNodes).find(n=>n.id===latest.nodeId);
-    return '<details class="snapshot-project"><summary><strong>'+esc(project?.name||latest.projectName||'已移除项目')+'</strong><span>'+esc(node?.title||latest.nodeTitle||'未命名计划')+'</span>'+(!node?'<small>计划已移除</small>':'')+'</summary><div class="snapshot-project-body">'+events.slice().sort((a,b)=>text(b.at).localeCompare(text(a.at))).map(event=>'<article class="snapshot-plan"><strong>'+esc(labels[event.kind]||'交付记录')+'</strong><div class="snapshot-meta"><time>'+esc(dateLabel(event.at))+'</time><span>'+esc(event.actor||'未署名')+'</span></div>'+((present(event.fromDate)||present(event.toDate))?'<p>'+esc(event.fromDate||'未设置')+' → '+esc(event.toDate||'已撤回')+'</p>':'')+paragraph('理由',event.reason)+paragraph('实际交付日',event.completedAt)+'</article>').join('')+'</div></details>';
+    return '<details class="snapshot-project"><summary><strong>'+esc(project?.name||latest.projectName||'已移除项目')+'</strong><span>'+esc(node?.title||latest.nodeTitle||'未命名计划')+'</span>'+(!node?'<small>计划已移除</small>':'')+'</summary><div class="snapshot-project-body">'+events.slice().sort((a,b)=>text(b.at).localeCompare(text(a.at))).map(event=>'<article class="snapshot-plan"><strong>'+esc(labels[event.kind]||'交付记录')+'</strong><div class="snapshot-meta"><time>'+esc(dateLabel(event.at))+'</time><span>'+esc(event.actor||'未署名')+'</span></div>'+((present(event.fromDate)||present(event.toDate))?'<p>'+(event.fromDate?'<time>'+esc(event.fromDate)+'</time>':'未设置')+' → '+(event.toDate?'<time>'+esc(event.toDate)+'</time>':'已撤回')+'</p>':'')+paragraph('理由',event.reason)+(present(event.completedAt)?'<div class="snapshot-field"><h5>实际交付日</h5><time>'+esc(event.completedAt)+'</time></div>':'')+'</article>').join('')+'</div></details>';
   }).join('')+'</section>';
 }
 
@@ -249,7 +249,7 @@ export function renderSnapshotPreview(snap) {
   const tagById = new Map(tags.map(tag => [tag.id,tag]));
   const timestamp = dateLabel(snap.createdAt);
   const frameNotes = list(data.frames).filter(frame => present(frame.rationale));
-  return `<div class="snapshot-preview"><header class="snapshot-preview-head"><strong>${esc(snap.name || '未命名快照')}</strong><p class="muted">只读${timestamp ? ' · '+esc(timestamp) : ''} · ${projects.length} 个项目。展示保存时的内容。</p></header><section class="snapshot-section"><h3>当时的画板布局</h3>${canvasHTML(data,projectById,tagById)}${annotationTextHTML(data)}${frameNotes.length ? `<details class="snapshot-frame-notes"><summary>分组说明</summary>${frameNotes.map(frame => paragraph(frame.name || '未命名分组',frame.rationale)).join('')}</details>` : ''}</section><section class="snapshot-section"><h3>当时的行动看板</h3>${boardsHTML(data,projectById,tagById)}</section>${deliveryHistoryHTML(data)}<section class="snapshot-section"><h3>项目清单</h3><p class="snapshot-caption muted">展开查看当时的问题陈述、评论、栏目、计划与资料。</p>${projectsHTML(data,projects,projectById,tagById)}</section></div>`;
+  return `<div class="snapshot-preview"><header class="snapshot-preview-head"><strong>${esc(snap.name || '未命名快照')}</strong><p class="muted">只读${timestamp ? ' · <time>'+esc(timestamp)+'</time>' : ''} · ${projects.length} 个项目。展示保存时的内容。</p></header><section class="snapshot-section"><h3>当时的画板布局</h3>${canvasHTML(data,projectById,tagById)}${annotationTextHTML(data)}${frameNotes.length ? `<details class="snapshot-frame-notes"><summary>分组说明</summary>${frameNotes.map(frame => paragraph(frame.name || '未命名分组',frame.rationale)).join('')}</details>` : ''}</section><section class="snapshot-section"><h3>当时的行动看板</h3>${boardsHTML(data,projectById,tagById)}</section>${deliveryHistoryHTML(data)}<section class="snapshot-section"><h3>项目清单</h3><p class="snapshot-caption muted">展开查看当时的问题陈述、评论、栏目、计划与资料。</p>${projectsHTML(data,projects,projectById,tagById)}</section></div>`;
 }
 
 /** Full historical project content for the standalone canvas drawer. */

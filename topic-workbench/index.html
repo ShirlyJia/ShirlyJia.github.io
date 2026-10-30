@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="tag-editor.css?v=20261030-tag-counts">
   <link rel="stylesheet" href="direction-focus.css?v=20261030-direction2">
   <link rel="stylesheet" href="card-surfaces.css?v=20261030-neutral">
+  <link rel="stylesheet" href="date-styles.css?v=20261030-dates">
 </head>
 <body>
   <a class="sr-only skip-link" href="#viewport">跳到画板</a>
@@ -97,6 +98,6 @@
   <dialog id="tagDialog" class="editor-dialog"><header class="editor-head"><h2>管理分类标签</h2><button id="closeTags" aria-label="关闭标签管理">×</button></header><form id="newTagForm" class="inline-form"><label class="sr-only" for="newTagName">新标签名称</label><input id="newTagName" placeholder="新标签名称" maxlength="40" required><span id="newTagColorControl"></span><button class="primary" type="submit">新增</button></form><div id="tagRows"></div><p class="muted">删除后可用顶部「撤销」恢复。</p></dialog>
   <dialog id="previewDialog" class="preview-dialog"><header class="editor-head"><h2 id="previewTitle">资料</h2><div><a id="previewOriginal" target="_blank" rel="noopener noreferrer">打开原文 ↗</a><button id="closePreview" aria-label="关闭资料预览">×</button></div></header><p class="muted">如受登录或网站限制未能显示，请打开原文查看、编辑。</p><iframe id="previewFrame" title="资料预览" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" referrerpolicy="no-referrer"></iframe></dialog>
   <dialog id="settingsDialog" class="workspace-settings"><header><h2>数据与备份</h2><button id="closeSettings" aria-label="关闭设置">×</button></header><p>修改与快照保存在当前浏览器，不会同步给其他设备或成员。</p><p>备份包含项目、画板与图片；会议资料在会议页单独备份。</p><div class="settings-links"><button id="exportData" class="primary">导出备份</button><a href="snapshots.html">查看历史快照 →</a></div></dialog>
-  <script type="module" src="app.js?v=20261030-comment-interactions"></script>
+  <script type="module" src="app.js?v=20261030-dates"></script>
 </body>
 </html>

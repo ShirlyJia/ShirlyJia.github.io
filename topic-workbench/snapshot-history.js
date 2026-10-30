@@ -1,7 +1,7 @@
 import {createSnapshotStore} from './snapshot-store.js';
 import {storageKey} from './deployment-config.js';
 import {snapshotCanvasModel, snapshotCardMarkup, snapshotFrameMarkup} from './snapshot-canvas.js';
-import {renderSnapshotProjectDetails, renderSnapshotRecords} from './snapshot-preview.js?v=20261030-comment-interactions';
+import {renderSnapshotProjectDetails, renderSnapshotRecords} from './snapshot-preview.js?v=20261030-dates';
 import {renderCanvasItem} from './canvas-item-view.js';
 import {referenceLinesMarkup} from './canvas-references.js';
 import {mountDetailResize} from './detail-panel.js';

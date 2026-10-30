@@ -69,7 +69,7 @@ function timestamp(value) {
   return Number.isFinite(parsed.getTime())?new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(parsed):String(value||'');
 }
 function eventDates(event) {
-  if(event.kind==='delivered')return '<span>实际交付 '+esc(event.completedAt||event.toDate||'')+'</span>';
+  if(event.kind==='delivered')return '<span>实际交付 '+dateHTML(event.completedAt||event.toDate||'')+'</span>';
   if(event.fromDate&&event.toDate&&event.fromDate!==event.toDate)return dateHTML(event.fromDate)+'<span aria-hidden="true">→</span>'+dateHTML(event.toDate);
   const date=event.toDate||event.fromDate;
   return date?dateHTML(date):'';

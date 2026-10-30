@@ -230,7 +230,7 @@ function bootMeetings() {
     if(!data){$('meetingList').innerHTML='';$('meetingCount').textContent='读取失败';return;}
     const meetings=categoryMeetings(),matches=meetings.filter(meeting=>meetingMatches(meeting,$('meetingSearch').value));
     $('meetingCount').textContent=`${matches.length}${matches.length!==meetings.length?' / '+meetings.length:''} 条会议`;
-    $('meetingList').innerHTML=matches.map(meeting=>`<div class="meeting-list-item${selected===meeting.id?' selected':''}"><button class="meeting-row" data-meeting="${esc(meeting.id)}"${selected===meeting.id?' aria-current="page"':''}><strong>${esc(meeting.title.trim()||'未命名会议')}</strong>${meeting.date?`<small>${esc(meeting.date)}</small>`:''}</button><button class="row-delete" data-delete-meeting="${esc(meeting.id)}" aria-label="删除会议：${esc(meeting.title.trim()||'未命名会议')}" title="删除会议">删除</button></div>`).join('')||'<p class="list-empty">'+(meetings.length?'没有匹配的会议':'还没有会议记录')+'</p>';
+    $('meetingList').innerHTML=matches.map(meeting=>`<div class="meeting-list-item${selected===meeting.id?' selected':''}"><button class="meeting-row" data-meeting="${esc(meeting.id)}"${selected===meeting.id?' aria-current="page"':''}><strong>${esc(meeting.title.trim()||'未命名会议')}</strong>${meeting.date?`<time datetime="${esc(meeting.date)}">${esc(meeting.date)}</time>`:''}</button><button class="row-delete" data-delete-meeting="${esc(meeting.id)}" aria-label="删除会议：${esc(meeting.title.trim()||'未命名会议')}" title="删除会议">删除</button></div>`).join('')||'<p class="list-empty">'+(meetings.length?'没有匹配的会议':'还没有会议记录')+'</p>';
     const count=data.deletedMeetings.length+(data.deletedItems?.length||0);
     $('undoDelete').disabled=!count;$('openTrash').disabled=false;$('trashCount').textContent=count?String(count):'';
   }
@@ -295,7 +295,7 @@ function bootMeetings() {
   function updateFooter() {
     const value = current()?.updatedAt;
     const date = value ? new Date(value) : null;
-    $('editedAt').textContent = date && Number.isFinite(date.getTime()) ? `最近编辑 ${date.toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}` : '';
+    $('editedAt').innerHTML = date && Number.isFinite(date.getTime()) ? `最近编辑 <time datetime="${esc(value)}">${esc(date.toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))}</time>` : '';
   }
   function renderEditor() {
     if($('materialPreview').open)$('materialPreview').close();releasePreview();

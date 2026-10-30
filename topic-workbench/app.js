@@ -16,8 +16,8 @@ import {richEditorMarkup, mountRichEditors, readRichEditor, richHTML, flushRichE
 import {readProjectFlow, setCurrentFlowNode, setProjectClosed} from './project-flow.js';
 import {flowMarkup, mountProjectFlow} from './project-flow-view.js';
 import {reconcileDelivery, recordDeliveryLifecycle, deliveryCases, todayDate} from './delivery-model.js';
-import {deliveryCardMarkup, deliveryPlanMarkup} from './delivery-view.js';
-import {createDeliveryController} from './delivery-controller.js';
+import {deliveryCardMarkup, deliveryPlanMarkup} from './delivery-view.js?v=20261030-dates';
+import {createDeliveryController} from './delivery-controller.js?v=20261030-dates';
 import {previewDeliveryUndo, applyDeliveryUndo} from './delivery-undo.js';
 import {resizeFrameBounds, frameResizeEdges, frameEdgeNames} from './frame-resize.js';
 import {mountDetailResize} from './detail-panel.js';
@@ -216,7 +216,7 @@ function relatedMarkup(pid){
   }
   return html;
 }
-function nodeMarkup(n){const status=nodeStatus(n.status),showStatus=status&&status!==n.title&&!(['处理中','进行中'].includes(n.title)&&status==='进行中');return '<div class="node-row"><div class="node-heading"><strong>'+esc(n.title)+'</strong>'+actionButton('编辑','node-edit',n.id)+'</div>'+(n.owner?'<p>'+esc(n.owner)+'</p>':'')+((n.targetDate||n.estimatedDate)?'<div class="node-dates">'+(n.targetDate?'<span>目标 '+esc(n.targetDate)+'</span>':'')+(n.estimatedDate?'<span>预计 '+esc(n.estimatedDate)+'</span>':'')+'<span>'+(n.dateConfirmed?'已确认':'未确认')+'</span></div>':'')+(showStatus?'<small>'+esc(status)+'</small>':'')+(n.note?'<p class="preserve-text">'+esc(n.note)+'</p>':'')+'</div>';}
+function nodeMarkup(n){const status=nodeStatus(n.status),showStatus=status&&status!==n.title&&!(['处理中','进行中'].includes(n.title)&&status==='进行中');return '<div class="node-row"><div class="node-heading"><strong>'+esc(n.title)+'</strong>'+actionButton('编辑','node-edit',n.id)+'</div>'+(n.owner?'<p>'+esc(n.owner)+'</p>':'')+((n.targetDate||n.estimatedDate)?'<div class="node-dates">'+(n.targetDate?'<span>目标 <time datetime="'+esc(n.targetDate)+'">'+esc(n.targetDate)+'</time></span>':'')+(n.estimatedDate?'<span>预计 <time datetime="'+esc(n.estimatedDate)+'">'+esc(n.estimatedDate)+'</time></span>':'')+'<span>'+(n.dateConfirmed?'已确认':'未确认')+'</span></div>':'')+(showStatus?'<small>'+esc(status)+'</small>':'')+(n.note?'<p class="preserve-text">'+esc(n.note)+'</p>':'')+'</div>';}
 function readableText(value){
   const text=displayDescription(value),pattern=/https?:\/\/[^\s<>"'（）()，。；]+/g;let html='',offset=0;
   for(const match of text.matchAll(pattern)){
@@ -472,7 +472,7 @@ function undoWithDeliveryHistory(){
       restoreData(prev);state.selected.clear();state.selectedFrames.clear();if(!byId[state.detail]){state.detail=null;state.detailInstance=null;$('detail').hidden=true;}renderAll();setSaveStatus(true);$('undo').disabled=!storage.canUndo();if($('tagDialog').open)tagRows();toast('已撤销，交付历史保留');return true;
     };
     if(preview.requiresReason){
-      editor('撤销交付变更','<p class="muted">这次撤销涉及交付日期或记录。填写原因后撤销，原记录继续保留。</p><ul class="delivery-undo-list">'+preview.changes.map(c=>'<li>'+esc(c.projectName)+' · '+esc(c.nodeTitle||'未命名计划')+(c.fromDate||c.toDate?'：'+esc(c.fromDate||'未设置')+' → '+esc(c.toDate||'未设置'):'')+'</li>').join('')+'</ul>'+area('reason','撤销理由')+field('actor','记录人（选填）'),f=>{const reason=f.get('reason').trim();if(!reason)throw Error('请填写撤销理由');return apply(reason,f.get('actor').trim());},'撤销并留档');
+      editor('撤销交付变更','<p class="muted">这次撤销涉及交付日期或记录。填写原因后撤销，原记录继续保留。</p><ul class="delivery-undo-list">'+preview.changes.map(c=>'<li>'+esc(c.projectName)+' · '+esc(c.nodeTitle||'未命名计划')+(c.fromDate||c.toDate?'：'+(c.fromDate?'<time>'+esc(c.fromDate)+'</time>':'未设置')+' → '+(c.toDate?'<time>'+esc(c.toDate)+'</time>':'未设置'):'')+'</li>').join('')+'</ul>'+area('reason','撤销理由')+field('actor','记录人（选填）'),f=>{const reason=f.get('reason').trim();if(!reason)throw Error('请填写撤销理由');return apply(reason,f.get('actor').trim());},'撤销并留档');
     }else apply();
   }catch(e){toast('撤销失败：'+e.message);}
 }
@@ -560,7 +560,7 @@ function snapshotsPanel(){
 function snapshotPreview(id){location.href='snapshots.html?snapshot='+encodeURIComponent(id);}
 function reviewPanel(){
   const data=documentData(),dates=findScheduleConflicts(data),links=findContentOverlaps(data);
-  const schedule=dates.map(r=>'<div class="review-row"><strong>'+esc(r.owner)+' · '+esc(r.overlap.start)+(r.overlap.end!==r.overlap.start?' 至 '+esc(r.overlap.end):'')+'</strong>'+r.items.map(i=>'<button type="button" data-review-project="'+esc(i.projectId)+'">'+esc(i.projectName)+' · '+esc(i.nodeTitle)+(i.dateConfirmed?'':' · 日期未确认')+'</button>').join('')+'<p>'+esc(r.reason)+'</p></div>').join('')||'<p class="muted">现有明确负责人及日期中，未发现同日或重叠安排。</p>';
+  const schedule=dates.map(r=>'<div class="review-row"><strong>'+esc(r.owner)+' · <time>'+esc(r.overlap.start)+'</time>'+(r.overlap.end!==r.overlap.start?' 至 <time>'+esc(r.overlap.end)+'</time>':'')+'</strong>'+r.items.map(i=>'<button type="button" data-review-project="'+esc(i.projectId)+'">'+esc(i.projectName)+' · '+esc(i.nodeTitle)+(i.dateConfirmed?'':' · 日期未确认')+'</button>').join('')+'<p>'+esc(r.reason)+'</p></div>').join('')||'<p class="muted">现有明确负责人及日期中，未发现同日或重叠安排。</p>';
   const related=links.map(r=>'<div class="review-row"><button type="button" data-review-project="'+esc(r.projectId)+'">'+esc(r.projectName)+'</button><p>'+esc((r.parents||r.boards||[]).map(x=>x.name).join(' / '))+'</p></div>').join('')||'<p class="muted">暂无共享关联需要查看。</p>';
   editor('待核对事项','<h3>排期 / 资源</h3>'+schedule+'<h3>关联 / 范围</h3><p class="muted">同一项目可以出现在多处。这里帮助核对各处范围，由你决定是否合并或调整安排。</p>'+related,()=>true,'关闭');
 }
