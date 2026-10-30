@@ -12,7 +12,7 @@ import { createPersistence } from './persistence.js?v=20261030-comment-interacti
 import { detachSourceMetadata } from './source-detach.js';
 import { displayPriority, visibleNodes, nodeStatus, displayDescription } from './presentation.js';
 import {deployment, storageKey} from './deployment-config.js';
-import {richEditorMarkup, mountRichEditors, readRichEditor, richHTML, flushRichEditors, destroyRichEditors} from './rich-text.js?v=20261030-comment-interactions';
+import {richEditorMarkup, mountRichEditors, readRichEditor, richHTML, flushRichEditors, destroyRichEditors} from './rich-text.js?v=20261030-card-preview';
 import {readProjectFlow, setCurrentFlowNode, setProjectClosed} from './project-flow.js';
 import {flowMarkup, mountProjectFlow} from './project-flow-view.js';
 import {reconcileDelivery, recordDeliveryLifecycle, deliveryCases, todayDate} from './delivery-model.js';
@@ -27,6 +27,7 @@ import {colorPickerMarkup, installColorPickers} from './color-presets.js?v=20261
 import {moveFramesToEdge} from './frame-layers.js';
 import {orderedTags,renameTag,moveTag,tagFilterMarkup,tagProjectCounts,mountTagEditor} from './tag-editor.js?v=20261030-tag-counts';
 import {referenceLinesMarkup, clonePlacement} from './canvas-references.js';
+import {fitCardPreviews} from './card-preview.js';
 import {directionFocusModel,directionIcon} from './direction-focus.js?v=20261030-direction2';
 
 const $ = id => document.getElementById(id);
@@ -93,7 +94,7 @@ function cardElement(p,instance=null){const el=document.createElement('article')
   if(action.hasAttribute('data-tree-add')){childProjectEditor(p.id);return;}
   const current=instance?state.instances.find(i=>i.id===instance.id):null,project=byId[p.id];if(!project||project.kind!=='direction'||instance&&!current)return;
   if(current){current.childrenExpanded=!current.childrenExpanded;save(false);}else if(expandedDirectionTrees.has(p.id))expandedDirectionTrees.delete(p.id);else expandedDirectionTrees.add(p.id);
-  el.innerHTML=cardMarkup(project,{instance:current});syncActiveProject();el.querySelector('[data-toggle-children]')?.focus({preventScroll:true});
+  el.innerHTML=cardMarkup(project,{instance:current});if(instance)fitCardPreviews(world,state.frames);syncActiveProject();el.querySelector('[data-toggle-children]')?.focus({preventScroll:true});
 });el.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.target.closest('button,select,input,textarea,a,[contenteditable="true"]')){e.preventDefault();e.stopPropagation();openDetail(p.id,instance?.id);}});return el;}
 let hoveredProject = null;
 function renderReferenceLines(){
@@ -147,7 +148,7 @@ function setDirectionFocus(id){
   closeDetail();state.focusDirection=id||null;state.scopeFrame=null;state.mode=id?'gather':'highlight';
   state.selected.clear();state.selectedFrames.clear();canvasEditor?.clear();applyFilter();$('gatherCards').scrollTop=0;renderSelection();
 }
-function applyFilter(options={}){renderDirectionFocus();renderTagCounts();const filtered=matchesAnyFilter();world.querySelectorAll('.project-card').forEach(el=>{const yes=matches(byId[el.dataset.pid]);el.classList.toggle('dimmed',filtered&&!yes);el.classList.toggle('match',filtered&&yes);el.classList.toggle('direction-match',!!focusedDirection&&yes);el.classList.toggle('direction-root',focusedDirection?.direction.id===el.dataset.pid);});$('logic').hidden=state.tags.size<2;$('clear').hidden=!state.tags.size&&!state.query.trim()&&!(state.display==='list'&&mobileScope())&&(state.mode!=='gather'||!!focusedDirection);const count=projects.filter(matches).length;$('canvasCount').textContent=projects.length+' 个项目 · '+state.frames.length+' 个分组'+(filtered?' · 匹配 '+count+' 项':'');$('searchEmpty').hidden=!filtered||count>0||state.mode==='gather';if(!options.keepMain){renderMobile();workbench?.render();}renderGather();syncActiveProject();for(const mode of ['highlight','gather']){$(mode).classList.toggle('active',state.mode===mode);$(mode).setAttribute('aria-pressed',String(state.mode===mode));}}
+function applyFilter(options={}){renderDirectionFocus();renderTagCounts();const filtered=matchesAnyFilter();world.querySelectorAll('.project-card').forEach(el=>{const yes=matches(byId[el.dataset.pid]);el.classList.toggle('dimmed',filtered&&!yes);el.classList.toggle('match',filtered&&yes);el.classList.toggle('direction-match',!!focusedDirection&&yes);el.classList.toggle('direction-root',focusedDirection?.direction.id===el.dataset.pid);});$('logic').hidden=state.tags.size<2;$('clear').hidden=!state.tags.size&&!state.query.trim()&&!(state.display==='list'&&mobileScope())&&(state.mode!=='gather'||!!focusedDirection);const count=projects.filter(matches).length;$('canvasCount').textContent=projects.length+' 个项目 · '+state.frames.length+' 个分组'+(filtered?' · 匹配 '+count+' 项':'');$('searchEmpty').hidden=!filtered||count>0||state.mode==='gather';if(!options.keepMain){renderMobile();workbench?.render();}renderGather();fitCardPreviews(world,state.frames);syncActiveProject();for(const mode of ['highlight','gather']){$(mode).classList.toggle('active',state.mode===mode);$(mode).setAttribute('aria-pressed',String(state.mode===mode));}}
 function renderMobile(){const el=$('mobileList');el.innerHTML='<div class="mobile-caption"><span>'+(mobileScope()?esc(mobileScope().name)+' · ':'全部项目 · ')+projects.filter(matches).length+' 项</span></div>';sortProjectsByPriority(projects.filter(matches)).forEach(p=>{const c=cardElement(p);c.addEventListener('click',e=>{if(!e.target.closest('select,input,button'))openDetail(p.id);});el.append(c);});}
 function gatheredCard(project){const el=cardElement(project);if(isClosedProject(project)&&project.result){let note=el.querySelector('.card-note');if(!note){note=document.createElement('p');note.className='card-note';el.append(note);}note.textContent=displayDescription(project.result);}el.addEventListener('click',e=>{if(!e.target.closest('select,input,button'))openDetail(project.id);});return el;}
 function renderDirectionGather(target){

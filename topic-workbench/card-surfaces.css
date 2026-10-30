@@ -16,3 +16,20 @@
 .world .project-card.dragging{
   box-shadow:0 3px 7px rgb(0 0 0 / .04),0 14px 30px rgb(0 0 0 / .04);
 }
+
+/* Show enough of the problem statement to read the card without opening it. */
+:where(.world,.gather-cards,.mobile-list) .project-card .card-note{
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:var(--card-preview-lines,4);
+  white-space:normal;
+  overflow-wrap:anywhere;
+  line-height:1.65;
+  overflow:hidden;
+}
+@media(hover:hover){
+  .world .project-card:hover{z-index:7}
+  .world .project-card:hover .card-note{-webkit-line-clamp:7}
+  .world .project-card.dragging{z-index:8}
+  .world .project-card.dragging .card-note{-webkit-line-clamp:var(--card-preview-lines,4)}
+}

@@ -265,7 +265,7 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
         }
       }
     };
-    const setEditing=editing=>{
+    const setEditing=(editing,{restoreFocus=true}={})=>{
       if(!editing){
         if(!flushRichEditors(wrapper)||onCommit?.(editor)===false)return;
         state.closeColors?.();state.resize.cancel();state.image=null;updateImageTools(editor);
@@ -273,7 +273,9 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
       state.editing=editing;wrapper.classList.toggle('is-editing',editing);editor.contentEditable=String(editing);editor.setAttribute('aria-readonly',String(!editing));
       wrapper.querySelector('.rich-toolbar').hidden=!editing;
       wrapper.querySelector('.rich-edit-actions').hidden=!editing;
-      if(editing)selectRange(editor,state.range);else editor.focus({preventScroll:true});
+      if(editing)selectRange(editor,state.range);
+      else if(restoreFocus)editor.focus({preventScroll:true});
+      else if(wrapper.contains(document.activeElement))document.activeElement.blur();
     };
     const toggleTask=box=>{
       const item=box.parentElement;item.dataset.richTask=String(item.dataset.richTask!=='true');notify(editor);
@@ -281,6 +283,12 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
     };
     if(wrapper.classList.contains('rich-collapsible')){
       listen(wrapper.querySelector('[data-rich-done]'),'click',()=>setEditing(false));
+      // Wait for click, not pointerdown: collapsing the editor must not move a
+      // control out from under the pointer before its click has been delivered.
+      listen(document,'click',event=>{
+        if(!state.editing||!editor.isConnected||event.button>0||wrapper.contains(event.target)||state.colorPopup?.menu.contains(event.target))return;
+        setEditing(false,{restoreFocus:false});
+      },{capture:true});
     }
     const closeColors=()=>{
       const popup=state.colorPopup;if(!popup)return;

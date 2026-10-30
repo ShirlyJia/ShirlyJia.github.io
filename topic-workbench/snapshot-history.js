@@ -4,6 +4,7 @@ import {snapshotCanvasModel, snapshotCardMarkup, snapshotFrameMarkup} from './sn
 import {renderSnapshotProjectDetails, renderSnapshotRecords} from './snapshot-preview.js?v=20261030-dates';
 import {renderCanvasItem} from './canvas-item-view.js';
 import {referenceLinesMarkup} from './canvas-references.js';
+import {fitCardPreviews} from './card-preview.js';
 import {mountDetailResize} from './detail-panel.js';
 
 const $=id=>document.getElementById(id),viewport=$('historyViewport'),world=$('historyWorld');
@@ -45,7 +46,7 @@ function renderReferenceLines(){
 function zoom(factor,cx=viewport.clientWidth/2,cy=viewport.clientHeight/2){
   const z=Math.min(2,Math.max(.12,view.z*factor));view={x:cx-(cx-view.x)*z/view.z,y:cy-(cy-view.y)*z/view.z,z};applyView();
 }
-function fit(){
+function fit(){fitCardPreviews(world,model?.frames||[]);
   if(!model?.bounds)return;const b=model.bounds,w=Math.max(1,b.right-b.left),h=Math.max(1,b.bottom-b.top),availableW=viewport.clientWidth,availableH=viewport.clientHeight;
   const z=Math.max(.12,Math.min(1.05,(availableW-80)/w,(availableH-100)/h));view={z,x:(availableW-w*z)/2-b.left*z,y:(availableH-h*z)/2-b.top*z};applyView();
 }
