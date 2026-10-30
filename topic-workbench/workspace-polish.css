@@ -86,7 +86,7 @@ body.list-view .mobile-list {gap:22px;padding-top:28px;padding-bottom:56px;}
 .comment-pool #commentForm .rich-editor{display:flex;flex-direction:column;border:0;background:transparent;border-radius:10px}
 .comment-pool #commentForm .rich-editor-input{order:0;min-height:100px;padding:16px 16px 12px;font-size:13px;line-height:1.8}
 .comment-pool #commentForm .rich-toolbar{order:1;padding:6px 10px;border-top:1px solid #eeede8;border-bottom:0;opacity:1;color:#8a8b83}
-.comment-pool #commentForm .rich-image-tools,.comment-pool #commentForm .rich-link-popover,.comment-pool #commentForm .rich-editor-message{order:2}
+.comment-pool #commentForm .rich-image-tools,.comment-pool #commentForm .rich-editor-message{order:2}
 .comment-pool #commentForm .comment-compose-actions{gap:12px;margin:0;padding:9px 14px 12px;border-top:1px solid #eeede8}
 .comment-pool .comment-compose-actions input{font-size:12px;padding:5px 0;color:#686b63}
 .comment-pool .comment-compose-actions button{display:flex;align-items:center;gap:9px;padding:6px 11px;border:1px solid #42483f;border-radius:6px;background:#42483f;color:#fff;font-size:12px;line-height:18px}
@@ -97,15 +97,31 @@ body.list-view .mobile-list {gap:22px;padding-top:28px;padding-bottom:56px;}
 .comment-pool .comment-entry{position:relative;padding:14px 14px 12px;border:1px solid #eeede7;border-radius:9px;background:#fff}
 .comment-pool .comment-entry:hover,.comment-pool .comment-entry:focus-within{border-color:#dcded5}
 .comment-pool .comment-entry header{gap:9px;padding:0;min-height:28px}
-.comment-pool .comment-entry .comment-avatar{display:grid;place-items:center;width:28px;height:28px;flex:none;border:1px solid #e6e9e1;border-radius:8px;background:#f0f3ed;color:#737d6b;font-size:11px;font-weight:500}
+/* A quiet grip for sorting, separate from editable text. */
+.comment-pool .comment-entry header>.comment-drag-handle{display:grid;place-items:center;width:28px;height:28px;flex:none;margin:0;padding:5px;border:0;border-radius:6px;background:transparent;color:#b4b6b1;opacity:1;cursor:grab;touch-action:none}
+.comment-pool .comment-entry header>.comment-drag-handle:hover,.comment-pool .comment-entry header>.comment-drag-handle:focus-visible{background:#f1f3ef;color:#778170}
+.comment-drag-handle svg{width:14px;height:18px;fill:currentColor}
+.comment-pool .comment-actions{display:flex;align-items:center;gap:4px;flex:none}
+.comment-pool .comment-actions button{display:flex;align-items:center;justify-content:center;gap:4px;min-width:26px;height:26px;padding:4px;border:0;border-radius:5px;background:transparent;color:#a4a79d;cursor:pointer}
+.comment-pool .comment-actions button:hover,.comment-pool .comment-actions button:focus-visible{background:#f1f3ef;color:#65705e}
+.comment-pool .comment-actions [data-delete-comment]{font-size:17px}
+.comment-pool .comment-actions [data-delete-comment]:hover{background:#f9eeea;color:#aa6554}
+.comment-pool .comment-pin svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.35;stroke-linecap:round;stroke-linejoin:round}
+.comment-pool .comment-pin span{font-size:10px;white-space:nowrap}
+.comment-pool .comment-pin[aria-pressed=true]{color:#748267;background:#f4f6f0;padding:4px 7px}
+.comment-pool .comment-entry.is-pinned{border-color:#e0e5da}
+.comment-pool .comment-entry.is-comment-dragging{opacity:.35}
+.comment-pool .comment-entry.comment-drop-before::before,.comment-pool .comment-entry.comment-drop-after::after{content:"";position:absolute;left:0;right:0;height:3px;border-radius:3px;background:#84917c;pointer-events:none}
+.comment-pool .comment-entry.comment-drop-before::before{top:-12px}
+.comment-pool .comment-entry.comment-drop-after::after{bottom:-12px}
+.comment-drag-preview{position:fixed;z-index:10020;pointer-events:none;max-width:260px;padding:10px 16px;border:1px solid #dde2d7;border-radius:8px;background:#fff;color:#575c52;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 8px 26px #242e2220}
+body.comment-sorting,body.comment-sorting *{cursor:grabbing!important;user-select:none!important}
 .comment-pool .comment-meta{display:flex;flex:1;min-width:0;align-items:baseline;gap:10px;flex-wrap:wrap}
 .comment-pool .comment-title{box-sizing:border-box;flex:1;min-width:110px;max-width:100%;margin-left:-5px;padding:3px 5px;border:1px solid transparent;border-radius:4px;background:transparent;color:#575c52;font:inherit;font-size:12px;line-height:1.65;font-weight:550;text-overflow:ellipsis;cursor:text}
 .comment-pool .comment-title::placeholder{color:#8c9187;font-weight:500}
 .comment-pool .comment-title:hover{background:#f7f8f5;border-color:#e4e7df}
 .comment-pool .comment-title:focus{outline:none;border-color:#aebbac;background:#fff;box-shadow:0 0 0 2px #aebbac16}
 .comment-pool .comment-entry time{font-size:10px;color:#999c92;font-variant-numeric:tabular-nums}
-.comment-pool .comment-entry header>button{width:24px;height:24px;flex:none;border-radius:5px;font-size:16px;color:#a4a79d}
-.comment-pool .comment-entry header>button:hover{background:#f9eeea;color:#aa6554}
 .comment-pool .comment-entry>.inline-field{margin:9px 0 0 36px}
 .comment-pool .comment-entry .rich-editor{border:0;background:transparent;border-radius:4px}
 .comment-pool .comment-entry .rich-editor-input{min-height:28px;padding:0;font-size:13px;line-height:1.85}

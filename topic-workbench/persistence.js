@@ -164,6 +164,7 @@ export function createPersistence({ key = 'topic-workbench-v2', onStatus } = {})
           const commentPath = `${path}.comments[${commentIndex}]`;
           for (const field of ['body', 'createdAt']) if (typeof comment[field] !== 'string') fail(`${commentPath}.${field} 必须是字符串`);
           optionalStrings(comment, ['author', 'updatedAt'], commentPath);
+          if (comment.pinned !== undefined && typeof comment.pinned !== 'boolean') fail(`${commentPath}.pinned 必须为布尔值`);
           richTextShape(comment.richText, ['body'], `${commentPath}.richText`);
         });
       }

@@ -1,17 +1,18 @@
 import {createCanvasEditor} from './canvas-editor.js?v=20261030-detail';
 import {canvasItemBounds, translateCanvasItem, restoreYellowNotes} from './canvas-items.js?v=20261030-detail';
 import {enrichProjectContent} from './project-content.js';
+import {orderedComments,moveComment,setCommentPinned,mountCommentSorting} from './comment-order.js';
 import {DETAIL_SECTION_TITLES, detailLayout, detailSectionTitle, visibleDetailSections, moveDetailSection, setDetailSectionHidden, renameDetailSection, removeCustomSection, restoreCustomSection} from './project-detail-layout.js';
 import {applyDomainTags} from './category-tags.js';
 import {createSnapshotStore} from './snapshot-store.js';
 import {findScheduleConflicts,findContentOverlaps} from './workbench-review.js';
 import { enrichWorkbench, isClosedProject, sortProjectsByPriority, collectDirectionResults, syncFrameBoards } from './workbench-model.js';
 import { createWorkbenchViews, colorControl } from './workbench-views.js';
-import { createPersistence } from './persistence.js?v=20261030-detail';
+import { createPersistence } from './persistence.js?v=20261030-comment-interactions';
 import { detachSourceMetadata } from './source-detach.js';
 import { displayPriority, visibleNodes, nodeStatus, displayDescription } from './presentation.js';
 import {deployment, storageKey} from './deployment-config.js';
-import {richEditorMarkup, mountRichEditors, readRichEditor, richHTML, flushRichEditors, destroyRichEditors} from './rich-text.js?v=20261030-rich-blocks';
+import {richEditorMarkup, mountRichEditors, readRichEditor, richHTML, flushRichEditors, destroyRichEditors} from './rich-text.js?v=20261030-comment-interactions';
 import {readProjectFlow, setCurrentFlowNode, setProjectClosed} from './project-flow.js';
 import {flowMarkup, mountProjectFlow} from './project-flow-view.js';
 import {reconcileDelivery, recordDeliveryLifecycle, deliveryCases, todayDate} from './delivery-model.js';
@@ -278,11 +279,11 @@ function detailRestoreMenu(p,available){
   return hidden.length?'<div class="hidden-section-menu"><span>已隐藏的栏目</span>'+hidden.map(key=>'<button type="button" class="text-action" data-restore-section="'+esc(key)+'">＋ '+esc(detailSectionTitle(p,key))+'</button>').join('')+'</div>':'';
 }
 function commentPoolMarkup(p){
-  const rows=[...(p.comments||[])].reverse();
+  const rows=orderedComments(p.comments||[]);
   const entries=rows.map(c=>{
     const title=c.author||'';let time='';
     if(c.createdAt&&!Number.isNaN(Date.parse(c.createdAt)))time=new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(c.createdAt));
-    return '<article class="comment-entry"><header><span class="comment-avatar" aria-hidden="true">记</span><div class="comment-meta"><input class="comment-title" data-inline="author" data-comment-id="'+esc(c.id)+'" aria-label="记录标题" title="点击修改标题" placeholder="随手记录" maxlength="120" value="'+esc(title)+'">'+(time?'<time datetime="'+esc(c.createdAt)+'">'+esc(time)+'</time>':'')+'</div><button data-delete-comment="'+esc(c.id)+'" aria-label="删除这条记录" title="删除记录">×</button></header>'+inlineText('body','记录内容',c.body,{comment:c.id,rows:2,autogrow:true,placeholder:'记录内容'})+'</article>';
+    return '<article class="comment-entry'+(c.pinned?' is-pinned':'')+'" data-comment-card="'+esc(c.id)+'"><header><button type="button" class="comment-drag-handle" data-comment-drag="'+esc(c.id)+'" aria-label="拖动记录：'+esc(title||'随手记录')+'" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown" title="拖动排序，也可按 Alt + ↑ / ↓"><svg viewBox="0 0 16 20" aria-hidden="true"><circle cx="5" cy="4" r="1"/><circle cx="11" cy="4" r="1"/><circle cx="5" cy="10" r="1"/><circle cx="11" cy="10" r="1"/><circle cx="5" cy="16" r="1"/><circle cx="11" cy="16" r="1"/></svg></button><div class="comment-meta"><input class="comment-title" data-inline="author" data-comment-id="'+esc(c.id)+'" aria-label="记录标题" title="点击修改标题" placeholder="随手记录" maxlength="120" value="'+esc(title)+'">'+(time?'<time datetime="'+esc(c.createdAt)+'">'+esc(time)+'</time>':'')+'</div><div class="comment-actions"><button type="button" class="comment-pin" data-pin-comment="'+esc(c.id)+'" aria-label="'+(c.pinned?'取消置顶':'置顶这条记录')+'" title="'+(c.pinned?'取消置顶':'置顶')+'" aria-pressed="'+Boolean(c.pinned)+'"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3h6l-1 5 3 3v2H5v-2l3-3-1-5Zm3 10v5"/></svg>'+(c.pinned?'<span>置顶</span>':'')+'</button><button type="button" data-delete-comment="'+esc(c.id)+'" aria-label="删除这条记录" title="删除记录">×</button></div></header>'+inlineText('body','记录内容',c.body,{comment:c.id,rows:2,autogrow:true,placeholder:'记录内容'})+'</article>';
   }).join('');
   return '<form id="commentForm">'+inlineText('commentDraft','记录新信息',p.commentDraft||'',{placeholder:'记下想法、讨论或进展…'})+'<div class="comment-compose-actions"><input data-inline="commentAuthor" aria-label="新记录标题" placeholder="标题（选填）" maxlength="120" value="'+esc(p.commentAuthor||'')+'"><button class="primary" type="submit">记一条 <span aria-hidden="true">↗</span></button></div></form><div class="comment-entries" aria-label="已记录的信息">'+entries+'</div>';
 }
@@ -505,6 +506,7 @@ function bindDeliveryActions(){
   window.addEventListener('focus',refreshClock);document.addEventListener('visibilitychange',refreshClock);setInterval(refreshClock,60000);
 }
 function bindProjectContent(){
+  mountCommentSorting($('detailBody'),{getComments:()=>byId[state.detail]?.comments||[],beforeMove:flushInline,onMove:(id,target,side)=>{const p=byId[state.detail];if(!p)return;const next=moveComment(p.comments,id,target,side);if(next!==p.comments)mutate(()=>p.comments=next,'顺序已保存',{rollbackOnSaveFailure:true});}});
   $('detailBody').addEventListener('submit',e=>{
     if(e.target.id!=='commentForm')return;e.preventDefault();if(!flushInline())return;
     const p=byId[state.detail],body=(p.commentDraft||'').trim();if(!body){e.target.querySelector('[data-inline="commentDraft"]').focus();return;}
@@ -512,7 +514,7 @@ function bindProjectContent(){
     $('commentForm')?.querySelector('[data-inline="commentDraft"]').focus();
   });
   $('detailBody').addEventListener('click',e=>{
-    const action=e.target.closest('[data-edit-project-title],[data-section-rename],[data-move-section],[data-hide-section],[data-restore-section],[data-toggle-closed],[data-delete-section],[data-delete-comment],[data-action="section-add"]');if(!action)return;if(!flushInline())return;
+    const action=e.target.closest('[data-edit-project-title],[data-section-rename],[data-move-section],[data-hide-section],[data-restore-section],[data-toggle-closed],[data-delete-section],[data-delete-comment],[data-pin-comment],[data-action="section-add"]');if(!action)return;if(!flushInline())return;
     const p=byId[state.detail],pid=p.id;
     if(action.hasAttribute('data-edit-project-title')){const title=$('detailBody').querySelector('[data-inline="name"]');title?.focus();title?.select();return;}
     if(action.hasAttribute('data-section-rename')){focusDetailSection(action.dataset.sectionRename,true);return;}
@@ -521,6 +523,7 @@ function bindProjectContent(){
     if(action.hasAttribute('data-restore-section')){const key=action.dataset.restoreSection;mutate(()=>setDetailSectionHidden(p,key,false),'栏目已加回');focusDetailSection(key);return;}
     if(action.hasAttribute('data-toggle-closed')){const closed=!isClosedProject(p);mutate(()=>{setProjectClosed(p,closed);if(closed)setDetailSectionHidden(p,'result',false);},closed?'项目已结束，可以填写成果记录':'已恢复跟进');if(closed)focusDetailSection('result');return;}
     if(action.hasAttribute('data-delete-section')){const id=action.dataset.deleteSection;let removed;const keys=[...$('detailBody').querySelectorAll('[data-detail-section]')].map(el=>el.dataset.detailSection),index=keys.indexOf('custom:'+id),next=keys[index+1]||keys[index-1];if(mutate(()=>removed=removeCustomSection(p,id))&&removed){focusDetailSection(next);detailUndo('已删除「'+(removed.section.title||'未命名栏目')+'」',()=>{if(!flushInline()||!byId[pid])return;mutate(()=>restoreCustomSection(byId[pid],removed),'栏目已恢复');if(state.detail===pid)focusDetailSection('custom:'+id,true);});}return;}
+    if(action.hasAttribute('data-pin-comment')){const id=action.dataset.pinComment,comment=p.comments.find(c=>c.id===id);if(!comment)return;const pinned=!comment.pinned;if(mutate(()=>p.comments=setCommentPinned(p.comments,id,pinned),pinned?'已置顶':'已取消置顶',{rollbackOnSaveFailure:true})){$('detailBody').querySelectorAll('[data-pin-comment]').forEach(button=>{if(button.dataset.pinComment===id)button.focus({preventScroll:true});});}return;}
     if(action.hasAttribute('data-delete-comment')){const index=p.comments.findIndex(c=>c.id===action.dataset.deleteComment),comment=p.comments[index];if(!comment)return;if(mutate(()=>p.comments.splice(index,1))){$('commentForm')?.querySelector('[data-inline="commentDraft"]').focus();detailUndo('记录已删除',()=>{if(!flushInline()||!byId[pid])return;mutate(()=>{const current=byId[pid];if(!current.comments.some(c=>c.id===comment.id))current.comments.splice(Math.min(index,current.comments.length),0,comment);},'记录已恢复');});}return;}
     const id=uid('section');mutate(()=>p.customSections.push({id,title:'',body:''}),'已添加栏目');focusDetailSection('custom:'+id,true);
   });

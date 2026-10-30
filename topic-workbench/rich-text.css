@@ -64,19 +64,14 @@
 .rich-image-handle-nw{left:0;top:0;cursor:nwse-resize}.rich-image-handle-ne{left:100%;top:0;cursor:nesw-resize}.rich-image-handle-sw{left:0;top:100%;cursor:nesw-resize}.rich-image-handle-se{left:100%;top:100%;cursor:nwse-resize}
 .rich-image-resizing,.rich-image-resizing *{user-select:none!important}
 @media(pointer:coarse){.rich-image-handle{width:32px;height:32px}.rich-image-handle::after{inset:9px}.rich-image-tools button{min-height:32px}}
-.rich-link-popover{display:flex;flex-wrap:wrap;align-items:end;gap:6px;padding:10px;border-top:1px solid #e6e6df;background:#fafaf8}
-.rich-link-popover label{display:flex;flex:1;min-width:140px;flex-direction:column;gap:4px;font-size:11px;color:#73726e}
-.rich-link-popover input{width:100%;padding:5px 7px;font:inherit;border:1px solid #deded7;border-radius:4px;background:#fff}
-.rich-link-popover button{border:0;background:#efefeb;color:#55544d;border-radius:4px;padding:5px 8px;font-size:12px;cursor:pointer}
 .rich-editor-message{font-size:11px;line-height:1.6;padding:4px 10px;margin:0;color:#73726e}.rich-editor-message.error{color:#a05d3c;background:#fffaf0}
 .rich-dragging{border-color:#8ca9ba!important;background:#f6f9fb}
 .rich-editor [hidden]{display:none!important}
 .rich-editor.rich-collapsible{border-color:transparent;background:transparent}
-.rich-editor.rich-collapsible:not(.is-editing){display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:0 8px}
-.rich-collapsible:not(.is-editing)>.rich-editor-input{grid-row:1;grid-column:1;min-height:28px;padding:5px 0;cursor:auto;user-select:text}
-.rich-collapsible:not(.is-editing)>.rich-editor-input[data-empty=true]::before{content:"暂无内容";position:static;color:#a5a6a9}
-.rich-edit-toggle{grid-row:1;grid-column:2;margin-top:4px;padding:3px 8px;border:0;border-radius:4px;background:transparent;color:#8d9198;font:inherit;font-size:12px;line-height:1.65;cursor:pointer}
-.rich-edit-toggle:hover,.rich-edit-toggle:focus-visible{background:#f1f3f6;color:#52647d}
+.rich-editor.rich-collapsible:not(.is-editing):hover{background:#f8f9fa}
+.rich-collapsible:not(.is-editing)>.rich-editor-input:focus-visible{outline:2px solid #a5b1c5;outline-offset:3px;border-radius:4px}
+.rich-collapsible:not(.is-editing)>.rich-editor-input{min-height:28px;padding:5px 0;cursor:text;user-select:text}
+.rich-collapsible:not(.is-editing)>.rich-editor-input[data-empty=true]::before{content:"点击填写";position:static;color:#a5a6a9}
 .rich-collapsible.is-editing{border-color:#a5b1c5;background:#fff;border-radius:6px;box-shadow:0 0 0 1px #a5b1c510}
 .rich-collapsible.is-editing:hover,.rich-collapsible.is-editing:focus-within{border-color:#8b9db9}
 .rich-collapsible.is-editing>.rich-toolbar{padding:7px 8px;opacity:1;border-bottom:1px solid #e8eaee;color:#555b64}

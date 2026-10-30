@@ -97,9 +97,28 @@ function plainFromHTML(html) {
   }
   return Array.from(holder.childNodes).map(walk).join('').replace(/\u00a0/g,' ').replace(/\n{3,}/g,'\n\n').replace(/\n+$/,'');
 }
+/** Pasted URLs become links; copied rich text keeps its formatting and safe links. */
+export function pastedRichHTML(html, plain = '') {
+  const holder=document.createElement('div');holder.innerHTML=richHTML(html,plain);
+  const walker=document.createTreeWalker(holder,NodeFilter.SHOW_TEXT),nodes=[];
+  while(walker.nextNode())if(!walker.currentNode.parentElement.closest('a,pre,code'))nodes.push(walker.currentNode);
+  for(const node of nodes){
+    const value=node.nodeValue,fragment=document.createDocumentFragment();let cursor=0;
+    for(const match of value.matchAll(/(?:https?:\/\/|mailto:)[^\s<>"'`，。；！？、（）]+/gi)){
+      let candidate=match[0].replace(/[.,;:!?]+$/,'');
+      for(const [open,close] of [['(',')'],['[',']'],['{','}']])while(candidate.endsWith(close)&&candidate.split(close).length>candidate.split(open).length)candidate=candidate.slice(0,-1);
+      const href=safeRichLink(candidate);if(!href)continue;
+      fragment.append(document.createTextNode(value.slice(cursor,match.index)));
+      const link=document.createElement('a');link.href=href;link.target='_blank';link.rel='noopener noreferrer';link.textContent=candidate;fragment.append(link);
+      cursor=match.index+candidate.length;
+    }
+    if(cursor){fragment.append(document.createTextNode(value.slice(cursor)));node.replaceWith(fragment);}
+  }
+  return holder.innerHTML;
+}
 function accompanyingContent(html, plain) {
-  if (!html) return plain ? plainHTML(plain) : '';
-  const content=document.createElement('template');content.innerHTML=richHTML(html);
+  if (!html&&!plain) return '';
+  const content=document.createElement('template');content.innerHTML=pastedRichHTML(html,plain);
   content.content.querySelectorAll('img').forEach(image=>image.remove());
   return content.innerHTML;
 }
@@ -118,14 +137,12 @@ const richIcons = {
   ordered:richIcon('<text x="2" y="7">1</text><text x="2" y="14">2</text><text x="2" y="21">3</text><path d="M10 5h11M10 12h11M10 19h11"/>'),
   bullets:richIcon('<circle cx="4" cy="5" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="19" r="1"/><path d="M10 5h11M10 12h11M10 19h11"/>'),
   task:richIcon('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="m7 12 3 3 7-7"/>'),
-  quote:richIcon('<path d="M10 5H6a3 3 0 0 0-3 3v7h7V9H3m18-4h-4a3 3 0 0 0-3 3v7h7V9h-7"/>'),
-  link:richIcon('<path d="m10 13 4-4m-6 6-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 2 1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0" transform="translate(1 1)"/>'),
-  image:richIcon('<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.5"/><path d="m3 18 6-6 4 4 3-3 5 5"/>')
+  quote:richIcon('<path d="M10 5H6a3 3 0 0 0-3 3v7h7V9H3m18-4h-4a3 3 0 0 0-3 3v7h7V9h-7"/>')
 };
 export function richEditorMarkup({value = '', html = '', label = '内容', placeholder = '输入内容，可直接粘贴图片', attrs = '', collapsible = false} = {}) {
   const separator='<span class="rich-tool-separator" aria-hidden="true"></span>';
-  const toolbar=tool('bold','加粗','<b>B</b>')+tool('italic','斜体','<i>I</i>')+tool('underline','下划线','<u>U</u>')+tool('strikeThrough','删除线','<s>S</s>')+tool('heading','小标题','H')+tool('foreColor','文字颜色','<span class="rich-color-letter" aria-hidden="true">A</span><span class="rich-color-chevron" aria-hidden="true">⌄</span>','aria-haspopup="menu" aria-expanded="false"')+separator+tool('insertOrderedList','编号列表',richIcons.ordered)+tool('insertUnorderedList','项目符号',richIcons.bullets)+tool('taskList','任务列表',richIcons.task)+tool('blockquote','引用',richIcons.quote)+separator+tool('link','插入链接',richIcons.link)+tool('image','插入图片',richIcons.image)+tool('removeFormat','清除格式','T×');
-  return `<div class="rich-editor${collapsible?' rich-collapsible':''}">${collapsible?`<button class="rich-edit-toggle" type="button" data-rich-edit aria-label="编辑${esc(label)}" aria-expanded="false">编辑</button>`:''}<div class="rich-toolbar" role="toolbar" aria-label="${esc(label)}格式"${collapsible?' hidden':''}>${toolbar}</div><div class="rich-editor-input rich-content" contenteditable="${!collapsible}" role="textbox" aria-readonly="${collapsible}" aria-multiline="true" aria-label="${esc(label)}" data-placeholder="${esc(placeholder)}" spellcheck="false" ${attrs}>${richHTML(html, value)}</div><div class="rich-image-tools" hidden><label>宽度 <input type="number" min="24" max="4096" step="1" data-rich-image-width aria-label="图片宽度"> px</label><button type="button" data-rich-command="resetImageSize">恢复原尺寸</button><button type="button" data-rich-command="removeImage">删除图片</button></div><input class="rich-image-picker" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden><div class="rich-link-popover" hidden><label>链接地址<input type="url" placeholder="https://…" aria-label="链接地址"></label><button type="button" data-rich-link-save>应用</button><button type="button" data-rich-link-cancel>取消</button></div><p class="rich-editor-message" role="status" hidden></p>${collapsible?'<div class="rich-edit-actions" hidden><button type="button" data-rich-done>完成</button></div>':''}</div>`;
+  const toolbar=tool('bold','加粗','<b>B</b>')+tool('italic','斜体','<i>I</i>')+tool('underline','下划线','<u>U</u>')+tool('strikeThrough','删除线','<s>S</s>')+tool('heading','小标题','H')+tool('foreColor','文字颜色','<span class="rich-color-letter" aria-hidden="true">A</span><span class="rich-color-chevron" aria-hidden="true">⌄</span>','aria-haspopup="menu" aria-expanded="false"')+separator+tool('insertOrderedList','编号列表',richIcons.ordered)+tool('insertUnorderedList','项目符号',richIcons.bullets)+tool('taskList','任务列表',richIcons.task)+tool('blockquote','引用',richIcons.quote);
+  return `<div class="rich-editor${collapsible?' rich-collapsible':''}"><div class="rich-toolbar" role="toolbar" aria-label="${esc(label)}格式"${collapsible?' hidden':''}>${toolbar}</div><div class="rich-editor-input rich-content" contenteditable="${!collapsible}" tabindex="0" role="textbox" aria-readonly="${collapsible}" aria-multiline="true" aria-label="${esc(label)}" data-placeholder="${esc(placeholder)}" spellcheck="false" ${attrs}>${richHTML(html, value)}</div><div class="rich-image-tools" hidden><label>宽度 <input type="number" min="24" max="4096" step="1" data-rich-image-width aria-label="图片宽度"> px</label><button type="button" data-rich-command="resetImageSize">恢复原尺寸</button><button type="button" data-rich-command="removeImage">删除图片</button></div><p class="rich-editor-message" role="status" hidden></p>${collapsible?'<div class="rich-edit-actions" hidden><button type="button" data-rich-done>完成</button></div>':''}</div>`;
 }
 function taskItem(editor, node) {
   const element=node?.nodeType===1?node:node?.parentElement,item=element?.closest('li');
@@ -251,20 +268,18 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
     const setEditing=editing=>{
       if(!editing){
         if(!flushRichEditors(wrapper)||onCommit?.(editor)===false)return;
-        state.closeColors?.();state.resize.cancel();state.image=null;updateImageTools(editor);wrapper.querySelector('.rich-link-popover').hidden=true;
+        state.closeColors?.();state.resize.cancel();state.image=null;updateImageTools(editor);
       }
       state.editing=editing;wrapper.classList.toggle('is-editing',editing);editor.contentEditable=String(editing);editor.setAttribute('aria-readonly',String(!editing));
       wrapper.querySelector('.rich-toolbar').hidden=!editing;
-      const toggle=wrapper.querySelector('[data-rich-edit]');toggle.hidden=editing;toggle.setAttribute('aria-expanded',String(editing));
       wrapper.querySelector('.rich-edit-actions').hidden=!editing;
-      if(editing)selectRange(editor,state.range);else toggle.focus({preventScroll:true});
+      if(editing)selectRange(editor,state.range);else editor.focus({preventScroll:true});
     };
     const toggleTask=box=>{
       const item=box.parentElement;item.dataset.richTask=String(item.dataset.richTask!=='true');notify(editor);
       if(!state.editing)onCommit?.(editor);
     };
     if(wrapper.classList.contains('rich-collapsible')){
-      listen(wrapper.querySelector('[data-rich-edit]'),'click',()=>setEditing(true));
       listen(wrapper.querySelector('[data-rich-done]'),'click',()=>setEditing(false));
     }
     const closeColors=()=>{
@@ -333,14 +348,22 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
     listen(editor,'keyup',remember); listen(editor,'mouseup',remember); listen(editor,'focus',remember);
     listen(editor,'click',event=>{
       const box=event.target.closest('[data-rich-task-box]');if(box&&editor.contains(box)){event.preventDefault();event.stopPropagation();toggleTask(box);return;}
-      if(state.editing){state.image=event.target.tagName==='IMG'?event.target:null;updateImageTools(editor);}
+      if(!state.editing){
+        if(event.target.closest('a'))return;
+        state.range=editorRange(editor)||document.caretRangeFromPoint?.(event.clientX,event.clientY);setEditing(true);
+      }
+      state.image=event.target.tagName==='IMG'?event.target:null;updateImageTools(editor);
     });
     listen(document,'pointerdown',event=>{if(state.image&&!wrapper.contains(event.target)&&!state.resize.active){state.image=null;updateImageTools(editor);}});
     listen(editor,'keydown',event=>{
       event.stopPropagation();
       const box=event.target.closest('[data-rich-task-box]');
       if(box&&[' ','Enter'].includes(event.key)){event.preventDefault();toggleTask(box);return;}
-      if(!state.editing)return;
+      if(!state.editing){
+        if(event.key==='Enter'||event.key==='F2'){event.preventDefault();setEditing(true);}
+        else if(event.key.length===1&&!event.ctrlKey&&!event.metaKey&&!event.altKey)setEditing(true);
+        else return;
+      }
       if(!state.composing&&event.key==='Enter'&&!event.shiftKey&&window.getSelection()?.isCollapsed){
         const item=taskItem(editor,window.getSelection()?.anchorNode);
         if(item&&!item.textContent.trim()&&!item.querySelector('img')){
@@ -353,14 +376,14 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
       }
     });
     listen(editor,'paste',event=>{
-      if(!state.editing)return;
       const clipboard=event.clipboardData; if(!clipboard)return;
+      if(!state.editing)setEditing(true);
       const files=Array.from(clipboard.items||[]).filter(item=>item.kind==='file'&&item.type.startsWith('image/')).map(item=>item.getAsFile()).filter(Boolean);
       const html=clipboard.getData('text/html'),plain=clipboard.getData('text/plain');
       if(files.length){event.preventDefault();addImages(files,accompanyingContent(html,plain));return;}
       if(!html&&!plain)return;
-      event.preventDefault();remember();selectRange(editor,state.range);edit(editor,()=>insertHTML(editor,html?richHTML(html):plainHTML(plain)));remember();
-      if (html && /<img\b/i.test(html) && !/<img\b/i.test(richHTML(html))) message('文字已粘贴。网页图片请复制图片本身，或用「图片」上传。',true);
+      event.preventDefault();remember();selectRange(editor,state.range);edit(editor,()=>insertHTML(editor,pastedRichHTML(html,plain)));remember();
+      if (html && /<img\b/i.test(html) && !/<img\b/i.test(richHTML(html))) message('文字已粘贴。网页图片请复制图片本身后粘贴，或拖入本地图片。',true);
     });
     listen(editor,'dragover',event=>{if(state.editing&&Array.from(event.dataTransfer?.types||[]).includes('Files')){event.preventDefault();wrapper.classList.add('rich-dragging');}});
     listen(editor,'dragleave',()=>wrapper.classList.remove('rich-dragging'));
@@ -368,15 +391,13 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
       const range=document.caretRangeFromPoint?.(event.clientX,event.clientY);if(range&&editor.contains(range.startContainer)){selectRange(editor,range);state.range=range.cloneRange();}
       const html=event.dataTransfer.getData('text/html'),plain=event.dataTransfer.getData('text/plain');
       if(files.length){addImages(files,accompanyingContent(html,plain));return;}
-      if(html||plain){selectRange(editor,state.range);edit(editor,()=>insertHTML(editor,html?richHTML(html):plainHTML(plain)));remember();}
-      if(html&&/<img\b/i.test(html)&&!/<img\b/i.test(richHTML(html)))message('文字已插入。网页图片请复制图片本身，或用「图片」上传。',true);
+      if(html||plain){selectRange(editor,state.range);edit(editor,()=>insertHTML(editor,pastedRichHTML(html,plain)));remember();}
+      if(html&&/<img\b/i.test(html)&&!/<img\b/i.test(richHTML(html)))message('文字已插入。网页图片请复制图片本身后粘贴，或拖入本地图片。',true);
     });
     listen(wrapper.querySelector('.rich-toolbar'),'mousedown',event=>{if(event.target.closest('button')){remember();event.preventDefault();}});
     listen(wrapper,'click',event=>{
       const command=event.target.closest('[data-rich-command]')?.dataset.richCommand;if(!command)return;event.preventDefault();event.stopPropagation();
       if(command==='foreColor'){openColors();return;}
-      if(command==='image'){remember();wrapper.querySelector('.rich-image-picker').click();return;}
-      if(command==='link'){remember();const popover=wrapper.querySelector('.rich-link-popover');popover.hidden=false;popover.querySelector('input').value='';popover.querySelector('input').focus();return;}
       if(command==='removeImage'){if(state.image){const range=document.createRange();range.selectNode(state.image);selectRange(editor,range);edit(editor,()=>document.execCommand('delete'));state.image=null;updateImageTools(editor);}return;}
       if(command==='resetImageSize'){state.resize.reset();return;}
       selectRange(editor,state.range);
@@ -384,23 +405,12 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
         if(command==='heading')document.execCommand('formatBlock',false,'h3');
         else if(command==='blockquote')document.execCommand('formatBlock',false,document.queryCommandValue('formatBlock')==='blockquote'?'p':'blockquote');
         else if(command==='taskList'){toggleTaskList(editor);notify(editor);}
-        else if(command==='removeFormat'){document.execCommand('removeFormat',false,null);document.execCommand('formatBlock',false,'p');}
         else if(['insertOrderedList','insertUnorderedList'].includes(command)&&currentList(editor)?.dataset.richList==='task'){
           if(command==='insertOrderedList')document.execCommand(command);else convertTaskItems(editor,currentList(editor),false);
         }else document.execCommand(command,false,null);
       });
       remember();
     });
-    listen(wrapper.querySelector('.rich-image-picker'),'change',event=>{addImages(event.target.files);event.target.value='';});
-    const applyLink=()=>{
-      const popover=wrapper.querySelector('.rich-link-popover'),url=safeRichLink(popover.querySelector('input').value);if(!url){message('请输入有效的 http、https 或邮件链接。',true);return;}
-      selectRange(editor,state.range);
-      edit(editor,()=>{if(window.getSelection()?.isCollapsed)insertHTML(editor,`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(url)}</a>`);else document.execCommand('createLink',false,url);});
-      popover.hidden=true;message('');remember();
-    };
-    listen(wrapper.querySelector('[data-rich-link-save]'),'click',applyLink);
-    listen(wrapper.querySelector('[data-rich-link-cancel]'),'click',()=>{wrapper.querySelector('.rich-link-popover').hidden=true;selectRange(editor,state.range);});
-    listen(wrapper.querySelector('.rich-link-popover input'),'keydown',event=>{event.stopPropagation();if(event.key==='Enter'){event.preventDefault();applyLink();}if(event.key==='Escape'){wrapper.querySelector('.rich-link-popover').hidden=true;selectRange(editor,state.range);}});
     syncTaskControls(editor);updateEmpty(editor);
   }
   return () => added.forEach(editor=>{mounts.get(editor)?.controller.abort();mounts.delete(editor);});

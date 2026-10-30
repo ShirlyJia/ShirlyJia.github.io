@@ -1,6 +1,7 @@
+import {orderedComments} from './comment-order.js';
 import {readProjectFlow} from './project-flow.js';
 import {isClosedProject} from './workbench-model.js';
-import {richHTML} from './rich-text.js?v=20261030-rich-blocks';
+import {richHTML} from './rich-text.js?v=20261030-comment-interactions';
 /** A pure, read-only projection of one saved snapshot. No DOM handlers or storage access. */
 const text = value => typeof value === 'string' ? value : typeof value === 'number' && Number.isFinite(value) ? String(value) : '';
 const esc = value => text(value).replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
@@ -192,9 +193,9 @@ function relationsHTML(project, data, projectById) {
 }
 
 function commentsHTML(project) {
-  const comments=list(project.comments);
+  const comments=orderedComments(list(project.comments));
   if(!comments.length)return '';
-  return `<section class="snapshot-project-section"><h4>评论池</h4><ul class="snapshot-comments">${comments.map(comment=>`<li><div class="snapshot-meta">${present(comment.author)?`<span>${esc(comment.author)}</span>`:''}${present(comment.createdAt)?`<time>${esc(dateLabel(comment.createdAt))}</time>`:''}</div><div class="snapshot-text rich-content">${richHTML(text(comment.richText?.body),text(comment.body))}</div></li>`).join('')}</ul></section>`;
+  return `<section class="snapshot-project-section"><h4>评论池</h4><ul class="snapshot-comments">${comments.map(comment=>`<li><div class="snapshot-meta">${comment.pinned?'<span class="snapshot-badge">置顶</span>':''}${present(comment.author)?`<span>${esc(comment.author)}</span>`:''}${present(comment.createdAt)?`<time>${esc(dateLabel(comment.createdAt))}</time>`:''}</div><div class="snapshot-text rich-content">${richHTML(text(comment.richText?.body),text(comment.body))}</div></li>`).join('')}</ul></section>`;
 }
 
 function customSectionsHTML(project) {
