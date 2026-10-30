@@ -1,0 +1,83 @@
+/* Keep the document in a tall side pane, with a compact, editable overview. */
+#detail.detail-panel{position:fixed;inset:48px 0 0 auto;z-index:40;box-shadow:-8px 0 24px #37352f08}
+#detail .detail-top{min-height:43px;padding:8px 24px;gap:10px;border-bottom:1px solid #efefeb;flex:none}
+#detail .detail-body{padding:12px 26px 40px;scroll-padding-top:16px}
+#detail .detail-title-tools{min-height:25px;margin:0;gap:8px}
+#detail .detail-toolbar{gap:5px}
+#detail .detail-toolbar>button,#detail .detail-menu>.menu-trigger{font-size:11px;padding:3px 5px}
+#detail .inline-title textarea{font-size:21px;line-height:1.35;font-weight:600;letter-spacing:-.35px;padding:4px 8px}
+#detail .project-title-editor>button{top:-7px}
+#detail .detail-edit-properties{gap:6px 14px;margin:0 0 8px;min-height:28px}
+#detail .detail-edit-properties>label{gap:6px}
+#detail .detail-edit-properties .free-status{min-width:130px}
+#detail .free-status .inline-input{padding:3px 5px;line-height:1.6}
+#detail .detail-edit-properties select{padding:3px 5px}
+#detail .project-lifecycle{padding:3px 6px}
+#detail .project-flow{margin:0 0 6px}
+#detail .flow-rail{gap:18px;padding:3px 1px 20px}
+#detail .flow-node:not(:last-child):after{top:14px;width:18px}
+#detail .flow-pill{min-height:28px;padding:1px 5px}
+#detail .project-flow .flow-title{line-height:22px}
+#detail .flow-node-tools{top:29px}
+#detail .detail-delivery-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;margin:0 0 10px;padding:8px 10px;border-color:#ecece7;background:#fafaf8}
+#detail .detail-delivery-summary .delivery-card-date{padding:0;margin:0;border:0}
+#detail .detail-delivery-summary .delivery-card-date time{font-size:14px;line-height:1.5}
+#detail .detail-delivery-summary .delivery-card-context{margin-top:2px;line-height:1.5}
+#detail .detail-delivery-summary>button{margin:0;padding:3px 0;font-size:10px;white-space:nowrap;align-self:center}
+#detail .detail-tags{gap:6px;margin:0 0 12px;min-height:24px}
+#detail .project-content-section,#detail .project-content-section.comment-pool,#detail .detail-section{margin-top:18px;padding-top:14px}
+#detail .project-content-section:first-of-type{margin-top:0;padding-top:0}
+#detail .project-section-head{gap:5px;min-height:27px;margin-bottom:6px}
+#detail .project-section-head>.section-title-input{font-size:12px;padding:3px 6px;line-height:1.65}
+#detail .section-tools{gap:1px}
+#detail .section-tools>button{min-width:23px;height:25px;font-size:13px}
+#detail .detail-body .inline-field{margin:10px 0}
+#detail .detail-body .inline-title{margin:6px -8px 8px}
+#detail .problem-statement>.inline-field{margin:0}
+#detail .rich-editor-input{font-size:13px;line-height:1.75}
+#detail .rich-collapsible:not(.is-editing)>.rich-editor-input{padding:2px 0;min-height:25px}
+#detail .rich-collapsible.is-editing>.rich-editor-input{padding:12px 14px;min-height:120px}
+#detail .rich-content p,#detail .rich-content div{margin-bottom:.45em}
+#detail .rich-content>:last-child{margin-bottom:0}
+#detail .inline-plan{padding:10px 12px;margin:10px 0}
+#detail .inline-plan .inline-field{margin:6px 0}
+#detail .relation-row{padding:12px;margin:10px 0}
+#detail .material-row{padding:9px 10px;margin:8px 0}
+#detail .detail-section-additions{gap:12px;margin:18px 0}
+#detail #commentForm>.inline-field{margin:0}
+#detail .comment-pool #commentForm .rich-editor-input{min-height:44px;padding:10px 12px;font-size:13px}
+#detail .comment-pool #commentForm:not(:focus-within):not(:has(.rich-editor-input[data-empty="false"])) :is(.rich-toolbar,.comment-compose-actions){display:none}
+#detail .comment-pool #commentForm:focus-within .rich-editor-input,#detail .comment-pool #commentForm:has(.rich-editor-input[data-empty="false"]) .rich-editor-input{min-height:76px}
+#detail .comment-pool .comment-entries{gap:12px;margin-top:14px}
+#detail .comment-pool .comment-entry{padding:11px 12px 10px}
+#detail .comment-pool .comment-entry>.inline-field{margin:6px 0 0 36px}
+#detail .comment-pool .comment-entry .rich-editor-input{font-size:13px;line-height:1.75}
+
+@media(min-width:761px){
+  /* Leave the canvas controls usable alongside the pane. */
+  .project-detail-open .app-shell>.page-heading{margin-right:var(--detail-width,560px);min-height:64px;height:64px;flex-basis:64px;padding:16px 24px 10px}
+  .project-detail-open .page-heading h1{font-size:24px;line-height:1.3;margin:0}
+  .project-detail-open .app-shell>.database-toolbar{margin-left:24px;margin-right:calc(var(--detail-width,560px) + 24px);height:auto;min-height:40px;flex:0 0 auto;gap:8px 12px;flex-wrap:wrap;padding-bottom:5px}
+  .project-detail-open .database-toolbar .view-tabs{min-height:35px;gap:14px}
+  .project-detail-open .database-toolbar .search-wrap{flex:1 1 100px;min-width:85px;max-width:none;width:130px}
+  .project-detail-open .database-toolbar .new-project{font-size:11px;padding:5px 8px;white-space:nowrap}
+  .project-detail-open .app-shell>.direction-focus-bar{margin-right:var(--detail-width,560px);padding:8px 24px;gap:8px;flex-wrap:wrap}
+  .project-detail-open .app-shell>.filterbar{margin-right:var(--detail-width,560px);padding:8px 24px;gap:7px 10px;flex-wrap:wrap;min-height:44px}
+  .project-detail-open .filterbar .tag-list{max-height:124px;gap:5px;scrollbar-width:thin;scrollbar-color:#d9d9d3 transparent;flex-basis:100%;order:2;overscroll-behavior:contain}
+  .project-detail-open .filterbar .tag-list::-webkit-scrollbar{display:block;width:4px}
+  .project-detail-open .filterbar .filter-controls{margin-left:auto;padding-top:0}
+  .project-detail-open .filterbar .filter-tag{padding:3px 6px}
+}
+@media(max-width:760px){
+  #detail.detail-panel{inset:0;width:100%;z-index:70}
+  #detail .detail-top{min-height:46px;padding:8px 18px}
+  #detail .detail-body{padding:12px 20px max(32px,env(safe-area-inset-bottom))}
+  #detail .inline-title textarea{font-size:21px;line-height:1.4}
+  #detail .rich-editor-input,#detail .comment-pool #commentForm .rich-editor-input,#detail .comment-pool .comment-entry .rich-editor-input{font-size:16px;line-height:1.75}
+  #detail .detail-edit-properties{gap:8px 12px}
+  #detail .detail-edit-properties .free-status{min-width:140px}
+  #detail .detail-delivery-summary{grid-template-columns:minmax(0,1fr);gap:4px}
+  #detail .detail-delivery-summary>button{justify-self:start}
+  #detail .comment-pool .comment-entry>.inline-field{margin-left:0}
+  #detail .flow-rail{padding-bottom:25px}
+}
