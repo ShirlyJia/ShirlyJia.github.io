@@ -4,6 +4,10 @@
 .rich-editor:hover .rich-toolbar,.rich-editor:focus-within .rich-toolbar{opacity:1;border-color:#efefeb}
 .rich-toolbar button{min-width:27px;min-height:28px;margin:0;padding:3px 6px;border:0;border-radius:3px;background:transparent;color:inherit;font-family:inherit;font-size:12px;line-height:1.5;cursor:pointer}
 .rich-toolbar button:hover,.rich-toolbar button:focus-visible{background:#efefeb;color:#37352f}
+.rich-toolbar button[aria-pressed=true]{background:#eeeff2;color:#434d5a}
+.rich-toolbar button svg{display:block;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+.rich-toolbar button svg text{stroke:none;fill:currentColor;font:8px -apple-system,BlinkMacSystemFont,sans-serif}
+.rich-tool-separator{align-self:center;flex:none;width:1px;height:17px;margin:0 5px;background:#e5e6e8}
 .rich-toolbar [data-rich-command=foreColor]{display:inline-flex;align-items:center;justify-content:center;gap:4px}
 .rich-color-letter{position:relative;line-height:16px;font-weight:600;padding-bottom:3px}
 .rich-color-letter:after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:1px;background:var(--rich-text-color,#37352f)}
@@ -26,6 +30,15 @@
 .rich-content ul,.rich-content ol{margin:.3em 0 .6em;padding-left:1.7em}
 .rich-content li{padding-left:.15em;margin:.15em 0}
 .rich-content blockquote{border-left:3px solid #d8d6ce;padding-left:12px;color:#73726e}
+.rich-content ul[data-rich-list=task]{list-style:none;padding-left:0}
+.rich-content ul[data-rich-list=task]>li{position:relative;min-height:1.85em;padding-left:27px;list-style:none}
+.rich-content [data-rich-task-box]{position:absolute;left:2px;top:.39em;box-sizing:border-box;width:16px;height:16px;border:1.5px solid #969ca4;border-radius:3px;background:#fff;user-select:none}
+.rich-editor [data-rich-task-box]{cursor:pointer}
+.rich-editor [data-rich-task-box]:hover{border-color:#65768c;background:#f4f6f9}
+.rich-editor [data-rich-task-box]:focus-visible{outline:2px solid #9eaec7;outline-offset:3px}
+.rich-content li[data-rich-task=true]{color:#919398;text-decoration:line-through;text-decoration-color:#b8bbc0}
+.rich-content li[data-rich-task=true]>[data-rich-task-box]{background:#718397;border-color:#718397}
+.rich-content li[data-rich-task=true]>[data-rich-task-box]::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #fff;border-width:0 1.5px 1.5px 0;transform:rotate(45deg)}
 .rich-content pre,.rich-content code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;background:#f5f5f2;border-radius:3px;font-size:.92em}
 .rich-content pre{padding:10px;white-space:pre-wrap}
 .rich-content code{padding:1px 4px}
@@ -58,6 +71,19 @@
 .rich-editor-message{font-size:11px;line-height:1.6;padding:4px 10px;margin:0;color:#73726e}.rich-editor-message.error{color:#a05d3c;background:#fffaf0}
 .rich-dragging{border-color:#8ca9ba!important;background:#f6f9fb}
 .rich-editor [hidden]{display:none!important}
+.rich-editor.rich-collapsible{border-color:transparent;background:transparent}
+.rich-editor.rich-collapsible:not(.is-editing){display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:0 8px}
+.rich-collapsible:not(.is-editing)>.rich-editor-input{grid-row:1;grid-column:1;min-height:28px;padding:5px 0;cursor:auto;user-select:text}
+.rich-collapsible:not(.is-editing)>.rich-editor-input[data-empty=true]::before{content:"暂无内容";position:static;color:#a5a6a9}
+.rich-edit-toggle{grid-row:1;grid-column:2;margin-top:4px;padding:3px 8px;border:0;border-radius:4px;background:transparent;color:#8d9198;font:inherit;font-size:12px;line-height:1.65;cursor:pointer}
+.rich-edit-toggle:hover,.rich-edit-toggle:focus-visible{background:#f1f3f6;color:#52647d}
+.rich-collapsible.is-editing{border-color:#a5b1c5;background:#fff;border-radius:6px;box-shadow:0 0 0 1px #a5b1c510}
+.rich-collapsible.is-editing:hover,.rich-collapsible.is-editing:focus-within{border-color:#8b9db9}
+.rich-collapsible.is-editing>.rich-toolbar{padding:7px 8px;opacity:1;border-bottom:1px solid #e8eaee;color:#555b64}
+.rich-collapsible.is-editing>.rich-editor-input{min-height:150px;padding:14px 16px 18px}
+.rich-edit-actions{display:flex;justify-content:flex-end;padding:0 12px 10px}
+.rich-edit-actions button{padding:4px 12px;border:1px solid #dce1e8;border-radius:4px;background:#f6f8fb;color:#52647d;font:inherit;font-size:12px;line-height:1.65;cursor:pointer}
+.rich-edit-actions button:hover{background:#edf1f7;border-color:#c3ccda}
 .comment-pool .rich-editor-input{min-height:65px}
 .comment-entry .rich-toolbar{padding-top:0}.comment-entry .rich-editor-input{min-height:42px}
 @media(max-width:760px){.rich-toolbar{opacity:1}.rich-editor{border-color:#ecece6}.rich-paste-hint{display:none}.rich-toolbar button{min-height:34px;padding:4px 7px}.rich-editor-input{font-size:16px}.rich-content img{max-height:480px}}

@@ -1,6 +1,6 @@
 import {readProjectFlow} from './project-flow.js';
 import {isClosedProject} from './workbench-model.js';
-import {richHTML} from './rich-text.js?v=20261030-color';
+import {richHTML} from './rich-text.js?v=20261030-rich-blocks';
 /** A pure, read-only projection of one saved snapshot. No DOM handlers or storage access. */
 const text = value => typeof value === 'string' ? value : typeof value === 'number' && Number.isFinite(value) ? String(value) : '';
 const esc = value => text(value).replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));

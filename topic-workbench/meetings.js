@@ -2,7 +2,7 @@ import {MEETING_CATEGORIES, meetingCategory, enrichMeetingContent} from './meeti
 import {createMeetingFiles} from './meeting-files.js';
 import {removeMeetingItem, restoreMeetingItem, restoreMeetingById} from './meeting-trash.js';
 import {deployment, storageKey} from './deployment-config.js';
-import {richEditorMarkup, mountRichEditors, readRichEditor, setRichEditor, flushRichEditors} from './rich-text.js?v=20261030-color';
+import {richEditorMarkup, mountRichEditors, readRichEditor, setRichEditor, flushRichEditors} from './rich-text.js?v=20261030-rich-blocks';
 /** Independent meeting notes. The project store is read-only here. */
 export const MEETING_KEY = storageKey('topic-workbench-meetings-v1');
 export const PROJECT_KEY = storageKey('topic-workbench-v2');

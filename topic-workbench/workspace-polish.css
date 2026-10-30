@@ -106,9 +106,9 @@ body.list-view .mobile-list {gap:22px;padding-top:28px;padding-bottom:56px;}
 .comment-pool .comment-entry>.inline-field{margin:9px 0 0 36px}
 .comment-pool .comment-entry .rich-editor{border:0;background:transparent;border-radius:4px}
 .comment-pool .comment-entry .rich-editor-input{min-height:28px;padding:0;font-size:13px;line-height:1.85}
-.comment-pool .comment-entry .rich-editor:hover .rich-editor-input{background:#fafaf7}
-.comment-pool .comment-entry .rich-toolbar{position:absolute;top:100%;left:-5px;z-index:4;width:max-content;max-width:calc(100% + 10px);padding:4px 5px;border:1px solid #e5e5de;border-radius:6px;background:#fff;box-shadow:0 3px 12px #37352f0a;opacity:0;visibility:hidden;pointer-events:none}
-.comment-pool .comment-entry .rich-editor:hover .rich-toolbar,.comment-pool .comment-entry .rich-editor:focus-within .rich-toolbar{opacity:1;visibility:visible;pointer-events:auto}
+.comment-pool .comment-entry .rich-editor.is-editing{border:1px solid #a5b1c5;border-radius:6px;background:#fff}
+.comment-pool .comment-entry .rich-editor.is-editing .rich-editor-input{min-height:100px;padding:12px 14px}
+.comment-pool .comment-entry .rich-toolbar{position:static;width:auto;max-width:none;padding:7px 8px;border-bottom:1px solid #e8eaee;background:#fff;opacity:1;visibility:visible;pointer-events:auto}
 .comment-pool .comment-entry .rich-paste-hint{display:none}
 @media(max-width:760px){.comment-pool #commentForm .rich-editor-input,.comment-pool .comment-entry .rich-editor-input{font-size:16px}.comment-pool .comment-entry>.inline-field{margin-left:0}.comment-pool .comment-meta{gap:4px 9px}.comment-pool .comment-entry header>button{opacity:1}}
 @media(prefers-reduced-motion:reduce){.comment-pool #commentForm{transition:none}}
