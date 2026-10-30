@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="color-presets.css">
   <link rel="stylesheet" href="frame-layers.css">
   <link rel="stylesheet" href="tag-editor.css">
+  <link rel="stylesheet" href="direction-focus.css?v=20261030-direction2">
 </head>
 <body>
   <a class="sr-only skip-link" href="#viewport">跳到画板</a>
@@ -49,11 +50,16 @@
     <div class="view-tabs" role="group" aria-label="项目展示方式"><button id="canvasView" class="active" aria-pressed="true"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4" width="5" height="12" rx="1"/><rect x="11" y="4" width="6" height="8" rx="1"/></svg>画板</button><button id="listView" aria-pressed="false"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 5h10M7 10h10M7 15h10M3 5h.5M3 10h.5M3 15h.5"/></svg>项目列表</button></div>
     <label class="search-wrap"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg><span class="sr-only">搜索项目标题</span><input id="search" type="search" placeholder="搜索项目…" autocomplete="off"></label><button id="newProject" class="primary new-project">＋ 新项目</button>
   </section>
-  <nav class="filterbar" aria-label="标签与视图">
+  <section id="directionFocusBar" class="direction-focus-bar" aria-label="主方向聚焦" hidden>
+    <label for="focusDirection" class="direction-focus-label"><span id="directionFocusIcon" aria-hidden="true"></span>主方向</label>
+    <div class="direction-select-wrap"><select id="focusDirection" class="direction-focus-select" aria-label="聚焦主方向"><option value="">全部项目</option></select></div>
+    <span id="directionFocusCount" class="direction-focus-count" aria-live="polite"></span><button id="exitDirectionFocus" class="direction-focus-exit" hidden>退出聚焦 ×</button>
+  </section>
+  <nav class="filterbar" aria-label="分类标签与展示方式">
     <button id="manageTags" class="filter-title" title="新增、改名、调整颜色或删除标签">分类标签 ＋</button><div class="tag-list" id="tags"></div>
     <div class="filter-controls">
       <select id="logic" class="logic-select" aria-label="多标签匹配逻辑"><option value="intersection">匹配全部</option><option value="union">匹配任一</option></select>
-      <div class="segment" aria-label="标签查看方式"><button id="highlight" class="active" aria-pressed="true">高亮</button><button id="gather" aria-pressed="false">聚集</button></div><button id="clear" class="clear">清除</button>
+      <div class="segment" aria-label="项目展示方式"><button id="highlight" class="active" aria-pressed="true">高亮</button><button id="gather" aria-pressed="false">聚集</button></div><button id="clear" class="clear">清除</button>
     </div>
   </nav>
   <main class="workspace" data-screen-label="议题画板">
@@ -90,6 +96,6 @@
   <dialog id="tagDialog" class="editor-dialog"><header class="editor-head"><h2>管理分类标签</h2><button id="closeTags" aria-label="关闭标签管理">×</button></header><form id="newTagForm" class="inline-form"><label class="sr-only" for="newTagName">新标签名称</label><input id="newTagName" placeholder="新标签名称" maxlength="40" required><span id="newTagColorControl"></span><button class="primary" type="submit">新增</button></form><div id="tagRows"></div><p class="muted">删除后可用顶部「撤销」恢复。</p></dialog>
   <dialog id="previewDialog" class="preview-dialog"><header class="editor-head"><h2 id="previewTitle">资料</h2><div><a id="previewOriginal" target="_blank" rel="noopener noreferrer">打开原文 ↗</a><button id="closePreview" aria-label="关闭资料预览">×</button></div></header><p class="muted">如受登录或网站限制未能显示，请打开原文查看、编辑。</p><iframe id="previewFrame" title="资料预览" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" referrerpolicy="no-referrer"></iframe></dialog>
   <dialog id="settingsDialog" class="workspace-settings"><header><h2>数据与备份</h2><button id="closeSettings" aria-label="关闭设置">×</button></header><p>修改与快照保存在当前浏览器，不会同步给其他设备或成员。</p><p>备份包含项目、画板与图片；会议资料在会议页单独备份。</p><div class="settings-links"><button id="exportData" class="primary">导出备份</button><a href="snapshots.html">查看历史快照 →</a></div></dialog>
-  <script type="module" src="app.js?v=20261030-color"></script>
+  <script type="module" src="app.js?v=20261030-direction3"></script>
 </body>
 </html>

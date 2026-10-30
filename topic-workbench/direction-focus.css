@@ -1,0 +1,46 @@
+/* Direction membership is navigation, separate from the coloured taxonomy. */
+.direction-focus-bar{display:flex;align-items:center;gap:12px;flex:none;min-height:48px;margin:0 40px;padding:7px 0;border-bottom:1px solid #eeede8;color:#76766e;font-size:12px;}
+.direction-focus-bar[hidden]{display:none;}
+.direction-focus-label{display:flex;align-items:center;gap:7px;flex:none;font-size:11px;}
+.direction-focus-label svg,.direction-card-focus svg{width:16px;height:16px;flex:none;}
+.direction-select-wrap{position:relative;min-width:0;max-width:440px;}
+.direction-select-wrap::after{content:"";position:absolute;right:10px;top:12px;width:5px;height:5px;border-right:1px solid #87877e;border-bottom:1px solid #87877e;transform:rotate(45deg);pointer-events:none;}
+.direction-focus-select{appearance:none;display:block;max-width:100%;width:100%;min-height:32px;padding:5px 28px 5px 9px;border:1px solid transparent;border-radius:4px;background:transparent;color:#57594f;font:inherit;text-overflow:ellipsis;cursor:pointer;}
+.direction-focus-select:hover,.direction-focus-select:focus-visible{border-color:#e7e6df;background:#f8f8f5;outline:none;}
+.direction-focus-bar.is-focused .direction-focus-select{background:#f4f4ee;border-color:#e4e5db;color:#444b3f;font-weight:550;}
+.direction-focus-count{color:#8a8a81;font-size:11px;white-space:nowrap;}
+.direction-focus-exit{margin-left:auto;padding:6px 8px;flex:none;border-radius:4px;background:transparent;color:#78796f;font-size:11px;white-space:nowrap;}
+.direction-focus-exit:hover,.direction-focus-exit:focus-visible{background:#f1f1eb;color:#42483c;}
+.direction-card-focus{display:inline-flex;align-items:center;gap:5px;padding:2px 4px;margin:-2px -4px;border:0;border-radius:3px;background:transparent;color:inherit;font:inherit;}
+.direction-card-focus svg{width:12px;height:12px;}
+.direction-card-focus:hover,.direction-card-focus:focus-visible{background:#eeefe8;color:#4c5845;}
+.direction-card-focus[aria-pressed=true]{color:#4c5845;}
+.gather-panel.is-direction-focus{width:520px;}
+.is-direction-focus .gather-head h2{color:#454c3e;font-size:17px;line-height:1.6;}
+.is-direction-focus .gather-head .direction-focus-title{display:flex;align-items:baseline;gap:10px;max-width:100%;padding:0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;white-space:normal;}
+.direction-focus-title>span{flex:none;color:#979b8c;font-size:13px;}
+.is-direction-focus .gather-head .direction-focus-title:hover{color:#303b26;}
+.direction-focus-title:focus-visible{outline:2px solid #c5cdb9;outline-offset:4px;}
+.direction-focus-heading{display:flex;align-items:center;gap:7px;margin-bottom:5px;color:#85877b;font-size:10px;letter-spacing:.03em;}
+.direction-focus-heading svg{width:15px;height:15px;}
+.direction-focus-tree{display:flex;flex-direction:column;gap:20px;min-width:0;}
+.direction-focus-item{position:relative;padding-left:19px;border-left:1px solid #d8dbd0;}
+.direction-focus-item::before{content:"";position:absolute;left:0;top:28px;width:18px;border-top:1px solid #d8dbd0;}
+.direction-focus-item.is-draft{border-left-style:dashed;}
+.direction-focus-item.is-draft::before{border-top-style:dashed;}
+.direction-focus-item-label{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 7px;color:#8b8c80;font-size:10px;line-height:1.6;}
+.direction-focus-parent{max-width:100%;padding:0;background:transparent;color:#777f6f;text-align:left;font:inherit;}
+.direction-focus-parent:hover{text-decoration:underline;text-underline-offset:3px;}
+.direction-focus-context{padding:9px 12px 0;color:#858579;font-size:11px;line-height:1.75;}
+.direction-focus-context summary{cursor:pointer;width:fit-content;}
+.direction-focus-context .rich-content{padding:8px 0 2px;color:#6f7365;}
+.direction-focus-context[open] summary{color:#535d48;}
+.direction-focus-history{border-top:1px solid #e1e3d9;margin-top:5px;padding-top:16px;}
+.direction-focus-history>summary{display:list-item;width:fit-content;color:#767b6c;font-size:12px;cursor:pointer;}
+.direction-focus-history>.direction-focus-tree{margin-top:20px;}
+.direction-focus-empty{padding:24px 12px;text-align:center;color:#8a8c81;font-size:12px;}
+.world .project-card.direction-match{border-color:#9da98e;background:#fdfefb;}
+.world .project-card.direction-root{box-shadow:0 0 0 1px #9da98e;}
+@media(max-width:1190px){.direction-focus-bar{margin-left:28px;margin-right:28px;gap:10px;}.direction-select-wrap{max-width:390px;}}
+@media(max-width:950px) and (min-width:761px){.direction-focus-bar{margin-left:20px;margin-right:20px;}.direction-select-wrap{flex:1;}.direction-focus-count{display:none;}}
+@media(max-width:760px){.direction-focus-bar{margin:0 17px;gap:8px;min-height:46px;}.direction-focus-label{font-size:10px;gap:4px;}.direction-select-wrap{flex:1;}.direction-focus-select{min-height:36px;font-size:12px;}.direction-select-wrap::after{top:14px;}.direction-focus-count{display:none;}.direction-focus-exit{padding:6px 0;font-size:10px;}.gather-panel.is-direction-focus{width:calc(100% - 28px);}.direction-focus-item{padding-left:13px;}.direction-focus-item::before{width:12px;}.direction-focus-tree{gap:16px;}}

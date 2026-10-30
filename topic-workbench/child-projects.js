@@ -58,8 +58,9 @@ export function parentProjectHintMarkup(pid,data){
 }
 
 /** A compact breadcrumb on every child card; full names stay available on hover. */
-export function parentCardMarkup(pid,data,{readonly=false}={}){
+export function parentCardMarkup(pid,data,{readonly=false,preferredParent=null}={}){
   const parents=parentProjectRows(pid,data);if(!parents.length)return '';
+  if(preferredParent)parents.sort((a,b)=>Number(b.project.id===preferredParent)-Number(a.project.id===preferredParent));
   const first=parents[0],label='所属主项目：'+parents.map(({project,draft})=>project.name+(draft?'（关联待确认）':'')).join('、');
   const content=parentIcon+'<span class="card-parent-label">主项目</span><span class="card-parent-name">'+esc(first.project.name)+'</span>'+(parents.length>1?'<small class="card-parent-count">+'+(parents.length-1)+'</small>':first.draft?'<small>待确认</small>':'');
   const attributes='title="'+esc(label)+'" aria-label="'+esc(label)+'"';
