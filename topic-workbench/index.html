@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="direction-focus.css?v=20261030-direction2">
   <link rel="stylesheet" href="card-surfaces.css?v=20261030-card-preview">
   <link rel="stylesheet" href="detail-density.css?v=20261030-detail-density">
+  <link rel="stylesheet" href="project-list.css?v=20261030-grouped-list">
   <link rel="stylesheet" href="date-styles.css?v=20261030-dates">
 </head>
 <body>
@@ -85,7 +86,14 @@
     <div class="zoom-controls"><button id="zoomOut" aria-label="缩小">−</button><span id="zoomValue" class="zoom-value">100%</span><button id="zoomIn" aria-label="放大">+</button><button id="fit" class="fit">全览</button></div>
     <div id="selectionActions" class="selection-actions" hidden><span id="selectionCount" class="selected-count"></span><button id="groupSelection">成组</button><button id="duplicateSelection">复制</button><button id="referenceSelection">放到分组</button><span id="frameStyleControls" class="frame-style-controls" hidden><span class="frame-background-control">背景 <span id="selectedFrameColor"></span></span><button id="bringFrameFront">置于顶层</button><button id="sendFrameBack">置于底层</button></span><button id="clearSelection">取消</button></div>
     <div id="searchEmpty" class="empty" hidden><strong>没有匹配的项目</strong><p>试试其他标题，或清除标签筛选。</p></div>
-    <div id="mobileList" class="mobile-list"></div>
+    <div id="mobileList" class="mobile-list">
+      <div class="project-list-toolbar" role="region" aria-label="项目列表筛选与排序">
+        <div class="list-filter-controls"><label><span class="sr-only">分组筛选</span><select id="listGroupFilter" aria-label="分组筛选"><option value="">全部分组</option></select></label><label><span class="sr-only">优先级筛选</span><select id="listPriorityFilter" aria-label="优先级筛选"><option value="">全部优先级</option></select></label></div>
+        <div class="list-sort-controls"><span>排序</span><label><span class="sr-only">项目排序方式</span><select id="listSort" aria-label="项目排序方式"><option value="canvas">画板顺序</option><option value="manual">手动顺序</option><option value="priority">优先级</option><option value="delivery">承诺交付日</option><option value="name">项目名称</option></select></label><button id="listSortDirection" type="button" aria-label="升序，点击改为降序" hidden>↑</button></div>
+        <span id="listProjectCount" aria-live="polite"></span><span id="listOrderStatus" class="sr-only" role="status"></span>
+      </div>
+      <div id="projectListGroups"></div><div id="listEmpty" class="project-list-empty" hidden><strong>没有匹配的项目</strong><p>调整分组、优先级或标签筛选。</p></div>
+    </div>
     <div id="workbenchView" class="workbench-view" hidden></div>
     <div id="gatherMask" class="gather-mask" hidden></div>
     <section id="gatherPanel" class="gather-panel" hidden aria-label="临时聚集结果"><div class="gather-head"><div><h2 id="gatherTitle">临时聚集</h2><p id="gatherSummary"></p></div><button id="scatter">散回原位 ↗</button></div><div id="gatherCards" class="gather-cards"></div></section>
@@ -99,6 +107,6 @@
   <dialog id="tagDialog" class="editor-dialog"><header class="editor-head"><h2>管理分类标签</h2><button id="closeTags" aria-label="关闭标签管理">×</button></header><form id="newTagForm" class="inline-form"><label class="sr-only" for="newTagName">新标签名称</label><input id="newTagName" placeholder="新标签名称" maxlength="40" required><span id="newTagColorControl"></span><button class="primary" type="submit">新增</button></form><div id="tagRows"></div><p class="muted">删除后可用顶部「撤销」恢复。</p></dialog>
   <dialog id="previewDialog" class="preview-dialog"><header class="editor-head"><h2 id="previewTitle">资料</h2><div><a id="previewOriginal" target="_blank" rel="noopener noreferrer">打开原文 ↗</a><button id="closePreview" aria-label="关闭资料预览">×</button></div></header><p class="muted">如受登录或网站限制未能显示，请打开原文查看、编辑。</p><iframe id="previewFrame" title="资料预览" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" referrerpolicy="no-referrer"></iframe></dialog>
   <dialog id="settingsDialog" class="workspace-settings"><header><h2>数据与备份</h2><button id="closeSettings" aria-label="关闭设置">×</button></header><p>修改与快照保存在当前浏览器，不会同步给其他设备或成员。</p><p>备份包含项目、画板与图片；会议资料在会议页单独备份。</p><div class="settings-links"><button id="exportData" class="primary">导出备份</button><a href="snapshots.html">查看历史快照 →</a></div></dialog>
-  <script type="module" src="app.js?v=20261030-card-preview"></script>
+  <script type="module" src="app.js?v=20261030-grouped-list"></script>
 </body>
 </html>
