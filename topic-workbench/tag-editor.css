@@ -16,3 +16,58 @@
 .filter-tag[data-tag]{touch-action:none}
 .tag-drag-preview{position:fixed;z-index:2001;pointer-events:none;padding:7px 11px;border:1px solid #bdc8ce;border-radius:5px;background:#fff;color:#4e4b44;font:12px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;box-shadow:0 4px 14px #37352f14;white-space:nowrap}
 .tag-list.tag-sorting .color-control{width:0;flex-basis:0;opacity:0;pointer-events:none}
+
+/* One quiet colour family across filters, cards and historical records. */
+.filter-token,.card-tag,.snapshot-tag{
+  --tag-ink:color-mix(in srgb,var(--tag-color,#85867f) 34%,#343b38);
+  --tag-surface:color-mix(in srgb,var(--tag-color,#85867f) 10%,#fff);
+  --tag-border:color-mix(in srgb,var(--tag-color,#85867f) 22%,#fff);
+}
+.tag-list{gap:8px}
+.filter-token{border-radius:8px}
+.filter-token .filter-tag{
+  min-height:30px;gap:7px;padding:5px 10px;border:1px solid var(--tag-border);border-radius:8px;
+  color:var(--tag-ink);background:var(--tag-surface);font-size:11px;line-height:18px;font-weight:500;
+  transition:background .15s ease,border-color .15s ease;
+}
+.filter-token .tag-dot{width:6px;height:6px;background:var(--tag-color);border-radius:50%}
+.filter-token .filter-tag::after{
+  content:"";box-sizing:border-box;flex:0 0 9px;width:9px;height:5px;margin-left:2px;
+  border-left:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
+  transform:translateY(-1px) rotate(-45deg);opacity:0;transition:opacity .15s ease;
+}
+.filter-token .filter-tag:hover{background:color-mix(in srgb,var(--tag-color) 16%,#fff);border-color:color-mix(in srgb,var(--tag-color) 38%,#fff)}
+.filter-token .filter-tag.active{background:color-mix(in srgb,var(--tag-color) 20%,#fff);border-color:color-mix(in srgb,var(--tag-color) 62%,#fff)}
+.filter-token .filter-tag.active::after{opacity:1}
+.filter-tag:focus-visible{outline:2px solid var(--tag-color);outline-offset:2px}
+
+/* The existing colour control sits on the dot, so hovering never shifts neighbours. */
+.filter-token .color-control,.filter-token:hover .color-control,.filter-token:focus-within .color-control{
+  position:absolute;left:3px;top:50%;transform:translateY(-50%);width:22px;height:22px;flex-basis:22px;
+  border-radius:50%;background:transparent;opacity:0;
+}
+.filter-token:hover .color-control,.filter-token:focus-within .color-control{opacity:1}
+.filter-token .preset-color-trigger{border-radius:50%}
+.filter-token .preset-color-trigger:hover,.filter-token .preset-color-trigger[aria-expanded=true]{background:color-mix(in srgb,var(--tag-color) 24%,#fff)}
+.filter-token .preset-color-dot{width:6px!important;height:6px!important;border:0;border-radius:50%}
+.filter-token:has(.tag-name-editor) .color-control,.tag-list.tag-sorting .color-control{opacity:0;pointer-events:none}
+.tag-name-editor{min-height:30px;padding:5px 10px;border-color:var(--tag-color,#9aa99e);border-radius:8px;font-size:11px;line-height:18px;color:var(--tag-ink,#37352f);box-shadow:0 0 0 2px var(--tag-surface,#f3f4f1)}
+
+.card-tag,.snapshot-tag{
+  display:inline-flex;align-items:center;gap:5px;box-sizing:border-box;min-height:22px;padding:2px 7px;
+  border:1px solid var(--tag-border);border-radius:6px;background:var(--tag-surface);color:var(--tag-ink);
+  font-size:10.5px;line-height:16px;font-weight:450;vertical-align:middle;
+}
+.card-tag[style*="--tag-color"]::before,.snapshot-tag::before{content:"";flex:0 0 4px;width:4px;height:4px;border-radius:50%;background:var(--tag-color)}
+.snapshot-tag{--tag-color:var(--snapshot-accent,#85867f);margin-bottom:4px}
+.card-tags{align-items:center}
+.detail-tags .card-tag{position:relative;min-height:27px;padding:3px 7px 3px 23px;gap:5px;font-size:11px;line-height:19px}
+.detail-tags .card-tag::before{display:none}
+.detail-tags .card-tag .color-control{position:absolute;left:4px;top:50%;transform:translateY(-50%);width:18px;height:20px;opacity:1;background:transparent}
+.detail-tags .card-tag .preset-color-trigger{min-width:18px;min-height:20px;border-radius:50%;opacity:1}
+.detail-tags .card-tag .preset-color-dot{width:6px!important;height:6px!important;border:0;border-radius:50%}
+.detail-tags .card-tag button[data-detach-tag]{padding:0;width:14px;min-height:18px;margin-left:1px;border-radius:4px;color:var(--tag-ink);font-size:14px}
+.detail-tags .card-tag button[data-detach-tag]:hover{background:color-mix(in srgb,var(--tag-color) 20%,#fff)}
+.tag-drag-preview{border-radius:8px;padding:6px 10px}
+@media(hover:none){.filter-token .color-control{opacity:1}.filter-token .filter-tag{min-height:34px}}
+@media(prefers-reduced-motion:reduce){.filter-token .filter-tag,.filter-token .filter-tag::after{transition:none}}

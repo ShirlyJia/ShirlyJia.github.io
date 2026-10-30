@@ -20,7 +20,7 @@ export function moveTag(tags,id,targetId,side='before'){
 }
 
 export function tagFilterMarkup(tags,selected,colorControl){
-  return orderedTags(tags).map(t=>'<span class="filter-token" data-tag-token="'+esc(t.id)+'"><button class="filter-tag'+(selected.has(t.id)?' active':'')+'" data-tag="'+esc(t.id)+'" aria-pressed="'+selected.has(t.id)+'" aria-keyshortcuts="F2 Alt+ArrowLeft Alt+ArrowRight" title="单击筛选 · 双击改名 · 拖动排序"><span class="tag-dot" style="background:'+esc(t.color)+'"></span><span>'+esc(t.name)+'</span></button>'+colorControl(t.color,'data-tag-color',t.id,'调整'+t.name+'颜色')+'</span>').join('');
+  return orderedTags(tags).map(t=>'<span class="filter-token" data-tag-token="'+esc(t.id)+'" style="--tag-color:'+esc(/^#[0-9a-f]{6}$/i.test(t.color)?t.color:'#85867f')+'"><button class="filter-tag'+(selected.has(t.id)?' active':'')+'" data-tag="'+esc(t.id)+'" aria-pressed="'+selected.has(t.id)+'" aria-keyshortcuts="F2 Alt+ArrowLeft Alt+ArrowRight" title="单击筛选 · 双击改名 · 拖动排序"><span class="tag-dot"></span><span>'+esc(t.name)+'</span></button>'+colorControl(t.color,'data-tag-color',t.id,'调整'+t.name+'颜色')+'</span>').join('');
 }
 
 /** Editing and sorting reuse the labels and rows already on screen; no new buttons. */
