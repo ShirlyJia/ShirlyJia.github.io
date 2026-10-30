@@ -37,7 +37,8 @@
   transform:translateY(-1px) rotate(-45deg);opacity:0;transition:opacity .15s ease;
 }
 .filter-token .filter-tag:hover{background:color-mix(in srgb,var(--tag-color) 16%,#fff);border-color:color-mix(in srgb,var(--tag-color) 38%,#fff)}
-.filter-token .filter-tag.active{background:color-mix(in srgb,var(--tag-color) 20%,#fff);border-color:color-mix(in srgb,var(--tag-color) 62%,#fff)}
+/* Selection uses the check mark; emphasis belongs to matching project cards. */
+.filter-token .filter-tag.active,.filter-token .filter-tag.active:hover{background:var(--tag-surface);border-color:var(--tag-border);color:var(--tag-ink)}
 .filter-token .filter-tag.active::after{opacity:1}
 .filter-tag:focus-visible{outline:2px solid var(--tag-color);outline-offset:2px}
 
