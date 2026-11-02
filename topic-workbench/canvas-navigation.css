@@ -1,0 +1,75 @@
+.canvas-navigation {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+  container-type: inline-size;
+}
+.project-detail-open .canvas-navigation { right: var(--detail-width, 560px); }
+.list-view .canvas-navigation, .workbench-screen .canvas-navigation { display: none; }
+.canvas-navigation .canvas-intro { top: 22px; left: 18px; }
+.canvas-navigation .zoom-controls {
+  inset: 12px 14px auto auto;
+  pointer-events: auto;
+  box-shadow: 0 1px 5px #37352f09;
+}
+.canvas-navigation #frameNav {
+  width: 92px;
+  height: 29px;
+  padding: 0 5px;
+  margin-right: 4px;
+  border: 0;
+  border-right: 1px solid #eaeae4;
+  background: transparent;
+  color: #66645c;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.canvas-navigation .fit {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.canvas-navigation .fit svg { width: 15px; height: 15px; }
+.canvas-recovery {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  max-width: 100%;
+  padding: 9px 14px;
+  border: 1px solid #d9d7cf;
+  border-radius: 6px;
+  background: #fff;
+  color: #514f47;
+  font-size: 13px;
+  box-shadow: 0 2px 8px #37352f0b;
+}
+.canvas-recovery:hover { background: #f6f5f1; }
+.tools .canvas-pan-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: auto;
+  padding-inline: 8px;
+  font-size: 12px;
+}
+@container (max-width: 530px) {
+  .canvas-navigation .canvas-intro { display: none; }
+}
+@container (max-width: 300px) {
+  .canvas-navigation .zoom-controls { right: 4px; }
+  .canvas-navigation #frameNav, .canvas-navigation .zoom-value { display: none; }
+}
+@container (max-width: 170px) {
+  .canvas-navigation #zoomIn, .canvas-navigation #zoomOut, .canvas-navigation #fit, .canvas-navigation .fit span { display: none; }
+  .canvas-navigation .fit { margin: 0; border: 0; }
+}
+@media (max-width: 760px) {
+  .canvas-navigation { display: none; }
+}
