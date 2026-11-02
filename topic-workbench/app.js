@@ -47,7 +47,7 @@ let focusedDirection = null;
 let state, projects = [], byId = {}, tagById = {}, lastEditor, editorInstance, gesture = null, space = false, toastTimer, pendingFrame, clickSuppressed = false, lastFrameClick, dirty = false;
 const viewport = $('viewport'), world = $('world');
 const navigationArea = $('canvasNavigation');
-let recoveryCheck = 0;
+let recoveryCheck = 0, viewPaintFrame = 0, viewSaveTimer = 0, paintedScale;
 $('saveStatus').title='修改保存在当前浏览器；数据与备份见设置';
 const storage = createPersistence({key:storageKey('topic-workbench-v2'),onStatus: result => {
   if (result?.ok === false || result?.success === false) setSaveStatus(false);
@@ -55,6 +55,8 @@ const storage = createPersistence({key:storageKey('topic-workbench-v2'),onStatus
 function documentData() { return {schemaVersion:2, workbenchVersion:state.workbenchVersion, frameBoardSyncVersion:state.frameBoardSyncVersion, domainTagVersion:state.domainTagVersion, projectContentVersion:state.projectContentVersion, canvasNoteStyleVersion:state.canvasNoteStyleVersion, quickBoards:state.quickBoards, deliveryEvents:state.deliveryEvents||[], sourceDetachedVersion:state.sourceDetachedVersion, projects:state.projects, tags:state.tagDefinitions, relations:state.relations, frames:state.frames, instances:state.instances, canvasItems:state.canvasItems||[], view:state.view}; }
 function setSaveStatus(ok) { dirty = !ok; const saved='已本机保存';$('saveStatus').textContent = ok ? saved : '未保存 · 点击重试'; $('saveStatus').classList.toggle('unsaved',!ok);$('detailSaveStatus').textContent=ok?saved:'未保存 · 重试';$('detailSaveStatus').classList.toggle('unsaved',!ok); }
 function save(history = true) {
+  clearTimeout(viewSaveTimer);
+  viewSaveTimer = 0;
   try {
     const synced=syncFrameBoards(state),recordHistory=history||dirty;
     storage.commit(documentData(),{recordHistory});
@@ -67,6 +69,13 @@ function save(history = true) {
     toast(e.name==='QuotaExceededError'?'浏览器存储空间不足，修改尚未保存。请先导出备份，再减少图片或清理旧快照后重试。':'保存失败：'+e.message+'。请重试或导出备份。');
     return false;
   }
+}
+function flushViewSave() {
+  if (viewSaveTimer) save(false);
+}
+function scheduleViewSave() {
+  clearTimeout(viewSaveTimer);
+  viewSaveTimer = setTimeout(flushViewSave, 180);
 }
 function restoreData(data) {const {tags,...rest}=data;state = {...state,...rest,canvasItems:data.canvasItems||[],tagDefinitions:tags}; indexData();}
 function indexData() {projects=state.projects; byId=Object.fromEntries(projects.map(p=>[p.id,p]));tagById=Object.fromEntries(state.tagDefinitions.map(t=>[t.id,t]));}
@@ -99,8 +108,8 @@ function cardMarkup(p,{instance=null}={}){
   const expandable=p.kind==='direction',expanded=expandable&&(instance?instance.childrenExpanded===true:expandedDirectionTrees.has(p.id));
   const priority=displayPriority(p),eyebrow=[p.kind==='direction'?'<button type="button" class="direction-card-focus" data-focus-direction="'+esc(p.id)+'" aria-label="聚焦方向：'+esc(p.name)+'" aria-pressed="'+(state.focusDirection===p.id)+'" title="聚焦此方向及关联小项目">'+directionIcon+'方向</button>':'',esc(p.outcome)].filter(Boolean).join(' · ');
   const actions=instance?'<div class="card-placement-actions" role="group" aria-label="此处卡片操作">'+
-    '<button type="button" class="card-copy" data-copy-instance="'+esc(instance.id)+'" title="复制到画板（⌘ / Ctrl + D）" aria-label="复制'+esc(p.name)+'到画板"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M13 5V3H3v10h2"/></svg></button>'+
-    '<button type="button" class="card-remove-reference" data-remove-instance="'+esc(instance.id)+'" title="移除这张卡片，保留项目内容">移除此处引用</button></div>':'';
+    '<button type="button" class="card-copy" data-copy-instance="'+esc(instance.id)+'" data-hint="复制到画板" aria-keyshortcuts="Control+D Meta+D" aria-label="复制'+esc(p.name)+'到画板"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M13 5V3H3v10h2"/></svg></button>'+
+    '<button type="button" class="card-remove-reference" data-remove-instance="'+esc(instance.id)+'" data-hint="移除此处引用" aria-label="移除此处引用"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M6.5 10h7" stroke-linecap="round"/></svg></button></div>':'';
   return childBadgeMarkup(children.length,p.id,{expandable,expanded})+(eyebrow||instance?.focus?'<div class="card-eyebrow">'+eyebrow+(instance?.focus?'<span class="focus-mark">★ 本处重点</span>':'')+'</div>':'')+'<div class="card-heading">'+pageIcon+'<h3 class="card-title">'+esc(p.name)+'</h3>'+actions+'<button class="detail-arrow" data-open="'+esc(p.id)+'" aria-label="查看'+esc(p.name)+'详情">↗</button></div>'+
   parentCardMarkup(p.id,state,{preferredParent:focusedDirection?.rows.find(row=>row.project.id===p.id)?.parent.id})+(true?'<div class="card-tags">'+priorityControl(p,true)+rankedTagIds(p.tagIds).slice(0,3).map(t=>tagMarkup(t)).join('')+(p.tagIds.length>3?'<span class="card-tag">+'+(p.tagIds.length-3)+'</span>':'')+'</div>':'')+
   (p.description?'<p class="card-note">'+esc(displayDescription(p.description))+'</p>':'')+
@@ -116,6 +125,14 @@ function cardElement(p,instance=null){const el=document.createElement('article')
   el.innerHTML=cardMarkup(project,{instance:current});if(instance)fitCardPreviews(world,state.frames);syncActiveProject();el.querySelector('[data-toggle-children]')?.focus({preventScroll:true});
 });el.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.target.closest('button,select,input,textarea,a,[contenteditable="true"]')){e.preventDefault();e.stopPropagation();openDetail(p.id,instance?.id);}});return el;}
 let hoveredProject = null;
+function setHoveredProject(pid) {
+  if (pid === hoveredProject) return;
+  hoveredProject = pid;
+  const active = state.detail || pid;
+  for (const path of world.querySelectorAll('[data-reference-pid]')) {
+    path.classList.toggle('is-active',path.dataset.referencePid === active);
+  }
+}
 function renderReferenceLines(){
   if(!state)return;world.querySelector('.canvas-reference-lines')?.remove();
   const bounds=new Map(),dimmedPids=new Set();
@@ -145,10 +162,11 @@ function positionPlacementActions(card){
   const actions=card?.querySelector('.card-placement-actions');
   if(!actions)return;
   const bounds=navigationArea.getBoundingClientRect(),box=card.getBoundingClientRect();
-  const {width,height}=actions.getBoundingClientRect(),zoom=state.view.z;
-  const right=Math.min(bounds.right-2,Math.max(bounds.left+width+2,box.right-2));
+  const {width,height}=actions.getBoundingClientRect(),zoom=state.view.z,inset=2*zoom;
+  const right=Math.min(bounds.right-inset,Math.max(bounds.left+width+inset,box.right-inset));
   actions.style.right=(box.right-right)/zoom+'px';
-  actions.style.top=(Math.max(box.top+2,bounds.top+height+2)-box.top)/zoom+'px';
+  actions.style.top=(Math.max(box.top+inset,bounds.top+height+inset)-box.top)/zoom+'px';
+  actions.classList.toggle('hints-to-right',right-bounds.left < 90*zoom);
 }
 
 function renderFrameNav() {
@@ -261,22 +279,26 @@ function scheduleRecoveryCheck() {
     });
   });
 }
+function scheduleViewPaint() {
+  if (!viewPaintFrame) viewPaintFrame = requestAnimationFrame(applyView);
+}
 function applyView() {
+  if (viewPaintFrame) cancelAnimationFrame(viewPaintFrame);
+  viewPaintFrame = 0;
   const v = state.view;
-  if (viewport.scrollLeft || viewport.scrollTop) {
-    v.x -= viewport.scrollLeft;
-    v.y -= viewport.scrollTop;
-    viewport.scrollLeft = viewport.scrollTop = 0;
-  }
   world.style.transform = 'translate('+v.x+'px,'+v.y+'px) scale('+v.z+')';
-  world.style.setProperty('--frame-hit',12/v.z+'px');
-  world.style.setProperty('--frame-grip',7/v.z+'px');
-  world.style.setProperty('--frame-stroke',1/v.z+'px');
-  world.style.setProperty('--canvas-copy-size',22/v.z+'px');
-  world.style.setProperty('--canvas-copy-offset',2/v.z+'px');
+  if (paintedScale !== v.z) {
+    paintedScale = v.z;
+    world.style.setProperty('--frame-hit',12/v.z+'px');
+    world.style.setProperty('--frame-grip',7/v.z+'px');
+    world.style.setProperty('--frame-stroke',1/v.z+'px');
+    world.style.setProperty('--canvas-copy-size',22/v.z+'px');
+    world.style.setProperty('--canvas-copy-offset',2/v.z+'px');
+    $('zoomValue').textContent = v.z < .01 ? '<1%' : Math.round(v.z*100)+'%';
+  }
+  // Connections live inside the transformed world. Only their endpoints need measuring.
+  if (gesture?.type === 'pan') return;
   if(state.display==='canvas')positionPlacementActions(world.querySelector('.project-card:hover, .project-card:focus-within'));
-  $('zoomValue').textContent = v.z < .01 ? '<1%' : Math.round(v.z*100)+'%';
-  renderReferenceLines();
   scheduleRecoveryCheck();
 }
 function zoom(delta,cx=navigationArea.clientWidth/2,cy=navigationArea.clientHeight/2,persist=true) {
@@ -285,8 +307,10 @@ function zoom(delta,cx=navigationArea.clientWidth/2,cy=navigationArea.clientHeig
   v.x = cx-(cx-v.x)*next/v.z;
   v.y = cy-(cy-v.y)*next/v.z;
   v.z = next;
-  applyView();
-  if (persist) save(false);
+  if (persist) {
+    applyView();
+    save(false);
+  } else scheduleViewPaint();
 }
 function fit({reading=false,persist=true}={}) {
   const cards = Array.from(world.querySelectorAll('.project-card[data-instance]'), card => ({
@@ -590,7 +614,7 @@ function setDisplay(display){
   const board=state.quickBoards.find(b=>b.id===state.activeBoard);
   $('pageTitle').textContent=display==='delivery'?'延期记录':display==='results'?'成果与历史':display==='boards'?board.name:display==='canvas'?'自由画板':'项目列表';
   state.mode='highlight';state.selected.clear();state.selectedFrames.clear();applyFilter();renderSelection();workbench?.renderNav();canvasEditor?.sync();
-  if (display === 'canvas') fit({reading:true,persist:false});
+  if (display === 'canvas') fit({persist:false});
 }
 function undoWithDeliveryHistory(event){
   const trigger=event?.currentTarget;
@@ -736,9 +760,12 @@ function returnToCenter() {
 $('homeCanvas').addEventListener('click',returnToCenter);
 $('returnToCanvas').addEventListener('click',returnToCenter);
 new ResizeObserver(scheduleRecoveryCheck).observe(navigationArea);
+// Settle a wheel gesture before any edit or drag can change the document.
+document.addEventListener('pointerdown',flushViewSave,true);
+window.addEventListener('pagehide',flushViewSave);
 window.addEventListener('pageshow',event => {
   if (event.persisted && state.display==='canvas' && !state.detail && state.mode!=='gather') {
-    fit({reading:true,persist:false});
+    fit({persist:false});
   }
 });
 
@@ -779,9 +806,19 @@ world.addEventListener('click',e=>{
   const card=e.target.closest('[data-instance]');
   if(card&&!e.shiftKey&&!space&&state.tool==='select')openDetail(card.dataset.pid,card.dataset.instance);
 });
-world.addEventListener('pointerover',e=>{const card=e.target.closest('[data-instance]');if(card&&!card.contains(e.relatedTarget))positionPlacementActions(card);if(card&&hoveredProject!==card.dataset.pid){hoveredProject=card.dataset.pid;renderReferenceLines();}});
-world.addEventListener('focusin',e=>positionPlacementActions(e.target.closest('[data-instance]')));
-world.addEventListener('pointerout',e=>{const card=e.target.closest('[data-instance]');if(card&&!card.contains(e.relatedTarget)){hoveredProject=null;renderReferenceLines();}});
+world.addEventListener('pointerover',e=>{const card=e.target.closest('[data-instance]');if(card&&!card.contains(e.relatedTarget)){positionPlacementActions(card);setHoveredProject(card.dataset.pid);}});
+world.addEventListener('focusin',e=>{
+  const card=e.target.closest('[data-instance]');
+  // The clipped canvas has no native scrolling. Keep keyboard navigation visible.
+  if(!gesture&&e.target.matches(':focus-visible')){
+    const box=(card||e.target).getBoundingClientRect(),area=navigationArea.getBoundingClientRect();
+    const dx=box.right<area.left||box.left>area.right ? (area.left+area.right-box.left-box.right)/2 : 0;
+    const dy=box.bottom<area.top||box.top>area.bottom ? (area.top+area.bottom-box.top-box.bottom)/2 : 0;
+    if(dx||dy){state.view.x+=dx;state.view.y+=dy;applyView();}
+  }
+  positionPlacementActions(card);
+});
+world.addEventListener('pointerout',e=>{const card=e.target.closest('[data-instance]');if(card&&!card.contains(e.relatedTarget))setHoveredProject(null);});
 world.addEventListener('keydown',e=>{
   const head=e.target.closest('[data-frame-head]');if(head&&e.target===head&&['Enter',' '].includes(e.key)){e.preventDefault();e.stopPropagation();if(canvasEditor?.clear()===false)return;selectFrame(head.dataset.frameHead,e.shiftKey);return;}
   const handle=e.target.closest('[data-resize-frame]');if(!handle)return;
@@ -798,13 +835,15 @@ world.addEventListener('dblclick',e=>{const h=e.target.closest('[data-frame-head
       if(additive&&state.selectedFrames.has(id))state.selectedFrames.delete(id);else state.selectedFrames.add(id);
       renderSelection();
     }
+    const wheelIdleMs=160;
+    let ignoreWheelUntil=-Infinity;
     viewport.addEventListener('pointerdown',e=>{
       if(gesture||e.button!==0&&e.button!==1)return;
       if(e.target.closest('button,a,input,select,textarea,label')&&!e.target.closest('[data-resize-frame]'))return;
       const p=toWorld(e.clientX,e.clientY),card=e.target.closest('[data-instance]'),head=e.target.closest('[data-frame-head]'),handle=e.target.closest('[data-resize-frame]');
       if(space||state.tool==='pan'||e.button===1){
         const primaryClick=e.button===0&&!space;
-        gesture={type:'pan',startX:e.clientX,startY:e.clientY,view:{...state.view},moved:false,
+        gesture={type:'pan',startX:e.clientX,startY:e.clientY,buttonMask:e.button===1?4:1,moved:false,
           blank:!card&&!head&&!handle,collapseOnClick:primaryClick,
           openCard:primaryClick && card ? {pid:card.dataset.pid,instanceId:card.dataset.instance} : null};
       }
@@ -832,9 +871,20 @@ world.addEventListener('dblclick',e=>{const h=e.target.closest('[data-frame-head
     });
     function updateGesture(clientX,clientY){
       if(!gesture)return;const g=gesture;g.lastX=clientX;g.lastY=clientY;
-      const p=toWorld(clientX,clientY);
-      if(g.type==='pan'){const dx=clientX-g.startX,dy=clientY-g.startY;state.view.x=g.view.x+dx;state.view.y=g.view.y+dy;g.moved||=Math.abs(dx)+Math.abs(dy)>3;applyView();return;}
+      if(g.type==='pan'){
+        const dx=clientX-g.startX,dy=clientY-g.startY;
+        if(!g.moved){
+          if(Math.abs(dx)+Math.abs(dy)<=3)return;
+          g.moved=true;
+          viewport.classList.add('hand-dragging');
+        }
+        state.view.x=g.initialView.x+dx;
+        state.view.y=g.initialView.y+dy;
+        scheduleViewPaint();
+        return;
+      }
       if(g.type==='toggle')return;
+      const p=toWorld(clientX,clientY);
       const dx=p.x-g.start.x,dy=p.y-g.start.y;
       if(Math.abs(dx)+Math.abs(dy)>4/state.view.z)g.moved=true;
       if(g.type==='resize'){
@@ -855,19 +905,37 @@ world.addEventListener('dblclick',e=>{const h=e.target.closest('[data-frame-head
         state.instances.forEach(i=>{if(!isClosedProject(byId[i.pid])&&intersects(boxFor(i),g.bounds))state.selected.add(i.id);});renderSelection();
       }
     }
-    viewport.addEventListener('pointermove',e=>{if(gesture?.pointerId===e.pointerId)updateGesture(e.clientX,e.clientY);});
+    viewport.addEventListener('pointermove',e=>{
+      if(gesture?.pointerId!==e.pointerId)return;
+      // Some mice lose pointerup outside the window. A later hover must never keep dragging.
+      if(gesture.type==='pan'&&e.pointerType==='mouse'&&!(e.buttons&gesture.buttonMask)){cancelGesture(e);return;}
+      updateGesture(e.clientX,e.clientY);
+    });
     function cancelGesture(e){
       if(!gesture)return;const g=gesture;gesture=null;viewport.classList.remove('frame-resizing');viewport.style.removeProperty('cursor');
+      if(g.lastWheelAt!==undefined)ignoreWheelUntil=g.lastWheelAt+wheelIdleMs;
+      if(g.type==='pan'){
+        viewport.classList.remove('hand-dragging');
+        if(viewport.hasPointerCapture(g.pointerId))viewport.releasePointerCapture(g.pointerId);
+        if(e?.key==='Escape')state.view=g.initialView;
+        applyView();
+        if(g.moved&&e?.key!=='Escape')save(false);
+        return;
+      }
       for(const old of [...(g.frames||[]),...(g.frame?[g.frame]:[])]){const f=state.frames.find(f=>f.id===old.id);if(f)Object.assign(f,old);}
       for(const old of g.items||[]){const i=state.instances.find(i=>i.id===old.id);if(i)Object.assign(i,old);}
       for(const old of g.canvasItems||[]){const i=state.canvasItems.find(i=>i.id===old.id);if(i)Object.assign(i,old);}
-      if(g.type==='pan'||g.viewChanged)state.view=g.initialView;
+      if(g.viewChanged)state.view=g.initialView;
       if(g.type==='select'){state.selected=new Set(g.initial);state.selectedFrames=new Set(g.initialFrames);}
       $('marquee')?.remove();if(viewport.hasPointerCapture(g.pointerId))viewport.releasePointerCapture(g.pointerId);renderWorld();
     }
     function endGesture(e){
       if(!gesture||gesture.pointerId!==e.pointerId)return;if(e.type==='pointercancel'){cancelGesture(e);return;}
-      const g=gesture;gesture=null;viewport.classList.remove('frame-resizing');viewport.style.removeProperty('cursor');$('marquee')?.remove();
+      // A release may be newer than the last delivered move. Paint that position before saving.
+      if(e.clientX!==gesture.lastX||e.clientY!==gesture.lastY)updateGesture(e.clientX,e.clientY);
+      const g=gesture;gesture=null;viewport.classList.remove('frame-resizing','hand-dragging');viewport.style.removeProperty('cursor');$('marquee')?.remove();
+      if(g.lastWheelAt!==undefined)ignoreWheelUntil=g.lastWheelAt+wheelIdleMs;
+      if((g.type==='pan'&&g.moved)||g.viewChanged)applyView();
       if(viewport.hasPointerCapture(e.pointerId))viewport.releasePointerCapture(e.pointerId);
       if(g.moved||g.type==='card'){clickSuppressed=true;setTimeout(()=>clickSuppressed=false,50);}
       if((g.type==='card'||g.type==='frame')&&g.moved){const grouped=new Set(g.frames.flatMap(f=>f.members));reconcileMembership(g.items.filter(i=>!grouped.has(i.id)).map(i=>i.id));}
@@ -882,15 +950,17 @@ world.addEventListener('dblclick',e=>{const h=e.target.closest('[data-frame-head
       if(changed)save();else if(g.viewChanged||(g.type==='pan'&&g.moved))save(false);
     }
     viewport.addEventListener('pointerup',endGesture);viewport.addEventListener('pointercancel',endGesture);viewport.addEventListener('lostpointercapture',e=>{if(gesture?.pointerId===e.pointerId)cancelGesture(e);});
-    viewport.addEventListener('scroll',()=>{if(viewport.scrollTop||viewport.scrollLeft)applyView();});
     viewport.addEventListener('wheel',e=>{
-      e.preventDefault();const r=viewport.getBoundingClientRect(),delta=wheelDelta(e,{width:r.width,height:r.height}),g=gesture;
+      e.preventDefault();
+      const g=gesture,now=performance.now();
+      // A grabbed canvas has one driver. Discard an overlapping wheel stream until it goes idle.
+      if(g?.type==='pan'||(!g&&now<ignoreWheelUntil)){ignoreWheelUntil=now+wheelIdleMs;return;}
+      const r=viewport.getBoundingClientRect(),delta=wheelDelta(e,{width:r.width,height:r.height});
       if(!delta.x&&!delta.y)return;
       if(e.ctrlKey||e.metaKey){
-        if(g?.type==='pan')return;
-        zoom(Math.exp(-delta.y*.007),e.clientX-r.left,e.clientY-r.top,!g);
-      }else{state.view.x-=delta.x;state.view.y-=delta.y;if(g?.type==='pan'){g.view.x-=delta.x;g.view.y-=delta.y;}applyView();}
-      if(g){g.viewChanged=true;g.moved=true;updateGesture(g.lastX,g.lastY);}else if(!e.ctrlKey&&!e.metaKey)save(false);
+        zoom(Math.exp(-delta.y*.007),e.clientX-r.left,e.clientY-r.top,false);
+      }else{state.view.x-=delta.x;state.view.y-=delta.y;scheduleViewPaint();}
+      if(g){g.lastWheelAt=now;g.viewChanged=true;g.moved=true;updateGesture(g.lastX,g.lastY);}else scheduleViewSave();
     },{passive:false});
     document.addEventListener('keydown',e=>{
       const editing=e.target.closest('input,select,textarea,[contenteditable="true"],[data-color-menu],[data-color-trigger],[data-tag],.card-parent-marker,[data-focus-direction],#exitDirectionFocus');

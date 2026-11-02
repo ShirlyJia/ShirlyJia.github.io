@@ -5,16 +5,24 @@
 .world>.project-card:is(:hover,:focus-within){overflow:visible}
 .world>.project-card:focus-within{z-index:7}
 .world .card-placement-actions{
-  --size:var(--canvas-copy-size,22px);
-  position:absolute;z-index:4;top:var(--canvas-copy-offset,2px);right:var(--canvas-copy-offset,2px);transform:translateY(-100%);
-  display:inline-flex;align-items:center;padding:calc(var(--size)*.08);border:1px solid #e4e1db;border-radius:calc(var(--size)*.25);
-  background:#fff;box-shadow:0 1px 4px #37352f16;white-space:nowrap;opacity:0;pointer-events:none;
+  position:absolute;z-index:4;top:2px;right:2px;transform:translateY(-100%);
+  display:inline-flex;gap:1px;border-radius:4px;background:#fffffff2;opacity:0;pointer-events:none;
 }
 .world>.project-card:is(:hover,:focus-within):not(.dragging) .card-placement-actions{opacity:1;pointer-events:auto}
-.world .card-placement-actions button{display:inline-grid;place-items:center;height:var(--size);padding:0;border:0;border-radius:calc(var(--size)*.16);background:transparent;color:#69665f;cursor:pointer}
-.world .card-copy{width:var(--size)}
+.world .card-placement-actions button{
+  position:relative;display:grid;place-items:center;width:22px;height:22px;padding:0;border:0;border-radius:3px;
+  background:transparent;color:#7b7871;cursor:pointer;
+}
+.world .card-placement-actions svg{width:13px;height:13px}
 .world .card-copy:is(:hover,:focus-visible){color:#484640;background:#f2f1ed}
-.world .card-copy svg{width:65%;height:65%}
-.world .card-placement-actions .card-remove-reference{padding-inline:calc(var(--size)*.32);border-inline-start:1px solid #e5e2dc;border-start-start-radius:0;border-end-start-radius:0;font-size:calc(var(--size)*.52);line-height:1}
 .world .card-remove-reference:is(:hover,:focus-visible){color:#9e5148;background:#faf0ed}
+.card-placement-actions button::after{
+  content:attr(data-hint);position:absolute;top:calc(100% + 2px);right:0;z-index:1;
+  padding:3px 6px;border:1px solid #e4e1db;border-radius:4px;background:#fff;color:#55524c;
+  font-size:11px;font-weight:400;line-height:1.4;white-space:nowrap;pointer-events:none;
+  visibility:hidden;
+}
+.card-placement-actions.hints-to-right button::after{right:auto;left:0}
+.card-placement-actions button:hover::after{visibility:visible;transition:visibility 0s .4s}
+.card-placement-actions button:focus-visible::after{visibility:visible;transition:none}
 @media(prefers-reduced-motion:reduce){.canvas-reference-line{transition:none}}

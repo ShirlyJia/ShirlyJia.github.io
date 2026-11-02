@@ -1,3 +1,10 @@
+#viewport {
+  overflow: clip;
+  overflow-anchor: none;
+  overscroll-behavior: none;
+}
+#viewport.hand-dragging, #viewport.hand-dragging * { cursor: grabbing; }
+#viewport.hand-dragging .card-placement-actions { visibility: hidden; }
 .canvas-navigation {
   position: absolute;
   inset: 0;
