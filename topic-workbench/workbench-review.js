@@ -1,4 +1,6 @@
 /** Evidence-only review helpers. Results are prompts to check, never conflict/duplicate verdicts. */
+import {countWorkdays} from './china-workdays.js';
+
 const copy = value => JSON.parse(JSON.stringify(value));
 const label = value => typeof value === 'string' ? value : '';
 const unresolvedOwners = new Set(['待定', '待确认', '未指定', '未分配', '暂无', '-', '--', 'tbd', 'unknown', 'unassigned', 'needs supplement']);
@@ -31,7 +33,8 @@ function windowFor(node) {
 }
 
 /**
- * Pairwise calendar-day overlaps for exactly matching nonempty owner text.
+ * Pairwise workday overlaps for the same owner. Explicit same-day commitments
+ * also merit review on a rest day because their promised dates are literal.
  * Node dateConfirmed is surfaced; unknown owners, aliases, effort, dependencies,
  * and whether the overlapping work is actually incompatible are never inferred.
  * Returns [{id, kind, status:'needs-review', owner, overlap, items, reason}].
@@ -59,9 +62,16 @@ export function findScheduleConflicts(data) {
         const start = a.start > b.start ? a.start : b.start, end = a.end < b.end ? a.end : b.end;
         if (start > end) continue;
         const kind = a.start === a.end && b.start === b.end ? 'same-date' : 'date-overlap';
+        const {count, complete} = countWorkdays(start, end, {includeStart: true});
+        const sameCommitment = kind === 'same-date' && [a, b].every(item => item.dateConfirmed && item.dateBasis === 'estimatedDate');
+        if (complete && !count && !sameCommitment) continue;
+        let reason;
+        if (sameCommitment) reason = '同一跟进人的两项已确认交付落在同一天，待核对安排。';
+        else if (!count) reason = '重叠日期的工作日历待补全，需核对排期。';
+        else reason = '同一跟进人的两项计划重叠'+(complete?' ':'至少 ')+count+' 个工作日，待核对安排。';
         results.push({id: 'schedule:' + JSON.stringify([a.projectId, a.nodeId, b.projectId, b.nodeId]), kind,
           status: 'needs-review', owner, overlap: {start, end}, items: [copy(a), copy(b)],
-          reason: kind === 'same-date' ? '同一跟进人的两个计划落在同一天，待核对安排。' : '同一跟进人的计划日期重叠，待核对安排。'});
+          reason});
       }
     }
   }

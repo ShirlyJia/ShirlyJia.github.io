@@ -1,9 +1,10 @@
-import {parentCardMarkup} from './child-projects.js';
+import {resultsTimelineMarkup} from './results-timeline.js';
+import {mountRichEditors, flushRichEditors, destroyRichEditors} from './rich-text.js?v=20261030-card-preview';
 import {colorPickerMarkup,colorChoices} from './color-presets.js';
 import {deliveryCases} from './delivery-model.js';
 import {deliveryPageMarkup} from './delivery-view.js';
 import {setProjectClosed} from './project-flow.js';
-import {isClosedProject, sortProjectsByPriority, outcomeKind, boardFromFrame, linkBoardToFrame} from './workbench-model.js';
+import {isClosedProject, sortProjectsByPriority, boardFromFrame, linkBoardToFrame} from './workbench-model.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $ = id => document.getElementById(id);
@@ -26,6 +27,11 @@ export function createWorkbenchViews(api) {
   /** Synchronously persist board text before navigation, snapshots or unloading. */
   function flush(){
     if(flushingText)return true;
+    const view=$('workbenchView');
+    if(!flushRichEditors(view))return false;
+    for(const el of view.querySelectorAll('[data-timeline-pid][data-pending]')){
+      if(!api.commitInline(el))return false;
+    }
     if(renameSession&&renameSession.finish()===false)return false;
     const entries=[...pendingText.values()].filter(entry=>{
       const board=boardById(entry.boardId),valid=board&&(entry.kind==='note'||board.projectIds.includes(entry.pid));
@@ -85,6 +91,7 @@ export function createWorkbenchViews(api) {
     if(position&&composing.has(document.activeElement)&&state.display==='boards'&&state.activeBoard===position.boardId){deferredRender=true;return;}
     if(!flush())return;
     deferredRender=false;
+    destroyRichEditors($('workbenchView'));
     renderContent();
     restoreEditor(position);
     api.afterRender?.();
@@ -112,14 +119,8 @@ export function createWorkbenchViews(api) {
     }
   }
   function renderResults(view){
-    const state=getState(),allEnded=state.projects.filter(isClosedProject),ended=sortProjectsByPriority(allEnded.filter(matches));
-    view.innerHTML='<div class="overview-heading"><div><h2>成果与历史</h2><p>项目结束后，沉淀解决的问题、结果与证据。</p></div>'+(allEnded.length?'<button data-record-result>＋ 补充成果</button>':'')+'</div><div id="resultsContent"></div>';
-    const target=$('resultsContent');
-    if(!ended.length){target.innerHTML='<div class="view-empty"><strong>'+(allEnded.length?'没有匹配的结项记录':'还没有结项记录')+'</strong><p>'+(allEnded.length?'清除筛选后查看已结束项目。':'推进中的项目无需填写成果。可直接记录已结项目，或在项目详情中结束项目后补充成果，并保留在所属主项目中。')+'</p></div>';return;}
-    for(const [kind,title] of [['resolved','已解决 / 已交付'],['stopped','已结束，问题未解决'],['ended','其他结项记录']]){
-      const rows=ended.filter(p=>outcomeKind(p)===kind);if(!rows.length)continue;
-      target.insertAdjacentHTML('beforeend','<div class="section-row"><h3>'+title+'</h3><span>'+rows.length+' 项</span></div><div class="outcome-grid">'+rows.map(p=>'<article class="outcome-card" data-project-highlight="'+esc(p.id)+'"><header><span>'+esc(p.outcome||'已结束')+'</span><time>'+esc(p.closedAt||'')+'</time></header><button data-project-open="'+esc(p.id)+'"><h3>'+esc(p.name)+'</h3></button>'+parentCardMarkup(p.id,state)+'<p class="outcome-result">'+esc(p.result||'待补充结果')+'</p>'+(p.impact?'<p>'+esc(p.impact)+'</p>':'')+'<footer><span>'+p.materials.length+' 份资料</span><button data-project-open="'+esc(p.id)+'">查看与补充 →</button><button data-reopen-project="'+esc(p.id)+'">恢复跟进</button></footer></article>').join('')+'</div>');
-    }
+    view.innerHTML=resultsTimelineMarkup(getState(),matches);
+    mountRichEditors(view,{onCommit:api.commitInline,onError:api.notify});
   }
 
   function renameBoard(id,trigger){
@@ -227,7 +228,7 @@ export function createWorkbenchViews(api) {
     if(event.target.closest('[data-board-title]')&&(event.code==='Space'||event.key===' '))event.stopPropagation();
   });
   document.addEventListener('click',e=>{
-    const b=e.target.closest('[data-board-open],[data-board-members],[data-board-edit],[data-board-rename],[data-create-board],[data-import-frames],[data-board-create-mode],[data-project-open],[data-board-remove],[data-board-star],[data-delete-board],[data-record-result],[data-reopen-project]');if(!b)return;
+    const b=e.target.closest('[data-board-open],[data-board-members],[data-board-edit],[data-board-rename],[data-create-board],[data-import-frames],[data-board-create-mode],[data-project-open],[data-board-remove],[data-board-star],[data-delete-board],[data-reopen-project]');if(!b)return;
     if(b.hasAttribute('data-board-open')){navigate('boards',b.dataset.boardOpen);return;}
     if(b.hasAttribute('data-project-open')){openProject(b.dataset.projectOpen);return;}
     if(b.hasAttribute('data-board-members')){membersEditor(b.dataset.boardMembers);return;}
@@ -237,7 +238,6 @@ export function createWorkbenchViews(api) {
     if(b.hasAttribute('data-import-frames')){boardEditor(null,'frames');return;}
     if(b.hasAttribute('data-board-create-mode')){rememberCreationDraft();createBoardEditor(b.dataset.boardCreateMode);return;}
     if(b.hasAttribute('data-delete-board')){removeBoard(b.dataset.deleteBoard);return;}
-    if(b.hasAttribute('data-record-result')){const ended=sortProjectsByPriority(getState().projects.filter(isClosedProject));if(!ended.length)return;editor('为已结束项目补充成果','<div class="member-options">'+ended.map(p=>'<label class="member-option"><input type="radio" name="pid" required value="'+esc(p.id)+'"><span>'+esc(p.name)+'</span></label>').join('')+'</div>',f=>{openProject(f.get('pid'));document.querySelector('[data-inline="result"]')?.focus();},'打开项目');return;}
     if(b.hasAttribute('data-reopen-project')){update(()=>{const p=getState().projects.find(p=>p.id===b.dataset.reopenProject);setProjectClosed(p,false);},'已恢复跟进，历史结果保留');return;}
     const id=b.dataset.boardRemove||b.dataset.boardStar,pid=b.dataset.pid;
     update(()=>{const board=boardById(id);if(b.hasAttribute('data-board-remove')){board.projectIds=board.projectIds.filter(x=>x!==pid);board.emphasisIds=board.emphasisIds.filter(x=>x!==pid);delete board.contexts?.[pid];}else board.emphasisIds=board.emphasisIds.includes(pid)?board.emphasisIds.filter(x=>x!==pid):[...board.emphasisIds,pid];});

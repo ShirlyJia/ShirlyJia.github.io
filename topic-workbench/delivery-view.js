@@ -1,25 +1,28 @@
 import {deliveryState, deliveryCases, todayDate} from './delivery-model.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const dayNumber = value => /^\d{4}-\d{2}-\d{2}$/.test(value || '') ? Date.parse(value+'T00:00:00Z')/86400000 : null;
-const daysUntil = (date,today) => dayNumber(date) !== null && dayNumber(today) !== null ? dayNumber(date)-dayNumber(today) : null;
 const eventLabels = {baseline:'已确认日期首次留档',confirmed:'确认交付日',reconfirmed:'重新确认交付日',rescheduled:'延后交付',advanced:'提前交付',corrected:'更正日期',withdrawn:'撤销日期确认',overdue:'发现交付逾期',delivered:'记录已交付',reopened:'恢复跟进',removed:'移除计划',projectClosed:'项目结束',projectReopened:'项目恢复跟进',projectDeleted:'项目删除',undo:'撤销调整',restored:'恢复计划'};
 
 function label(state,today,node) {
-  if(state.kind==='overdue')return '已延期 '+state.daysLate+' 天';
+  const lateDays=(state.calendarComplete?' ':'至少 ')+state.daysLate+' 个工作日';
+  if(state.kind==='overdue')return '已延期'+lateDays;
   if(state.kind==='due')return '今天交付';
-  if(state.kind==='delivered')return state.daysLate?'已交付 · 晚 '+state.daysLate+' 天':'已交付';
+  if(state.kind==='delivered'){
+    if(state.daysLate)return '已交付 · 延期'+lateDays;
+    return state.calendarComplete?'已交付':'已交付 · 工作日历待补全';
+  }
   if(state.kind==='closed')return '项目已结束';
   if(node?.delivery&&!node.dateConfirmed)return '已撤回确认';
   if(state.kind==='scheduled'){
-    const days=daysUntil(state.date,today);
-    return days===1?'明天交付':days!==null&&days<=3?'还有 '+days+' 天':'已确认';
+    if(!state.calendarComplete)return state.date<today?'到期未交付 · 工作日历待补全':'工作日历待补全';
+    if(state.date<today)return '到期未交付';
+    return state.remainingWorkdays===0?'休息日交付':'还剩 '+state.remainingWorkdays+' 个工作日';
   }
   return state.date?'待确认':'未设置';
 }
 function tone(state,today) {
   if(state.kind==='overdue')return 'overdue';
-  if(state.kind==='due'||(state.kind==='scheduled'&&daysUntil(state.date,today)<=3))return 'soon';
+  if(state.kind==='due'||(state.kind==='scheduled'&&state.calendarComplete&&(state.date<today||state.remainingWorkdays<=3)))return 'soon';
   if(state.kind==='delivered')return 'delivered';
   return state.kind==='scheduled'?'confirmed':'neutral';
 }
@@ -102,5 +105,5 @@ export function deliveryPageMarkup(data,{filter='active',query='',today=todayDat
   const totalChanges=cases.reduce((total,row)=>total+row.events.filter(event=>event.kind==='rescheduled').length,0);
   return '<div class="delivery-page"><header class="delivery-page-head"><div class="delivery-summary"><span'+(active.length?' class="has-delays"':'')+'><strong>'+active.length+'</strong> 项正在延期</span><span><strong>'+totalChanges+'</strong> 次延期调整</span></div></header>'+
     '<div class="delivery-page-controls"><div role="tablist" aria-label="延期记录范围"><button type="button" role="tab" data-delivery-filter="active" aria-selected="'+(filter==='active')+'">当前延期 <span>'+active.length+'</span></button><button type="button" role="tab" data-delivery-filter="history" aria-selected="'+(filter==='history')+'">历史记录 <span>'+cases.length+'</span></button></div><label class="delivery-search"><span class="sr-only">搜索延期记录</span><input type="search" data-delivery-search placeholder="搜索项目、计划或理由" aria-label="搜索延期记录" value="'+esc(query)+'"></label></div>'+
-    '<div class="delivery-case-list">'+(rows.length?rows.map(row=>caseMarkup(row,today)).join(''):'<div class="delivery-empty"><strong>'+(q?'没有匹配的记录':filter==='active'?'当前没有延期项目':'暂无延期历史')+'</strong><p>'+(q?'换一个关键词试试。':filter==='active'?'已确认交付日过后仍未交付的计划会出现在这里。':'发生延期或调整后，日期与原因会留存在这里。')+'</p></div>')+'</div></div>';
+    '<div class="delivery-case-list">'+(rows.length?rows.map(row=>caseMarkup(row,today)).join(''):'<div class="delivery-empty"><strong>'+(q?'没有匹配的记录':filter==='active'?'当前没有延期项目':'暂无延期历史')+'</strong><p>'+(q?'换一个关键词试试。':filter==='active'?'从承诺交付日后的首个工作日起，未交付的计划会显示在这里。':'发生延期或调整后，日期与原因会留存在这里。')+'</p></div>')+'</div></div>';
 }

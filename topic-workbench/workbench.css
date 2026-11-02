@@ -69,15 +69,40 @@
 .view-empty strong {font-size:15px;font-weight:500;}
 .view-empty p {font-size:12px;color:#898278;max-width:420px;margin:8px auto 16px;}
 .view-empty button {font-size:12px;padding:6px 12px;background:#f2f0eb;border-radius:4px;}
-.outcome-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
-.outcome-card {padding:18px;border:1px solid #e6e3dc;border-radius:5px;}
-.outcome-card header,.outcome-card footer {display:flex;gap:10px;justify-content:space-between;align-items:center;color:#8c857a;font-size:11px;flex-wrap:wrap;}
-.outcome-card>button {padding:0;text-align:left;}
-.outcome-card h3 {font-size:15px;line-height:1.6;margin:12px 0 8px;}
-.outcome-card p {font-size:12px;white-space:pre-wrap;}
-.outcome-card .outcome-result {font-size:14px;color:#4d4942;}
-.outcome-card footer {margin-top:18px;border-top:1px solid #efede8;padding-top:12px;}
-.outcome-card footer button {padding:0;}
+.result-timeline {container-type:inline-size;list-style:none;margin:5px 0 0;padding:0;max-width:920px;}
+.result-event {--rail:97px;--dot:26px;position:relative;display:grid;grid-template-columns:82px minmax(0,1fr);column-gap:36px;padding-bottom:22px;}
+.result-event::before,.result-event::after {content:"";position:absolute;left:var(--rail);pointer-events:none;}
+.result-event:not(:last-child)::before {top:var(--dot);bottom:calc(0px - var(--dot));width:1px;background:#d9d8d1;}
+.result-event::after {top:var(--dot);width:9px;height:9px;box-sizing:border-box;border:2px solid #8e958b;background:#fff;border-radius:50%;transform:translate(-4px,-50%);}
+.result-stamp {padding-top:7px;text-align:right;font-variant-numeric:tabular-nums;}
+.result-stamp time {display:inline-flex;flex-direction:column;font-size:10px;line-height:1.6;}
+.result-stamp strong {font-size:14px;font-weight:550;}
+.result-undated {display:inline-block;margin-top:8px;color:#87827a;font-size:12px;}
+.result-record {min-width:0;padding:16px 20px 13px;border:1px solid #e6e4dd;border-radius:7px;background:#fff;overflow-wrap:anywhere;}
+.result-record header,.result-record footer {display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+.result-record h3 {margin:0;font-size:15px;font-weight:600;line-height:1.6;}
+.result-record h3 button {text-align:left;font:inherit;padding:0;}
+.result-record h3 button:hover,.result-record footer button:hover {text-decoration:underline;text-underline-offset:3px;}
+.result-record .card-parent-marker {margin:4px 0;}
+.result-label {display:block;font-size:11px;color:#817d75;font-weight:550;}
+.result-fact,.result-conclusion {display:grid;grid-template-columns:65px minmax(0,1fr);align-items:baseline;gap:10px;margin-top:10px;}
+.result-conclusion:has(.is-editing) {align-items:start;}
+.result-fact .rich-content {display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-size:13px;line-height:1.65;color:#615e57;}
+.result-conclusion .rich-editor-input {font-size:14px;line-height:1.65;}
+.result-conclusion .rich-collapsible:not(.is-editing)>.rich-editor-input {min-height:23px;padding:0;}
+.result-conclusion .rich-collapsible:not(.is-editing)>.rich-editor-input[data-empty=true]::before {content:attr(data-placeholder);color:#88784d;}
+.result-record footer {margin-top:13px;padding-top:8px;border-top:1px solid #eeede8;justify-content:space-between;}
+.result-record footer button {font-size:11px;color:#827d75;padding:3px 0;}
+@container (max-width:510px) {
+  .result-event {--rail:5px;--dot:12px;display:block;padding:0 0 19px 23px;}
+  .result-stamp {padding:0 0 7px;text-align:left;}
+  .result-stamp time {display:inline-flex;flex-direction:row;align-items:baseline;gap:5px;}
+  .result-stamp strong {font-size:12px;}
+  .result-undated {margin:0;}
+  .result-record {padding:12px 13px 10px;}
+  .result-fact,.result-conclusion {display:block;}
+  .result-label {margin-bottom:3px;}
+}
 .member-search {display:flex;gap:12px;align-items:center;font-size:12px;margin-bottom:14px;}
 .member-search input {padding:8px;border:1px solid #dedad2;border-radius:4px;flex:1;min-width:0;}
 .member-options {max-height:420px;overflow:auto;}

@@ -1,9 +1,9 @@
 import {isClosedProject} from './workbench-model.js';
+import {countWorkdays} from './china-workdays.js';
 
 const clone = value => JSON.parse(JSON.stringify(value));
 const object = value => value && typeof value === 'object' && !Array.isArray(value);
 const own = (value,key) => Object.prototype.hasOwnProperty.call(value,key);
-const dayMs = 86400000;
 const eventKinds = new Set(['baseline','confirmed','reconfirmed','rescheduled','advanced','corrected','withdrawn','overdue','delivered','reopened','removed','undo','restored','projectClosed','projectReopened']);
 const exceptionKinds = new Set(['reconfirmed','rescheduled','advanced','corrected','withdrawn','overdue','reopened','removed','undo','restored']);
 const completedStatuses=new Set(['done','finished','completed','已完成','已交付']);
@@ -31,8 +31,7 @@ function dateValue(value,label,{empty=true}={}) {
 export function todayDate(now) {
   return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(timestamp(now)));
 }
-const days = (later,earlier) => Math.max(0,Math.round((Date.parse(later+'T00:00:00Z')-Date.parse(earlier+'T00:00:00Z'))/dayMs));
-const historyEvent = event => exceptionKinds.has(event.kind) || (event.kind === 'delivered' && !!event.completedAt && !!event.toDate && event.completedAt > event.toDate);
+const historyEvent = event => exceptionKinds.has(event.kind) || (event.kind === 'delivered' && !!event.completedAt && !!event.toDate && countWorkdays(event.toDate,event.completedAt).count > 0);
 const caseKey = (pid,nid) => JSON.stringify([pid,nid]);
 
 /** Only estimatedDate is a commitment. targetDate is an independent desired date. */
@@ -44,14 +43,26 @@ export function deliveryState(project,node,{today=todayDate()}={}) {
   const completed=isDeliveryDate(meta?.completedAt)?meta.completedAt:!meta?legacy.completedAt:'';
   const isComplete=meta&&own(meta,'completed')?meta.completed:!!completed||legacy.completed;
   const baseline=isDeliveryDate(meta?.baselineDate)?meta.baselineDate:node?.dateConfirmed?effective:'';
-  let kind='none', daysLate=0;
-  if (isComplete) {kind='delivered';daysLate=committed&&completed?days(completed,committed):0;}
+  let kind='none', elapsed, remaining;
+  if (isComplete) {
+    kind='delivered';
+    if (completed && committed && (meta || node.dateConfirmed)) elapsed=countWorkdays(committed,completed);
+  }
   else if (isClosedProject(project)) kind='closed';
   else if (!effective) kind='none';
   else if (!node.dateConfirmed) kind='draft';
-  else if (committed<today) {kind='overdue';daysLate=days(today,committed);}
-  else kind=committed===today?'due':'scheduled';
-  return {kind,date:effective?(node?.dateConfirmed?(committed||effective):effective):'',daysLate,baselineDate:baseline,completedAt:completed,hasHistory:!!meta?.hasHistory||kind==='overdue'||(kind==='delivered'&&daysLate>0)};
+  else if (committed<today) {
+    elapsed=countWorkdays(committed,today);
+    kind=elapsed.count>0?'overdue':'scheduled';
+  } else if (committed===today) kind='due';
+  else {
+    kind='scheduled';
+    remaining=countWorkdays(today,committed);
+  }
+  const daysLate=elapsed?.count??0;
+  return {kind,date:effective?(node?.dateConfirmed?(committed||effective):effective):'',daysLate,
+    remainingWorkdays:remaining?.count??null,calendarComplete:elapsed?.complete??remaining?.complete??true,
+    baselineDate:baseline,completedAt:completed,hasHistory:!!meta?.hasHistory||daysLate>0};
 }
 
 export function validateDelivery(data) {
@@ -102,7 +113,7 @@ function observeOverdue(project,node,events,{at,actor='',today}={}) {
   const state=deliveryState(project,node,{today});
   if(state.kind!=='overdue'||!node.delivery)return false;
   if(events.some(event=>event.projectId===project.id&&event.nodeId===node.id&&event.cycleId===node.delivery.cycleId&&event.kind==='overdue'))return false;
-  appendEvent(events,project,node,'overdue',{at,actor,reason:'已过承诺交付日，尚未记录交付。'});
+  appendEvent(events,project,node,'overdue',{at,actor,reason:'已进入承诺交付日之后的工作日，尚未记录交付。'});
   return true;
 }
 

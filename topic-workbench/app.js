@@ -5,18 +5,18 @@ import {orderedComments,moveComment,setCommentPinned,mountCommentSorting} from '
 import {DETAIL_SECTION_TITLES, detailLayout, detailSectionTitle, visibleDetailSections, moveDetailSection, setDetailSectionHidden, renameDetailSection, removeCustomSection, restoreCustomSection} from './project-detail-layout.js';
 import {applyDomainTags} from './category-tags.js';
 import {createSnapshotStore} from './snapshot-store.js';
-import {findScheduleConflicts,findContentOverlaps} from './workbench-review.js';
+import {findScheduleConflicts,findContentOverlaps} from './workbench-review.js?v=20261102-workdays';
 import { enrichWorkbench, isClosedProject, sortProjectsByPriority, collectDirectionResults, syncFrameBoards } from './workbench-model.js';
-import { createWorkbenchViews, colorControl } from './workbench-views.js';
+import { createWorkbenchViews, colorControl } from './workbench-views.js?v=20261102-results';
 import { createPersistence } from './persistence.js?v=20261030-comment-interactions';
 import { detachSourceMetadata } from './source-detach.js';
 import { displayPriority, visibleNodes, nodeStatus, displayDescription } from './presentation.js';
 import {deployment, storageKey} from './deployment-config.js';
-import {richEditorMarkup, mountRichEditors, readRichEditor, richHTML, flushRichEditors, destroyRichEditors} from './rich-text.js?v=20261030-card-preview';
+import {richEditorMarkup, mountRichEditors, readRichEditor, richHTML, richHasContent, flushRichEditors, destroyRichEditors} from './rich-text.js?v=20261030-card-preview';
 import {readProjectFlow, setCurrentFlowNode, setProjectClosed} from './project-flow.js';
 import {flowMarkup, mountProjectFlow} from './project-flow-view.js';
 import {reconcileDelivery, recordDeliveryLifecycle, deliveryCases, todayDate} from './delivery-model.js';
-import {deliveryCardMarkup, deliveryPlanMarkup} from './delivery-view.js?v=20261030-dates';
+import {deliveryCardMarkup, deliveryPlanMarkup} from './delivery-view.js';
 import {createDeliveryController} from './delivery-controller.js?v=20261030-dates';
 import {previewDeliveryUndo, applyDeliveryUndo} from './delivery-undo.js';
 import {resizeFrameBounds, frameResizeEdges, frameEdgeNames} from './frame-resize.js';
@@ -340,7 +340,7 @@ function detailUndo(message,restore){
 }
 function focusDetailSection(key,title=false){
   const section=[...$('detailBody').querySelectorAll('[data-detail-section]')].find(el=>el.dataset.detailSection===key);if(!section)return;
-  section.scrollIntoView({block:'nearest'});const control=section.querySelector(title?'.section-title-input':'[data-section-rename]');control?.focus({preventScroll:true});if(title)control?.select();
+  section.scrollIntoView({block:'nearest'});const control=section.querySelector(title?'.section-title-input':key==='result'?'[data-inline="result"]':'[data-section-rename]');control?.focus({preventScroll:true});if(title)control?.select();
 }
 function projectSectionMarkup(p,block,keys){
   const index=keys.indexOf(block.key),custom=block.key.startsWith('custom:'),title=detailSectionTitle(p,block.key);
@@ -350,7 +350,7 @@ function projectSectionMarkup(p,block,keys){
 }
 function projectDetailSections(p,nodes){
   const blocks=[{key:'description',className:'problem-statement',body:inlineText('description',detailSectionTitle(p,'description'),displayDescription(p.description),{rows:4,autogrow:true,placeholder:'描述需要解决的问题、场景与影响…'})}];
-  if(isClosedProject(p))blocks.push({key:'result',className:'result-editor',body:inlineText('result','解决 / 牵引了什么问题',p.result,{rows:3,autogrow:true,placeholder:'项目结束后，记录解决的问题与最终结果'})+inlineText('impact','影响与证据说明',p.impact||'',{rows:2,autogrow:true,placeholder:'数据变化、落地影响、验证边界…'})+inlineText('closedAt','结束日期',p.closedAt||'',{type:'date'})});
+  if(isClosedProject(p))blocks.push({key:'result',className:'result-editor',body:inlineText('result','结项结论',p.result,{rows:3,autogrow:true,placeholder:'写下解决了什么问题，或最终作出的决定…'})+inlineText('impact','影响与证据说明',p.impact||'',{rows:2,autogrow:true,placeholder:'数据变化、落地影响、验证边界…'})+inlineText('closedAt','结束日期',p.closedAt||'',{type:'date'})});
   (p.customSections||[]).forEach(section=>blocks.push({key:'custom:'+section.id,className:'custom-section',body:inlineText('body','栏目内容',section.body,{section:section.id,rows:3,autogrow:true,placeholder:'记录这个栏目下的内容…'})}));
   blocks.push({key:'comments',className:'comment-pool',body:commentPoolMarkup(p)},...inlineRelations(p.id));const history=directionHistory(p);if(history)blocks.push(history);
   if(nodes.length)blocks.push({key:'plans',body:nodes.map(node=>inlinePlan(node,nodes.length)).join(''),action:actionButton('＋ 计划','inline-node-add')});
@@ -444,9 +444,13 @@ function richArea(name,label,value='',html=''){return '<div class="form-field"><
 function projectEditor(pid=null){
   const creatingClosed=!pid&&state.display==='results';
   const p=byId[pid]||{name:'',kind:'project',priority:'',description:'',outcome:''};
-  const resultFields=creatingClosed?richArea('result','解决 / 牵引了什么问题')+richArea('impact','影响与证据说明')+field('closedAt','结束日期（选填）','','date'):'';
+  const resultFields=creatingClosed?richArea('result','结项结论（必填）')+richArea('impact','影响与证据说明')+field('closedAt','结项日期',todayDate(),'date'):'';
   editor(pid?'编辑项目':creatingClosed?'记录已结项目':'新建项目',field('name','标题',p.name,'text','required maxlength="180"')+'<div class="form-grid">'+selectField('kind','呈现为',p.kind,[['project','项目'],['direction','长期方向']])+field('priority','项目优先级',p.priority,'text','list="priorities" placeholder="可留空，自由填写"')+'</div><datalist id="priorities"><option>P0</option><option>P1</option><option>P2</option></datalist>'+richArea('description','问题陈述',p.description,p.richText?.description)+resultFields+field('outcome','结果状态',p.outcome,'text','placeholder="自由填写，可留空"'),form=>{
     const name=form.get('name').trim();if(!name)throw Error('标题不能为空');let nextId=pid;
+    if(creatingClosed&&!richHasContent({text:form.get('result')||'',html:form.get('_rich:result')||''})){
+      $('editorFields').querySelector('[data-rich-name="result"]').focus();
+      throw Error('请填写结项结论，再记录成果。');
+    }
     const ok=mutate(()=>{
       const values=Object.fromEntries(['name','kind','priority','description','outcome'].map(k=>[k,form.get(k).trim()]));
       values.richText={...(p.richText||{}),description:form.get('_rich:description')||''};
@@ -513,7 +517,7 @@ function closeOrCancel(){if(!document.querySelector('dialog[open]')){if(document
 function commitInline(el){
   clearTimeout(inlineTimers.get(el));inlineTimers.delete(el);
   if(!el?.dataset.pending)return true;
-  const pid=el.dataset.editingPid||state.detail,p=byId[pid];if(!p)return false;
+  const pid=el.dataset.timelinePid||el.dataset.editingPid||state.detail,p=byId[pid];if(!p)return false;
   const rich=el.classList.contains('rich-editor-input')?readRichEditor(el):null;
   const key=el.dataset.inline,value=rich?rich.text:el.type==='checkbox'?el.checked:el.value;
   if(el.dataset.layoutKey){const ok=mutate(()=>renameDetailSection(p,el.dataset.layoutKey,value),'',{keepDetail:true});if(ok){delete el.dataset.pending;el.removeAttribute('aria-invalid');}return ok;}
@@ -521,10 +525,11 @@ function commitInline(el){
   if(!target)return false;
   if(key==='name'&&!value.trim()){el.setAttribute('aria-invalid','true');toast('项目标题不能为空');return false;}
   if(target[key]===value&&(!rich||target.richText?.[key]===rich.html)){if(dirty&&!save(false))return false;delete el.dataset.pending;return true;}
-  const ok=mutate(()=>{target[key]=value;if(rich){target.richText??={};target.richText[key]=rich.html;}if(key==='focus'&&value)p.planNodes.filter(n=>n.id!==el.dataset.nodeId).forEach(n=>n.focus=false);if(el.dataset.commentId)target.updatedAt=new Date().toISOString();},'',{keepDetail:true});
+  const ok=mutate(()=>{target[key]=value;if(rich){target.richText??={};target.richText[key]=rich.html;}if(key==='focus'&&value)p.planNodes.filter(n=>n.id!==el.dataset.nodeId).forEach(n=>n.focus=false);if(el.dataset.commentId)target.updatedAt=new Date().toISOString();},'',el.dataset.timelinePid
+    ?{keepMain:true,keepDetail:state.detail!==pid,rollbackOnSaveFailure:true}:{keepDetail:true});
   if(ok){delete el.dataset.pending;el.removeAttribute('aria-invalid');if(key==='focus')$('detailBody').querySelectorAll('[data-inline="focus"]').forEach(box=>box.checked=!!p.planNodes.find(n=>n.id===box.dataset.nodeId)?.focus);}return ok;
 }
-function flushInline(){if(tagEditor?.flush()===false)return false;if(!flushRichEditors($('detailBody')))return false;let ok=flowEditor?.flush()!==false;if(canvasEditor?.flush()===false)ok=false;document.querySelectorAll('[data-inline][data-pending]').forEach(el=>{if(!commitInline(el))ok=false;});if(workbench?.flush()===false)ok=false;return ok;}
+function flushInline(){if(tagEditor?.flush()===false)return false;if(!flushRichEditors($('detailBody'))||!flushRichEditors($('workbenchView')))return false;let ok=flowEditor?.flush()!==false;if(canvasEditor?.flush()===false)ok=false;document.querySelectorAll('[data-inline][data-pending]').forEach(el=>{if(!commitInline(el))ok=false;});if(workbench?.flush()===false)ok=false;return ok;}
 function navigate(display,board=null){
   if(!flushInline())return;closeDetail();state.activeBoard=board;state.scopeFrame=null;state.focusDirection=null;state.tags.clear();state.query='';$('search').value='';renderTags();setDisplay(display);if(mobile())toggleSidebar(false);
 }
@@ -615,8 +620,8 @@ function bindProjectContent(){
 function bindInlineEditing(){
   $('detailBody').addEventListener('keydown',e=>{if(e.target.matches('.comment-title')&&e.key==='Enter'&&!e.isComposing){e.preventDefault();e.stopPropagation();if(commitInline(e.target))e.target.blur();}});
   $('detailBody').addEventListener('compositionend',e=>{if(e.target.matches('.comment-title'))e.target.dispatchEvent(new Event('input',{bubbles:true}));});
-  $('detailBody').addEventListener('input',e=>{const el=e.target;if(!el.matches('[data-inline]'))return;if(e.isComposing)return;if(el.matches('textarea[data-autogrow]')){el.style.height='0px';el.style.height=Math.max(el.closest('.inline-title')?0:el.classList.contains('comment-draft')?56:72,el.scrollHeight+2)+'px';}el.dataset.pending='true';el.dataset.editingPid=state.detail;$('saveStatus').textContent='正在编辑…';$('detailSaveStatus').textContent='正在编辑…';clearTimeout(inlineTimers.get(el));inlineTimers.set(el,setTimeout(()=>commitInline(el),700));});
-  $('detailBody').addEventListener('focusout',e=>{if(e.target.matches('[data-inline][data-pending]'))commitInline(e.target);});
+  document.addEventListener('input',e=>{const el=e.target;if(!el.matches('[data-inline]'))return;if(e.isComposing)return;if(el.matches('textarea[data-autogrow]')){el.style.height='0px';el.style.height=Math.max(el.closest('.inline-title')?0:el.classList.contains('comment-draft')?56:72,el.scrollHeight+2)+'px';}el.dataset.pending='true';el.dataset.editingPid=state.detail;$('saveStatus').textContent='正在编辑…';$('detailSaveStatus').textContent='正在编辑…';clearTimeout(inlineTimers.get(el));inlineTimers.set(el,setTimeout(()=>commitInline(el),700));});
+  document.addEventListener('focusout',e=>{if(e.target.matches('[data-inline][data-pending]'))commitInline(e.target);});
   $('detailBody').addEventListener('change',e=>{
     const el=e.target;if(el.matches('[data-inline]')){el.dataset.pending='true';el.dataset.editingPid=state.detail;commitInline(el);}
     if(el.matches('[data-project-board]'))mutate(()=>{const b=state.quickBoards.find(b=>b.id===el.dataset.projectBoard),pid=state.detail;if(el.checked&&!b.projectIds.includes(pid))b.projectIds.push(pid);else if(!el.checked){b.projectIds=b.projectIds.filter(id=>id!==pid);b.emphasisIds=b.emphasisIds.filter(id=>id!==pid);delete b.contexts?.[pid];}},'',{keepDetail:true});
@@ -886,7 +891,7 @@ async function boot(){
   state={...data,canvasItems:data.canvasItems||[],tagDefinitions:tags,selected:new Set(),selectedFrames:new Set(),tags:new Set(),logic:'intersection',mode:'highlight',query:'',tool:'select',detail:null,detailInstance:null,display:'canvas',activeBoard:null,scopeFrame:null,focusDirection:null,deliveryFilter:'active',deliveryQuery:''};
   reconcileDelivery(state);
   deliveryController=createDeliveryController({getState:()=>state,mutate,flush:flushInline,editor,field,area,check,openProject:openDetail,navigate,toast,storageKey});
-  indexData();canvasEditor=createCanvasEditor({world,viewport,getState:()=>state,mutate,save,toWorld,setTool,isPanning:e=>space||state.tool==='pan'||e.button===1,clearProjects:()=>{state.selected.clear();state.selectedFrames.clear();renderSelection();},closeDetail,toast,onEditing:()=>{dirty=true;$('saveStatus').textContent='正在编辑…';}});workbench=createWorkbenchViews({getState:()=>state,update:mutate,openProject:openDetail,cardElement,navigate,editor,field,area,matches,afterRender:syncActiveProject});projectList=createProjectList({root:$('mobileList'),getData:()=>state,cardElement,openProject:openDetail,matches,beforeChange:flushInline,onFilterChange:()=>{renderTags();applyFilter();renderSelection();},key:storageKey('topic-workbench-list-view-v1'),notify:toast});bindEvents();
+  indexData();canvasEditor=createCanvasEditor({world,viewport,getState:()=>state,mutate,save,toWorld,setTool,isPanning:e=>space||state.tool==='pan'||e.button===1,clearProjects:()=>{state.selected.clear();state.selectedFrames.clear();renderSelection();},closeDetail,toast,onEditing:()=>{dirty=true;$('saveStatus').textContent='正在编辑…';}});workbench=createWorkbenchViews({getState:()=>state,update:mutate,openProject:openDetail,cardElement,navigate,editor,field,area,matches,commitInline,notify:toast,afterRender:syncActiveProject});projectList=createProjectList({root:$('mobileList'),getData:()=>state,cardElement,openProject:openDetail,matches,beforeChange:flushInline,onFilterChange:()=>{renderTags();applyFilter();renderSelection();},key:storageKey('topic-workbench-list-view-v1'),notify:toast});bindEvents();
   const compact=matchMedia('(min-width:761px) and (max-width:1100px)').matches;if(compact)document.body.classList.add('sidebar-collapsed');
   renderAll();setDisplay(state.display);save(loaded.fromStorage&&!loaded.data.frameBoardSyncVersion&&data.quickBoards.some(board=>board.sourceFrameId));
   try { snapshots.list(); } catch(error) { toast(error.message); }
