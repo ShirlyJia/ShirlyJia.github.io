@@ -80,3 +80,14 @@ export function clonePlacement(instance,{id,x,y,offset=36,placements=[]}={}){
   }
   return copy;
 }
+
+/** Remove one placement, including its membership in any canvas frames. */
+export function removePlacement(data,placementId){
+  const index=data.instances.findIndex(item=>item.id===placementId);
+  if(index<0)return false;
+  data.instances.splice(index,1);
+  for(const frame of data.frames){
+    if(frame.members.includes(placementId))frame.members=frame.members.filter(id=>id!==placementId);
+  }
+  return true;
+}
