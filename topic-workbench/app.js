@@ -21,7 +21,7 @@ import {createDeliveryController} from './delivery-controller.js?v=20261030-date
 import {previewDeliveryUndo, applyDeliveryUndo} from './delivery-undo.js';
 import {resizeFrameBounds, frameResizeEdges, frameEdgeNames} from './frame-resize.js';
 import {mountDetailResize} from './detail-panel.js';
-import {wheelDelta, enclosedFrameIds, moveSelection, centeredCanvasView} from './canvas-gesture.js?v=20261102-navigation';
+import {wheelDelta, enclosedFrameIds, frameContainsCard, moveSelection, centeredCanvasView} from './canvas-gesture.js?v=20261102-nested-frames';
 import {childBadgeMarkup, childProjectRows, childTreeMarkup, childSectionActionsMarkup, createChildProject, parentProjectHintMarkup, parentCardMarkup} from './child-projects.js?v=20261030-direction2';
 import {colorPickerMarkup, installColorPickers} from './color-presets.js?v=20261030-detail';
 import {moveFramesToEdge} from './frame-layers.js';
@@ -582,7 +582,23 @@ function openTags(){if(!tagEditor?.flush())return;tagRows();if(!$('tagDialog').o
 function previewMaterial(pid,id){const m=byId[pid].materials.find(m=>m.id===id);if(!m||!safeURL(m.url))return;$('previewTitle').textContent=m.title||'资料';$('previewOriginal').href=safeURL(m.url);$('previewFrame').src=safeURL(m.url);$('previewDialog').showModal();}
 function addReferences(pids){referenceEditor([...new Set(pids)]);}
 function removeFrame(id){mutate(()=>{state.frames=state.frames.filter(f=>f.id!==id);if(state.scopeFrame===id)state.scopeFrame=null;},'分组已取消，项目保留');}
-function reconcileMembership(ids,frames=state.frames){for(const f of frames){f.members=f.members.filter(id=>!ids.includes(id));for(const id of ids){const i=state.instances.find(i=>i.id===id),b=boxFor(i),cx=b.x+b.w/2,cy=b.y+b.h/2;if(cx>=f.x&&cx<=f.x+f.w&&cy>=f.y&&cy<=f.y+f.h)f.members.push(id);}}}
+function reconcileMembership(placements,frames,onlyCrossings=false){
+  if(!placements.length||!frames.length)return;
+  const live=new Map(state.instances.map(i=>[i.id,i]));
+  const cards=placements.map(start=>{
+    const bounds=boxFor(live.get(start.id));
+    return {id:start.id,bounds,before:onlyCrossings?{...bounds,x:start.x,y:start.y}:null};
+  });
+  for(const frame of frames){
+    const members=new Set(frame.members);
+    for(const card of cards){
+      const inside=frameContainsCard(frame,card.bounds);
+      if(card.before&&frameContainsCard(frame,card.before)===inside)continue;
+      if(inside)members.add(card.id);else members.delete(card.id);
+    }
+    frame.members=[...members];
+  }
+}
 function scatter(){state.mode='highlight';applyFilter();renderSelection();}
 function closeOrCancel(){if(!document.querySelector('dialog[open]')){if(document.body.classList.contains('sidebar-open'))toggleSidebar(false);else if(state.detail)closeDetail();else if(state.mode==='gather')scatter();else if(state.focusDirection)setDirectionFocus('');else{state.selected.clear();state.selectedFrames.clear();renderSelection();setTool('select');}}}
 function commitInline(el){
@@ -825,11 +841,19 @@ world.addEventListener('keydown',e=>{
   if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)||state.tool!=='select')return;e.stopPropagation();e.preventDefault();if(gesture||!flushInline()||canvasEditor?.clear()===false)return;
   const id=handle.dataset.resizeFrame,edge=handle.dataset.resizeEdge,frame=state.frames.find(f=>f.id===id);if(!frame)return;
   selectFrame(id);const step=e.shiftKey?10:1,dx=e.key==='ArrowLeft'?-step:e.key==='ArrowRight'?step:0,dy=e.key==='ArrowUp'?-step:e.key==='ArrowDown'?step:0;
-  mutate(()=>{Object.assign(frame,resizeFrameBounds(frame,edge,dx,dy));reconcileMembership(state.instances.map(i=>i.id),[frame]);},'',{keepDetail:true});
+  mutate(()=>{Object.assign(frame,resizeFrameBounds(frame,edge,dx,dy));reconcileMembership(state.instances,[frame]);},'',{keepDetail:true});
   world.querySelector('[data-resize-frame="'+id+'"][data-resize-edge="'+edge+'"]')?.focus({preventScroll:true});
 });
 world.addEventListener('dblclick',e=>{const h=e.target.closest('[data-frame-head]');if(h&&!e.target.closest('button'))requestFrame(null,null,h.dataset.frameHead);});
-    function selectedMember(id){return state.frames.some(f=>state.selectedFrames.has(f.id)&&f.members.includes(id));}
+    function visibleCardBounds(instance){return isClosedProject(byId[instance.pid])?null:boxFor(instance);}
+    function selectionForCard(id){
+      if(state.selectedFrames.size||state.selected.has(id)){
+        const current=moveSelection(state,{cardBounds:visibleCardBounds});
+        if(current.items.some(item=>item.id===id))return current;
+      }
+      state.selected.clear();state.selectedFrames.clear();state.selected.add(id);
+      return moveSelection(state,{instanceId:id});
+    }
     function selectFrame(id,additive=false){
       if(!additive){state.selected.clear();state.selectedFrames.clear();}
       if(additive&&state.selectedFrames.has(id))state.selectedFrames.delete(id);else state.selectedFrames.add(id);
@@ -857,11 +881,11 @@ world.addEventListener('dblclick',e=>{const h=e.target.closest('[data-frame-head
       }else if(card&&state.tool==='select'){
         if(!flushInline())return;const id=card.dataset.instance;
         if(e.shiftKey){state.selected.has(id)?state.selected.delete(id):state.selected.add(id);renderSelection();gesture={type:'toggle',moved:false};}
-        else{if(!state.selected.has(id)&&!selectedMember(id)){state.selected.clear();state.selectedFrames.clear();state.selected.add(id);}renderSelection();gesture={type:'card',pid:card.dataset.pid,instanceId:id,start:p,...moveSelection(state,{instanceId:id}),moved:false};}
+        else{const moving=selectionForCard(id);renderSelection();gesture={type:'card',pid:card.dataset.pid,instanceId:id,start:p,...moving,moved:false};}
       }else if(head&&state.tool==='select'){
         if(!flushInline())return;const id=head.dataset.frameHead;
         if(e.shiftKey){selectFrame(id,true);gesture={type:'toggle',moved:false};}
-        else{if(!state.selectedFrames.has(id))selectFrame(id);gesture={type:'frame',frameId:id,start:p,...moveSelection(state,{frameId:id}),moved:false};head.focus({preventScroll:true});}
+        else{if(!state.selectedFrames.has(id))selectFrame(id);gesture={type:'frame',frameId:id,start:p,...moveSelection(state,{frameId:id,cardBounds:visibleCardBounds}),moved:false};head.focus({preventScroll:true});}
       }else{
         if(!e.shiftKey){state.selected.clear();state.selectedFrames.clear();renderSelection();}
         const rect=document.createElement('div');rect.className='marquee';rect.id='marquee';world.append(rect);
@@ -940,13 +964,17 @@ world.addEventListener('dblclick',e=>{const h=e.target.closest('[data-frame-head
       if((g.type==='pan'&&g.moved)||g.viewChanged)applyView();
       if(viewport.hasPointerCapture(e.pointerId))viewport.releasePointerCapture(e.pointerId);
       if(g.moved||g.type==='card'){clickSuppressed=true;setTimeout(()=>clickSuppressed=false,50);}
-      if((g.type==='card'||g.type==='frame')&&g.moved){const grouped=new Set(g.frames.flatMap(f=>f.members));reconcileMembership(g.items.filter(i=>!grouped.has(i.id)).map(i=>i.id));}
+      if((g.type==='card'||g.type==='frame')&&g.moved){
+        const carried=new Set(g.frames.map(frame=>frame.id));
+        // Co-moving frames keep their memberships. Only crossing a stationary frame changes a carried card's membership.
+        reconcileMembership(g.items,state.frames.filter(frame=>!carried.has(frame.id)),carried.size>0);
+      }
       if(g.type==='card'&&!g.moved&&e.type==='pointerup')openDetail(g.pid,g.instanceId);
       if(g.type==='pan'&&!g.moved&&g.openCard)openDetail(g.openCard.pid,g.openCard.instanceId);
       if(g.type==='frame'&&!g.moved&&e.type==='pointerup'){const now=Date.now();if(lastFrameClick?.id===g.frameId&&now-lastFrameClick.time<350){requestFrame(null,null,g.frameId);lastFrameClick=null;}else lastFrameClick={id:g.frameId,time:now};}
       if(!g.moved&&state.detail&&((g.type==='select'&&!g.shift)||(g.type==='pan'&&g.blank&&g.collapseOnClick)))closeDetail();
       if(g.type==='draw'&&g.bounds&&g.bounds.w>40&&g.bounds.h>40){const ids=state.instances.filter(i=>!isClosedProject(byId[i.pid])&&intersects(boxFor(i),g.bounds)).map(i=>i.id);requestFrame(g.bounds,ids);}
-      if(g.type==='resize'&&g.moved)reconcileMembership(state.instances.map(i=>i.id),state.frames.filter(f=>f.id===g.frame.id));
+      if(g.type==='resize'&&g.moved)reconcileMembership(state.instances,state.frames.filter(f=>f.id===g.frame.id));
       const changed=['frame','card','resize'].includes(g.type)&&g.moved;
       if(changed)renderWorld();world.querySelectorAll('.dragging').forEach(el=>el.classList.remove('dragging'));
       if(changed)save();else if(g.viewChanged||(g.type==='pan'&&g.moved))save(false);

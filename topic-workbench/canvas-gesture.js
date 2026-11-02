@@ -3,7 +3,15 @@ import {canvasItemBounds} from './canvas-items.js';
 const finite=value=>Number.isFinite(value)?value:0;
 const clone=value=>structuredClone(value);
 const validBox=box=>box&&[box.x,box.y,box.w,box.h].every(Number.isFinite)&&box.w>=0&&box.h>=0;
-const contains=(outer,inner)=>validBox(outer)&&validBox(inner)&&inner.x>=outer.x&&inner.y>=outer.y&&inner.x+inner.w<=outer.x+outer.w&&inner.y+inner.h<=outer.y+outer.h;
+// Translating two flush edges at fractional zoom can round them a fraction of a pixel apart.
+const edgeTolerance=1e-7;
+const contains=(outer,inner)=>validBox(outer)&&validBox(inner)&&
+  inner.x>=outer.x-edgeTolerance && inner.y>=outer.y-edgeTolerance &&
+  inner.x+inner.w<=outer.x+outer.w+edgeTolerance && inner.y+inner.h<=outer.y+outer.h+edgeTolerance;
+export function frameContainsCard(frame,box) {
+  if(!box)return false;
+  return contains(frame,{x:box.x+box.w/2,y:box.y+box.h/2,w:0,h:0});
+}
 
 /** Normalize wheel input to screen pixels before the view or world coordinates change. */
 export function wheelDelta(event,{width=0,height=0,lineHeight=16}={}) {
@@ -54,14 +62,22 @@ export function enclosedFrameIds(frames,bounds) {
   return (frames||[]).filter(frame=>contains(bounds,frame)).map(frame=>frame.id);
 }
 
-/** Capture one immutable start state for every selected object, including overlapping groups. */
-export function moveSelection(state,{instanceId,frameId}={}) {
+/** Capture at pointerdown. Every nested body is contained by a root, regardless of depth or layer order. */
+export function moveSelection(state,{instanceId,frameId,cardBounds}={}) {
   const frameIds=new Set(state.selectedFrames||[]),instanceIds=new Set(state.selected||[]);
   if(frameId)frameIds.add(frameId);if(instanceId)instanceIds.add(instanceId);
-  const frames=(state.frames||[]).filter(frame=>frameIds.has(frame.id));
+  const allFrames=state.frames||[];
+  const roots=allFrames.filter(frame=>frameIds.has(frame.id));
+  const frames=allFrames.filter(frame=>frameIds.has(frame.id)||roots.some(root=>
+    (root.w-frame.w>edgeTolerance || root.h-frame.h>edgeTolerance) && contains(root,frame)));
   for(const frame of frames)for(const id of frame.members||[])instanceIds.add(id);
+  const items=(state.instances||[]).filter(instance=>{
+    if(instanceIds.has(instance.id))return true;
+    if(!roots.length||!cardBounds)return false;
+    const bounds=cardBounds(instance);
+    return roots.some(frame=>frameContainsCard(frame,bounds));
+  });
+  const canvasItems=(state.canvasItems||[]).filter(item=>roots.some(frame=>contains(frame,canvasItemBounds(item))));
   const unique=rows=>[...new Map(rows.map(row=>[row.id,row])).values()].map(clone);
-  const items=(state.instances||[]).filter(instance=>instanceIds.has(instance.id));
-  const canvasItems=(state.canvasItems||[]).filter(item=>frames.some(frame=>contains(frame,canvasItemBounds(item))));
-  return{frames:unique(frames),items:unique(items),canvasItems:unique(canvasItems)};
+  return {frames:unique(frames),items:unique(items),canvasItems:unique(canvasItems)};
 }
