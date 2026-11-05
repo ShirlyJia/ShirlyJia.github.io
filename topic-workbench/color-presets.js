@@ -4,15 +4,56 @@ const hex=value=>/^#[0-9a-f]{6}$/i.test(value||'');
 
 /** One named family, with restrained tones for surfaces, accents and readable ink. */
 export const COLOR_PRESETS=Object.freeze([
-  {name:'石墨',accent:'#74736c',surface:'#e9e8e4',ink:'#494a46'},
-  {name:'雾蓝',accent:'#6284a0',surface:'#e0e9f1',ink:'#45627d'},
-  {name:'鼠尾草',accent:'#668777',surface:'#e0eae2',ink:'#496a58'},
-  {name:'暖沙',accent:'#9b8671',surface:'#eee5d5',ink:'#7c6750'},
-  {name:'陶土',accent:'#b77d68',surface:'#f1e2da',ink:'#955f4d'},
-  {name:'灰紫',accent:'#9080a1',surface:'#e9e3ef',ink:'#716081'},
-  {name:'青灰',accent:'#65898b',surface:'#deebea',ink:'#426d70'},
-  {name:'藕灰',accent:'#ad7e86',surface:'#f0e1e5',ink:'#895d69'}
+  {name:'灰色',accent:'#646a73',surface:'#f2f3f5',ink:'#4e5969'},
+  {name:'蓝色',accent:'#3370ff',surface:'#eaf0ff',ink:'#1456f0'},
+  {name:'绿色',accent:'#34a853',surface:'#e8f5e9',ink:'#237b42'},
+  {name:'黄色',accent:'#d99904',surface:'#fbf4df',ink:'#865b03'},
+  {name:'橙色',accent:'#ed6d0c',surface:'#fff3e5',ink:'#a44904'},
+  {name:'红色',accent:'#f54a45',surface:'#fef0f0',ink:'#c02a26'},
+  {name:'紫色',accent:'#8d55ed',surface:'#f5f0fe',ink:'#7a35f0'},
+  {name:'青色',accent:'#14a89d',surface:'#e6f7f4',ink:'#087f76'},
+  {name:'粉色',accent:'#e8529c',surface:'#fff0f6',ink:'#b83280'}
 ].map(Object.freeze));
+
+const legacyFamilies = [
+  [['#74736c','#8c8981','#b8afa0'],['#e9e8e4'],0],
+  [['#6284a0'],['#e0e9f1','#e0e4e6'],1],
+  [['#668777'],['#e0eae2','#e5e5de'],2],
+  [['#b18b50'],[],3],
+  [['#9b8671','#b77d68'],['#eee5d5','#f1e2da','#e7e4db'],4],
+  [['#9080a1'],['#e9e3ef'],6],
+  [['#65898b','#738b91'],['#deebea'],7],
+  [['#ad7e86'],['#f0e1e5'],8]
+];
+const oldColors = new Map();
+for (const [accents,surfaces,index] of legacyFamilies) {
+  for (const color of accents) oldColors.set(color,COLOR_PRESETS[index].accent);
+  for (const color of surfaces) oldColors.set(color,COLOR_PRESETS[index].surface);
+}
+
+/** Replace only former built-in colors. User-defined colors retain their value. */
+export function applyProfessionalColors(input) {
+  const data = JSON.parse(JSON.stringify(input));
+  const update = row => {
+    if (!row) return;
+    for (const key of ['color','backgroundColor']) {
+      const replacement = oldColors.get(row[key]?.toLowerCase());
+      if (replacement) row[key] = replacement;
+    }
+  };
+  for (const row of [...(data.tags||[]),...(data.frames||[]),...(data.quickBoards||[])]) {
+    update(row);update(row.frameSync);
+  }
+  return data;
+}
+
+export function accentForSurface(value) {
+  const current = COLOR_PRESETS.find(p=>p.surface.toLowerCase()===value.toLowerCase());
+  if (current) return current.accent;
+  const legacy = {'#e9e8e4':'#74736c','#e0e9f1':'#6284a0','#e0eae2':'#668777',
+    '#eee5d5':'#9b8671','#f1e2da':'#b77d68','#e9e3ef':'#9080a1','#deebea':'#65898b','#f0e1e5':'#ad7e86'};
+  return legacy[value.toLowerCase()] || value;
+}
 
 export function colorChoices(variant='accent'){
   if(variant==='note')return [{name:'浅黄',value:NOTE_YELLOW},...colorChoices('surface')];

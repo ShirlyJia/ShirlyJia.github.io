@@ -1,4 +1,4 @@
-import {COLOR_PRESETS} from './color-presets.js';
+import {accentForSurface} from './color-presets.js';
 /** Optional workbench views over schema-v2 project facts. No storage or remote writes. */
 const resolvedOutcomes = new Set(['已解决', '已交付', '已完成']);
 const stoppedOutcomes = new Set(['已结束未解决', '停止推进', '不再推进', '暂停终止']);
@@ -66,7 +66,7 @@ function frameBoardContent(data, frameId) {
     }
   }
   const surface=frame.backgroundColor || frame.color || '#74736c';
-  return {name:frame.name,color:COLOR_PRESETS.find(p=>p.surface.toLowerCase()===surface.toLowerCase())?.accent||surface,
+  return {name:frame.name,color:accentForSurface(surface),
     projectIds, emphasisIds, contexts:Object.fromEntries([...notes].map(([pid, values]) => [pid, [...values].join('\n\n')]))};
 }
 

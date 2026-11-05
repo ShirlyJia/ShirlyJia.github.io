@@ -11,8 +11,9 @@ import { createWorkbenchViews, colorControl } from './workbench-views.js?v=20261
 import { createPersistence } from './persistence.js?v=20261030-comment-interactions';
 import { detachSourceMetadata } from './source-detach.js';
 import { displayPriority, visibleNodes, nodeStatus, displayDescription } from './presentation.js';
-import {boardPublication, deployment, storageKey} from './deployment-config.js?v=20261105-editions';
+import {boardPublication, deployment, storageKey, useBoardEdition} from './deployment-config.js?v=20261105-editions';
 import {showBoardCopies} from './board-publication.js';
+import {loadSharedBoard, mountAutoSync, prepareLiveStorage} from './auto-sync.js';
 import {richEditorMarkup, mountRichEditors, readRichEditor, richHTML, richHasContent, flushRichEditors, destroyRichEditors} from './rich-text.js?v=20261030-card-preview';
 import {readProjectFlow, setCurrentFlowNode, setProjectClosed} from './project-flow.js';
 import {flowMarkup, mountProjectFlow} from './project-flow-view.js';
@@ -24,7 +25,7 @@ import {resizeFrameBounds, frameResizeEdges, frameEdgeNames} from './frame-resiz
 import {mountDetailResize} from './detail-panel.js';
 import {wheelDelta, enclosedFrameIds, frameContainsCard, moveSelection, centeredCanvasView} from './canvas-gesture.js?v=20261102-nested-frames';
 import {childBadgeMarkup, childProjectRows, childTreeMarkup, childSectionActionsMarkup, createChildProject, parentProjectHintMarkup, parentCardMarkup} from './child-projects.js?v=20261030-direction2';
-import {colorPickerMarkup, installColorPickers} from './color-presets.js?v=20261030-detail';
+import {applyProfessionalColors, colorPickerMarkup, installColorPickers} from './color-presets.js?v=20261030-detail';
 import {moveFramesToEdge} from './frame-layers.js';
 import {orderedTags,renameTag,moveTag,tagFilterMarkup,tagProjectCounts,mountTagEditor} from './tag-editor.js?v=20261030-tag-counts';
 import {referenceLinesMarkup, clonePlacement, removePlacement} from './canvas-references.js?v=20261102-remove-reference';
@@ -50,7 +51,8 @@ const viewport = $('viewport'), world = $('world');
 const navigationArea = $('canvasNavigation');
 let recoveryCheck = 0, viewPaintFrame = 0, viewSaveTimer = 0, paintedScale;
 $('saveStatus').title='修改保存在当前浏览器；数据与备份见设置';
-const storage = createPersistence({key:storageKey('topic-workbench-v2'),onStatus: result => {
+let cloudSync = null;
+let storage = createPersistence({key:storageKey('topic-workbench-v2'),onStatus: result => {
   if (result?.ok === false || result?.success === false) setSaveStatus(false);
 }});
 function documentData() { return {schemaVersion:2, workbenchVersion:state.workbenchVersion, frameBoardSyncVersion:state.frameBoardSyncVersion, domainTagVersion:state.domainTagVersion, projectContentVersion:state.projectContentVersion, canvasNoteStyleVersion:state.canvasNoteStyleVersion, quickBoards:state.quickBoards, deliveryEvents:state.deliveryEvents||[], sourceDetachedVersion:state.sourceDetachedVersion, projects:state.projects, tags:state.tagDefinitions, relations:state.relations, frames:state.frames, instances:state.instances, canvasItems:state.canvasItems||[], view:state.view}; }
@@ -61,6 +63,7 @@ function save(history = true) {
   try {
     const synced=syncFrameBoards(state),recordHistory=history||dirty;
     storage.commit(documentData(),{recordHistory});
+    cloudSync?.changed(documentData());
     if(recordHistory)$('toast').querySelector('[data-undo-latest]')?.remove();
     if(synced)workbench?.renderNav();
     setSaveStatus(true);$('undo').disabled=!storage.canUndo();
@@ -649,7 +652,7 @@ function undoWithDeliveryHistory(event){
         recordDeliveryLifecycle(next,current,{actor});reconcileDelivery(next);return next;
       }});
       if(!prev)return false;
-      restoreData(prev);state.selected.clear();state.selectedFrames.clear();if(!byId[state.detail]){state.detail=null;state.detailInstance=null;$('detail').hidden=true;}renderAll();setSaveStatus(true);$('undo').disabled=!storage.canUndo();if($('tagDialog').open)tagRows();toast(preview.requiresReason?'已撤销，交付历史保留':'已撤销');return true;
+      restoreData(prev);cloudSync?.changed(documentData());state.selected.clear();state.selectedFrames.clear();if(!byId[state.detail]){state.detail=null;state.detailInstance=null;$('detail').hidden=true;}renderAll();setSaveStatus(true);$('undo').disabled=!storage.canUndo();if($('tagDialog').open)tagRows();toast(preview.requiresReason?'已撤销，交付历史保留':'已撤销');return true;
     };
     if(preview.requiresReason){
       editor('撤销交付变更','<p class="muted">这次撤销涉及交付日期或记录。填写原因后撤销，原记录继续保留。</p><ul class="delivery-undo-list">'+preview.changes.map(c=>'<li>'+esc(c.projectName)+' · '+esc(c.nodeTitle||'未命名计划')+(c.fromDate||c.toDate?'：'+(c.fromDate?'<time>'+esc(c.fromDate)+'</time>':'未设置')+' → '+(c.toDate?'<time>'+esc(c.toDate)+'</time>':'未设置'):'')+'</li>').join('')+'</ul>'+area('reason','撤销理由')+field('actor','记录人（选填）'),f=>{const reason=f.get('reason').trim();if(!reason)throw Error('请填写撤销理由');return apply(reason,f.get('actor').trim());},'撤销并留档');
@@ -1049,14 +1052,38 @@ world.addEventListener('dblclick',e=>{const h=e.target.closest('[data-frame-head
 }
 async function boot(){
  try {
+  const syncKey = storageKey('topic-workbench-auto-sync');
+  let connection = '';
+  try { connection = localStorage.getItem(syncKey + ':connection') || ''; } catch {}
+  const release = await loadSharedBoard({connection, publicSite:deployment.public});
+  if (release) useBoardEdition(release.updatedAt.slice(0,10) + '-' + release.revision.slice(0,16));
+  const live = release && (!boardPublication.edition || boardPublication.active === boardPublication.edition);
+  const fallbackLive = !release && !new URLSearchParams(location.search).has('draft') && localStorage.getItem(storageKey('topic-workbench-live-v1'));
+  const dataKey = live || fallbackLive ? storageKey('topic-workbench-live-v1') : storageKey('topic-workbench-v2');
+  if (live) await prepareLiveStorage({storage:localStorage,key:dataKey,
+    archivePrefix:(deployment.public?deployment.namespace+':':'')+'topic-workbench-v2',release});
+  storage = createPersistence({key:dataKey,onStatus:result=>{
+    if (result?.ok === false) setSaveStatus(false);
+  }});
   const seedUrl = boardPublication.edition ? './initial-data.json?v=' + boardPublication.edition : './initial-data.json';
-  const response=await fetch(seedUrl, {cache:'no-cache'});
-  if(!response.ok)throw Error('初始项目尚未就绪');
-  const seed=await response.json(),loaded=storage.load(seed);
-  if(loaded.error){$('loadCaption').textContent='本地记录读取失败，原记录已保留';$('saveStatus').textContent='需要恢复';$('world').innerHTML='<div class="load-error"><h2>本地记录暂时无法读取</h2><p>'+esc(loaded.error)+'</p><p>原记录已保留。先导出原始备份，再处理恢复。</p><button id="downloadRaw">导出原始记录</button></div>';$('downloadRaw').onclick=()=>storage.download(localStorage.getItem(storageKey('topic-workbench-v2')));return;}
+  let seed = release?.board;
+  if (!seed) {
+    const response = await fetch(seedUrl, {cache:'no-cache'});
+    if (!response.ok) throw Error('初始项目尚未就绪');
+    seed = await response.json();
+  }
+  const loaded = storage.load(seed);
+  if (!boardPublication.edition || boardPublication.active === boardPublication.edition) {
+    cloudSync = mountAutoSync({key:syncKey,release,getData:documentData,notify:toast});
+    if (cloudSync.pendingBoard()) {
+      storage.validate(cloudSync.pendingBoard());
+      loaded.data = cloudSync.pendingBoard();
+    }
+  }
+  if(loaded.error){$('loadCaption').textContent='本地记录读取失败，原记录已保留';$('saveStatus').textContent='需要恢复';$('world').innerHTML='<div class="load-error"><h2>本地记录暂时无法读取</h2><p>'+esc(loaded.error)+'</p><p>原记录已保留。先导出原始备份，再处理恢复。</p><button id="downloadRaw">导出原始记录</button></div>';$('downloadRaw').onclick=()=>storage.download(localStorage.getItem(dataKey));return;}
   if(!loaded.data.domainTagVersion&&loaded.fromStorage)localStorage.setItem(storageKey('topic-workbench-v2-before-domain-tags'),JSON.stringify(loaded.data));
   if(!loaded.data.projectContentVersion&&loaded.fromStorage)localStorage.setItem(storageKey('topic-workbench-v2-before-project-content'),JSON.stringify(loaded.data));
-  const enriched=restoreYellowNotes(detachSourceMetadata(enrichProjectContent(applyDomainTags(enrichWorkbench(loaded.data)))).data);
+  const enriched=applyProfessionalColors(restoreYellowNotes(detachSourceMetadata(enrichProjectContent(applyDomainTags(enrichWorkbench(loaded.data)))).data));
   if(!loaded.data.workbenchVersion&&loaded.fromStorage)localStorage.setItem(storageKey('topic-workbench-v2-before-workbench-upgrade'),JSON.stringify(loaded.data));
   const {tags,...data}=enriched;
   state={...data,canvasItems:data.canvasItems||[],tagDefinitions:tags,selected:new Set(),selectedFrames:new Set(),tags:new Set(),logic:'intersection',mode:'highlight',query:'',tool:'select',detail:null,detailInstance:null,display:'canvas',activeBoard:null,scopeFrame:null,focusDirection:null,deliveryFilter:'active',deliveryQuery:''};
@@ -1065,6 +1092,9 @@ async function boot(){
   indexData();canvasEditor=createCanvasEditor({world,viewport,getState:()=>state,mutate,save,toWorld,setTool,isPanning:e=>space||state.tool==='pan'||e.button===1,clearProjects:()=>{state.selected.clear();state.selectedFrames.clear();renderSelection();},closeDetail,toast,onEditing:()=>{dirty=true;$('saveStatus').textContent='正在编辑…';}});workbench=createWorkbenchViews({getState:()=>state,update:mutate,openProject:openDetail,cardElement,navigate,editor,field,area,matches,commitInline,notify:toast,afterRender:syncActiveProject});projectList=createProjectList({root:$('mobileList'),getData:()=>state,cardElement,openProject:openDetail,matches,beforeChange:flushInline,onFilterChange:()=>{renderTags();applyFilter();renderSelection();},key:storageKey('topic-workbench-list-view-v1'),notify:toast});bindEvents();
   const compact=matchMedia('(min-width:761px) and (max-width:1100px)').matches;if(compact)document.body.classList.add('sidebar-collapsed');
   renderAll();setDisplay(state.display);save(loaded.fromStorage&&!loaded.data.frameBoardSyncVersion&&data.quickBoards.some(board=>board.sourceFrameId));
+  localStorage.setItem(storageKey('topic-workbench-active-key'),dataKey);
+  cloudSync?.start();
+  if (deployment.public && !release) toast('最新线上画板暂时无法读取，当前显示上次发布版');
   showBoardCopies($('settingsDialog').querySelector('.settings-links'), boardPublication);
   try { snapshots.list(); } catch(error) { toast(error.message); }
   const linkedProject=new URLSearchParams(location.search).get('project');if(linkedProject&&byId[linkedProject])openDetail(linkedProject);

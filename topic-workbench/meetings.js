@@ -139,7 +139,9 @@ export async function loadMeetingStore(store, fetcher = globalThis.fetch) {
 
 export function readMeetingProjects(storage) {
   try {
-    const raw = storage.getItem(PROJECT_KEY);
+    const activeKey = storage.getItem(storageKey('topic-workbench-active-key'));
+    const key = typeof activeKey === 'string' && (activeKey === storageKey('topic-workbench-live-v1') || activeKey.startsWith(PROJECT_KEY + ':')) ? activeKey : PROJECT_KEY;
+    const raw = storage.getItem(key);
     if (raw === null) return {projects:[], error:'先打开工作台载入项目，再回来关联。'};
     const data = JSON.parse(raw);
     if (data?.schemaVersion !== 2 || !Array.isArray(data.projects) || data.projects.some(project => !project || typeof project.id !== 'string' || typeof project.name !== 'string')) throw new Error('项目记录格式不兼容');
@@ -428,7 +430,7 @@ function bootMeetings() {
   document.addEventListener('visibilitychange',() => { if (document.visibilityState === 'hidden') save(); });
   window.addEventListener('focus',refreshProjects);
   window.addEventListener('storage',event => {
-    if (event.key === PROJECT_KEY || event.key === null) refreshProjects();
+    if (event.key === PROJECT_KEY || event.key === storageKey('topic-workbench-live-v1') || event.key === null) refreshProjects();
     if (event.key === MEETING_KEY || event.key === null) {
       if (dirty || !flushRichEditors($('meetingEditor'))) { clearTimeout(timer); status('未保存 · 检测到其他页面更改',true); error('另一个页面修改了会议记录。当前草稿已保留，请导出后再刷新页面合并。'); }
       else load();

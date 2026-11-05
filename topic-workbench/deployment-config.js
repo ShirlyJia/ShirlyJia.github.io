@@ -1,9 +1,13 @@
 import {publicationStore} from './board-publication.js';
 
-export const deployment = {"public": true, "namespace": "topic-canvas-share-v1", "publishedAt": "2026-11-05T02:40:37.816811+00:00"};
-export const boardPublication = publicationStore(deployment, {
+export const deployment = {"public": true, "namespace": "topic-canvas-share-v1", "publishedAt": "2026-11-05T04:43:25.983166+00:00"};
+const publicationOptions = {
   edition: globalThis.document?.querySelector('meta[name="board-edition"]')?.content,
   requested: new URLSearchParams(globalThis.location?.search).get('draft'),
   disk: () => globalThis.localStorage
-});
+};
+export let boardPublication = publicationStore(deployment, publicationOptions);
+export function useBoardEdition(edition) {
+  boardPublication = publicationStore(deployment, {...publicationOptions, edition});
+}
 export const storageKey = key => boardPublication.key(key);
