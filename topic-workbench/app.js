@@ -13,7 +13,7 @@ import { detachSourceMetadata } from './source-detach.js';
 import { displayPriority, visibleNodes, nodeStatus, displayDescription } from './presentation.js';
 import {boardPublication, deployment, storageKey, useBoardEdition} from './deployment-config.js?v=20261105-editions';
 import {showBoardCopies} from './board-publication.js';
-import {loadSharedBoard, mountAutoSync, prepareLiveStorage} from './auto-sync.js';
+import {loadSharedBoard, mountAutoSync, prepareLiveStorage} from './auto-sync.js?v=20261105-pairing2';
 import {richEditorMarkup, mountRichEditors, readRichEditor, richHTML, richHasContent, flushRichEditors, destroyRichEditors} from './rich-text.js?v=20261030-card-preview';
 import {readProjectFlow, setCurrentFlowNode, setProjectClosed} from './project-flow.js';
 import {flowMarkup, mountProjectFlow} from './project-flow-view.js';

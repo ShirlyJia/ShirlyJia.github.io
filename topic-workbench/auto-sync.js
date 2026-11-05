@@ -170,20 +170,24 @@ export function mountAutoSync({key, release, getData, notify}) {
   badge.hidden=!sync.connection();
   detail.textContent=sync.connection()?'编辑后自动发布到原网址。':'连接后，项目内容、分组与布局会自动发布到原网址。';
   container.prepend(button,detail);
-  let pairing=null;
+  let pairing=null, pairingNonce='';
   button.onclick=()=>{
     if(sync.connection()){
       sync.disconnect();button.textContent='连接这台 Mac 自动同步';return;
     }
-    pairing=window.open(SYNC_ORIGIN+'/pair?origin='+encodeURIComponent(location.origin),
+    pairingNonce=crypto.randomUUID().replaceAll('-','');
+    detail.textContent='正在连接这台 Mac…';
+    pairing=window.open(SYNC_ORIGIN+'/pair?origin='+encodeURIComponent(location.origin)+'&nonce='+pairingNonce,
                         'topic-canvas-pair','width=520,height=420');
     if(!pairing)notify('请允许打开连接窗口');
   };
   window.addEventListener('message',async event=>{
-    if(event.origin!==SYNC_ORIGIN||event.source!==pairing||event.data?.type!=='topic-canvas-paired'||
+    if(event.origin!==SYNC_ORIGIN||!pairingNonce||event.data?.nonce!==pairingNonce||event.data?.type!=='topic-canvas-paired'||
        !/^[a-f0-9]{64}$/.test(event.data.token||''))return;
-    try{await sync.connect(event.data.token);button.textContent='关闭自动同步';notify('自动同步已开启');}
-    catch{notify('连接未完成，请重试');}
+    detail.textContent='正在验证连接…';
+    try{await sync.connect(event.data.token);button.textContent='关闭自动同步';notify('自动同步已开启');
+      event.source?.postMessage({type:'topic-canvas-connected',nonce:pairingNonce},SYNC_ORIGIN);pairingNonce='';}
+    catch{detail.textContent='连接未完成，请重试';notify('连接未完成，请重试');}
   });
   window.addEventListener('online',()=>sync.retry());
   return sync;

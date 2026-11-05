@@ -1,6 +1,6 @@
 import {publicationStore} from './board-publication.js';
 
-export const deployment = {"public": true, "namespace": "topic-canvas-share-v1", "publishedAt": "2026-11-05T04:43:25.983166+00:00"};
+export const deployment = {"public": true, "namespace": "topic-canvas-share-v1", "publishedAt": "2026-11-05T04:46:09.654261+00:00"};
 const publicationOptions = {
   edition: globalThis.document?.querySelector('meta[name="board-edition"]')?.content,
   requested: new URLSearchParams(globalThis.location?.search).get('draft'),
