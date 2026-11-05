@@ -19,7 +19,7 @@
   <link rel="stylesheet" href="detail-panel.css"><link rel="stylesheet" href="canvas-selection.css">
   <link rel="stylesheet" href="color-presets.css?v=20261105-feishu">
   <link rel="stylesheet" href="frame-layers.css">
-  <link rel="stylesheet" href="tag-editor.css?v=20261030-tag-counts">
+  <link rel="stylesheet" href="tag-editor.css?v=20261105-collapsed">
   <link rel="stylesheet" href="direction-focus.css?v=20261030-direction2">
   <link rel="stylesheet" href="card-surfaces.css?v=20261030-two-line-previews">
   <link rel="stylesheet" href="detail-density.css?v=20261030-detail-density">
@@ -61,11 +61,12 @@
     <span id="directionFocusCount" class="direction-focus-count" aria-live="polite"></span><button id="exitDirectionFocus" class="direction-focus-exit" hidden>退出聚焦 ×</button>
   </section>
   <nav class="filterbar" aria-label="分类标签与展示方式">
-    <button id="manageTags" class="filter-title" title="新增、改名、调整颜色或删除标签">分类标签 ＋</button><div class="tag-list" id="tags"></div>
+    <button id="toggleTags" class="tag-disclosure" aria-expanded="false" aria-controls="tagPanel"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 4 4 4-4 4"/></svg>分类标签<span id="selectedTagCount" class="selected-tag-count" hidden></span></button>
     <div class="filter-controls">
       <select id="logic" class="logic-select" aria-label="多标签匹配逻辑"><option value="intersection">匹配全部</option><option value="union">匹配任一</option></select>
       <div class="segment" aria-label="项目展示方式"><button id="highlight" class="active" aria-pressed="true">高亮</button><button id="gather" aria-pressed="false">聚集</button></div><button id="clear" class="clear">清除</button>
     </div>
+    <div id="tagPanel" class="tag-panel" hidden><div class="tag-list" id="tags"></div><button id="manageTags" class="tag-manage" aria-label="管理分类标签" title="新增、改名、调整颜色或删除标签">＋</button></div>
   </nav>
   <main class="workspace" data-screen-label="议题画板">
     <div id="viewport" class="viewport" tabindex="0" aria-label="自由画板。按住鼠标中键拖动平移，Home 回到中心"><div id="world" class="world"></div></div>
@@ -131,6 +132,6 @@
       "./delivery-view.js":"./delivery-view.js?v=20261102-workdays"
     }}
   </script>
-  <script type="module" src="app.js?v=20261105-auto-sync2"></script>
+  <script type="module" src="app.js?v=20261105-collapsed-tags"></script>
 </body>
 </html>

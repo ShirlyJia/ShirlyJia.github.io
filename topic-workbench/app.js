@@ -195,6 +195,8 @@ function renderWorld(options={}){
 }
 function renderTags(){const draft=tagEditor?.capture();$('tags').innerHTML=tagFilterMarkup(state.tagDefinitions,state.tags,colorControl,tagProjectCounts(projects.filter(matchesScope)));tagEditor?.restore(draft);}
 function renderTagCounts(){
+  $('selectedTagCount').hidden=!state.tags.size;
+  $('selectedTagCount').textContent=state.tags.size?'已选 '+state.tags.size:'';
   const counts=tagProjectCounts(projects.filter(matchesScope));
   $('tags').querySelectorAll('[data-tag]').forEach(button=>{const count=counts.get(button.dataset.tag)||0;button.querySelector('.filter-tag-count').textContent=count;button.setAttribute('aria-description',count+' 个项目');});
 }
@@ -796,6 +798,13 @@ $('clear').addEventListener('click',()=>{if(projectList?.clearFilters()===false)
 document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>setTool(b.dataset.tool)));$('groupTool').addEventListener('click',groupSelection);$('groupSelection').addEventListener('click',groupSelection);$('duplicateSelection').addEventListener('click',()=>duplicateInstances([...state.selected]));$('referenceSelection').addEventListener('click',()=>addReferences(state.instances.filter(i=>state.selected.has(i.id)).map(i=>i.pid)));$('clearSelection').addEventListener('click',()=>{state.selected.clear();state.selectedFrames.clear();renderSelection();});$('zoomIn').addEventListener('click',()=>zoom(1.15));$('zoomOut').addEventListener('click',()=>zoom(1/1.15));$('fit').addEventListener('click',fit);
 $('closeDetail').addEventListener('click',closeDetail);$('openSettings').addEventListener('click',()=>$('settingsDialog').showModal());$('closeSettings').addEventListener('click',()=>$('settingsDialog').close());$('help').addEventListener('click',()=>$('helpDialog').showModal());$('closeHelp').addEventListener('click',()=>$('helpDialog').close());$('cancelName').addEventListener('click',()=>$('nameDialog').close());
 $('nameForm').addEventListener('submit',e=>{e.preventDefault();const name=$('frameName').value.trim();if(!name)return;const ok=mutate(()=>{if(pendingFrame.rename)state.frames.find(f=>f.id===pendingFrame.rename).name=name;else state.frames.push({id:uid('frame'),name,...pendingFrame.bounds,members:pendingFrame.ids,tone:'sand',color:'#b8afa0',backgroundColor:'#e9e8e4'});state.selected.clear();state.selectedFrames.clear();},'分组已更新');if(ok){$('nameDialog').close();setTool('select');}});
+$('toggleTags').addEventListener('click',()=>{
+  if(!tagEditor.flush())return;
+  const expanded=$('tagPanel').hidden;
+  $('tagPanel').hidden=!expanded;
+  $('toggleTags').setAttribute('aria-expanded',String(expanded));
+  applyView();
+});
 $('newProject').addEventListener('click',()=>projectEditor());$('manageTags').addEventListener('click',openTags);$('closeTags').addEventListener('click',()=>{if(tagEditor.flush())$('tagDialog').close();});
 $('newTagForm').addEventListener('submit',e=>{e.preventDefault();const name=$('newTagName').value.trim(),color=$('newTagColor').value;if(!name)return;if(state.tagDefinitions.some(t=>t.name.toLocaleLowerCase()===name.toLocaleLowerCase())){toast('已有同名标签');return;}mutate(()=>state.tagDefinitions.push({id:uid('tag'),name,color,rank:Math.max(-1,...state.tagDefinitions.map(t=>t.rank||0))+1}),'标签已新增');$('newTagName').value='';tagRows();});
 $('tagRows').addEventListener('click',e=>{const b=e.target.closest('[data-delete-tag]');if(!b)return;const id=b.dataset.deleteTag;mutate(()=>{state.tagDefinitions=state.tagDefinitions.filter(t=>t.id!==id);projects.forEach(p=>p.tagIds=p.tagIds.filter(t=>t!==id));state.tags.delete(id);},'标签已删除，可撤销');tagRows();});

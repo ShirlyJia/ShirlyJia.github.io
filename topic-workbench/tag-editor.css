@@ -73,3 +73,15 @@
 .tag-drag-preview{border-radius:8px;padding:6px 10px}
 @media(hover:none){.filter-token .color-control{opacity:1}.filter-token .filter-tag{min-height:34px}}
 @media(prefers-reduced-motion:reduce){.filter-token .filter-tag,.filter-token .filter-tag::after{transition:none}}
+
+/* Keep the canvas quiet on entry; filters stay available without an extra dialog. */
+.app-shell>.filterbar{flex-basis:auto;height:auto;min-height:40px;flex-wrap:wrap;gap:7px 14px;align-items:center}
+.filterbar .tag-disclosure{display:inline-flex;align-items:center;gap:6px;padding:5px 0;color:#646a73;font-size:11px;line-height:20px;cursor:pointer}
+.tag-disclosure svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.4;transition:transform .15s ease}
+.tag-disclosure[aria-expanded=true] svg{transform:rotate(90deg)}
+.filterbar .filter-controls{margin-left:auto;width:auto;min-height:0;padding-top:0}
+.filterbar .tag-panel{display:flex;align-items:flex-start;gap:10px;flex:0 0 100%;min-width:0;padding:2px 0 5px}
+.filterbar .tag-panel .tag-list{flex:1;order:0;flex-wrap:wrap;overflow:auto;max-height:124px;gap:8px;min-height:0}
+.filterbar .tag-manage{flex:none;min-width:28px;height:30px;padding:3px;color:#8f959e;font-size:17px}
+.selected-tag-count{padding:0 5px;border-radius:4px;background:#f2f3f5;color:#4e5969;font-size:10px;font-variant-numeric:tabular-nums}
+@media(prefers-reduced-motion:reduce){.tag-disclosure svg{transition:none}}
