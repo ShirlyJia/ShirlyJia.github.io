@@ -1,7 +1,7 @@
 import {MEETING_CATEGORIES, meetingCategory, enrichMeetingContent} from './meeting-model.js';
 import {createMeetingFiles} from './meeting-files.js';
 import {removeMeetingItem, restoreMeetingItem, restoreMeetingById} from './meeting-trash.js';
-import {deployment, storageKey} from './deployment-config.js';
+import {deployment, storageKey} from './deployment-config.js?v=20261105-editions';
 import {richEditorMarkup, mountRichEditors, readRichEditor, setRichEditor, flushRichEditors} from './rich-text.js?v=20261030-comment-interactions';
 /** Independent meeting notes. The project store is read-only here. */
 export const MEETING_KEY = storageKey('topic-workbench-meetings-v1');

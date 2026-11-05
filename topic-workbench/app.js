@@ -11,7 +11,8 @@ import { createWorkbenchViews, colorControl } from './workbench-views.js?v=20261
 import { createPersistence } from './persistence.js?v=20261030-comment-interactions';
 import { detachSourceMetadata } from './source-detach.js';
 import { displayPriority, visibleNodes, nodeStatus, displayDescription } from './presentation.js';
-import {deployment, storageKey} from './deployment-config.js';
+import {boardPublication, deployment, storageKey} from './deployment-config.js?v=20261105-editions';
+import {showBoardCopies} from './board-publication.js';
 import {richEditorMarkup, mountRichEditors, readRichEditor, richHTML, richHasContent, flushRichEditors, destroyRichEditors} from './rich-text.js?v=20261030-card-preview';
 import {readProjectFlow, setCurrentFlowNode, setProjectClosed} from './project-flow.js';
 import {flowMarkup, mountProjectFlow} from './project-flow-view.js';
@@ -1048,7 +1049,8 @@ world.addEventListener('dblclick',e=>{const h=e.target.closest('[data-frame-head
 }
 async function boot(){
  try {
-  const response=await fetch('./initial-data.json');
+  const seedUrl = boardPublication.edition ? './initial-data.json?v=' + boardPublication.edition : './initial-data.json';
+  const response=await fetch(seedUrl, {cache:'no-cache'});
   if(!response.ok)throw Error('初始项目尚未就绪');
   const seed=await response.json(),loaded=storage.load(seed);
   if(loaded.error){$('loadCaption').textContent='本地记录读取失败，原记录已保留';$('saveStatus').textContent='需要恢复';$('world').innerHTML='<div class="load-error"><h2>本地记录暂时无法读取</h2><p>'+esc(loaded.error)+'</p><p>原记录已保留。先导出原始备份，再处理恢复。</p><button id="downloadRaw">导出原始记录</button></div>';$('downloadRaw').onclick=()=>storage.download(localStorage.getItem(storageKey('topic-workbench-v2')));return;}
@@ -1063,6 +1065,7 @@ async function boot(){
   indexData();canvasEditor=createCanvasEditor({world,viewport,getState:()=>state,mutate,save,toWorld,setTool,isPanning:e=>space||state.tool==='pan'||e.button===1,clearProjects:()=>{state.selected.clear();state.selectedFrames.clear();renderSelection();},closeDetail,toast,onEditing:()=>{dirty=true;$('saveStatus').textContent='正在编辑…';}});workbench=createWorkbenchViews({getState:()=>state,update:mutate,openProject:openDetail,cardElement,navigate,editor,field,area,matches,commitInline,notify:toast,afterRender:syncActiveProject});projectList=createProjectList({root:$('mobileList'),getData:()=>state,cardElement,openProject:openDetail,matches,beforeChange:flushInline,onFilterChange:()=>{renderTags();applyFilter();renderSelection();},key:storageKey('topic-workbench-list-view-v1'),notify:toast});bindEvents();
   const compact=matchMedia('(min-width:761px) and (max-width:1100px)').matches;if(compact)document.body.classList.add('sidebar-collapsed');
   renderAll();setDisplay(state.display);save(loaded.fromStorage&&!loaded.data.frameBoardSyncVersion&&data.quickBoards.some(board=>board.sourceFrameId));
+  showBoardCopies($('settingsDialog').querySelector('.settings-links'), boardPublication);
   try { snapshots.list(); } catch(error) { toast(error.message); }
   const linkedProject=new URLSearchParams(location.search).get('project');if(linkedProject&&byId[linkedProject])openDetail(linkedProject);
   $('toggleSidebar').setAttribute('aria-expanded',String(!mobile()&&!compact));

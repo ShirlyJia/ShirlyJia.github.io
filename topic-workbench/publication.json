@@ -1,7 +1,8 @@
 {
-  "publishedAt": "2026-10-28T11:59:27.923813+00:00",
-  "projects": 24,
+  "publishedAt": "2026-11-05T02:40:37.816811+00:00",
+  "projects": 26,
   "meetings": 1,
-  "projectDataSha256": "1161bf03f1fdaf1e66daae4e23dbc069638b79472707cf8400bb6a5a8c2c3362",
-  "meetingDataSha256": "caf6e3e085af82a4688706ddbc5eff81ffa5636e2bf4c42fcf1de713aae12ccd"
+  "projectDataSha256": "6af6459d339eb3609f811ec83dc8736e2524fa3d2168054d0b41b8379a8ef3ca",
+  "meetingDataSha256": "caf6e3e085af82a4688706ddbc5eff81ffa5636e2bf4c42fcf1de713aae12ccd",
+  "projectEdition": "2026-11-05-6af6459d339eb360"
 }
