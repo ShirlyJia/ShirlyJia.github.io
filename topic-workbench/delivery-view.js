@@ -12,6 +12,7 @@ function label(state,today,node) {
     return state.calendarComplete?'已交付':'已交付 · 工作日历待补全';
   }
   if(state.kind==='closed')return '项目已结束';
+  if(state.kind==='frozen')return '项目已冻结';
   if(node?.delivery&&!node.dateConfirmed)return '已撤回确认';
   if(state.kind==='scheduled'){
     if(!state.calendarComplete)return state.date<today?'到期未交付 · 工作日历待补全':'工作日历待补全';
@@ -33,7 +34,7 @@ function action(nodeId,projectId,kind,text,className='') {
   return '<button type="button" class="'+esc(className)+'" data-delivery-'+kind+'="'+esc(nodeId)+'" data-project-id="'+esc(projectId)+'">'+esc(text)+'</button>';
 }
 function orderedPlans(project,today) {
-  const rank={overdue:0,due:1,scheduled:2,draft:3,none:4,delivered:5,closed:6};
+  const rank={overdue:0,due:1,scheduled:2,draft:3,none:4,delivered:5,frozen:6,closed:7};
   return (project.planNodes||[]).map(node=>({node,state:deliveryState(project,node,{today})}))
     .filter(item=>item.state.date||item.node.targetDate)
     .sort((a,b)=>(rank[a.state.kind]??7)-(rank[b.state.kind]??7)||Number(!!b.node.focus)-Number(!!a.node.focus)||(a.state.date||a.node.targetDate).localeCompare(b.state.date||b.node.targetDate));
@@ -55,7 +56,7 @@ export function deliveryPlanMarkup(project,node,{today=todayDate()}={}) {
   const hasHistory=state.hasHistory||!!node.delivery?.hasHistory;
   const completion=state.completedAt||node.delivery?.completedAt||'';
   const actions=action(node.id,project.id,'edit',hasDate?'修改日期':'设置交付日','delivery-edit-date')+
-    (hasDate&&node.dateConfirmed&&state.kind!=='delivered'&&state.kind!=='closed'?action(node.id,project.id,'complete','标记已交付','delivery-complete'):'')+
+    (hasDate&&node.dateConfirmed&&state.kind!=='delivered'&&state.kind!=='closed'&&state.kind!=='frozen'?action(node.id,project.id,'complete','标记已交付','delivery-complete'):'')+
     (state.kind==='delivered'?action(node.id,project.id,'complete','更正交付记录','delivery-complete')+action(node.id,project.id,'reopen','恢复跟进','delivery-reopen'):'')+
     (hasHistory?action(node.id,project.id,'history','延期记录 ↗','delivery-history-link'):'');
   return '<section class="delivery-plan delivery-tone-'+tone(state,today)+'" aria-label="交付日期">'+

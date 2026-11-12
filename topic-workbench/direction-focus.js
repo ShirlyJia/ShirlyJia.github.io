@@ -1,3 +1,4 @@
+import {projectLifecycle} from './project-lifecycle.js';
 import {isClosedProject,sortProjectsByPriority} from './workbench-model.js';
 
 export const directionIcon='<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1"/><path d="M4.5 7v8h8M4.5 10h8"/><rect x="13" y="7.5" width="5" height="5" rx="1"/><rect x="13" y="14" width="5" height="4" rx="1"/></svg>';
@@ -37,5 +38,5 @@ export function directionFocusModel(data,id){
     }
   }
   append(id);
-  return {direction,ids:new Set(all.keys()),rows,active:rows.filter(r=>!isClosedProject(r.project)),closed:rows.filter(r=>isClosedProject(r.project))};
+  return {direction,ids:new Set(all.keys()),rows,active:rows.filter(r=>projectLifecycle(r.project)==='active'),frozen:rows.filter(r=>projectLifecycle(r.project)==='frozen'),closed:rows.filter(r=>isClosedProject(r.project))};
 }

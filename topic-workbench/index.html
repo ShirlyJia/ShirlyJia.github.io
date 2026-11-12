@@ -26,6 +26,8 @@
   <link rel="stylesheet" href="project-list.css?v=20261030-two-line-previews">
   <link rel="stylesheet" href="canvas-navigation.css?v=20261102-pan-fit">
   <link rel="stylesheet" href="date-styles.css?v=20261030-dates">
+  <link rel="stylesheet" href="workspace-header.css?v=20261112">
+  <link rel="stylesheet" href="project-lifecycle.css?v=20261112">
 </head>
 <body>
   <a class="sr-only skip-link" href="#viewport">跳到画板</a>
@@ -47,20 +49,20 @@
   <header class="app-header">
     <button id="toggleSidebar" class="icon-button" aria-label="切换侧栏" aria-expanded="true" title="切换侧栏"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4" width="14" height="12" rx="2"/><path d="M8 4v12"/></svg></button>
 
-    <div class="header-spacer"></div><button id="saveStatus" class="save-status" title="保存状态">正在载入…</button><button class="plain-button" id="undo" disabled>撤销</button><button class="plain-button" id="snapshots">保存快照</button><button class="plain-button" id="reviewIssues">待核对</button><button class="plain-button" id="help" title="操作说明与快捷键">帮助</button>
+    <h1 id="pageTitle" class="workspace-title">自由画板</h1><div class="header-spacer"></div><button id="saveStatus" class="save-status" title="保存状态">正在载入…</button><button class="plain-button" id="undo" disabled>撤销</button><button class="plain-button" id="snapshots">保存快照</button><button class="plain-button" id="reviewIssues">待核对</button><button class="plain-button" id="help" title="操作说明与快捷键">帮助</button>
   </header>
-  <section class="page-heading" aria-labelledby="pageTitle"><h1 id="pageTitle">自由画板</h1><p id="loadCaption" role="status">正在载入项目…</p></section>
+  <p id="loadCaption" class="load-caption" role="status">正在载入项目…</p>
   <button id="deliveryReminder" class="delivery-reminder" hidden></button>
   <section class="database-toolbar" aria-label="视图与搜索">
     <div class="view-tabs" role="group" aria-label="项目展示方式"><button id="canvasView" class="active" aria-pressed="true"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4" width="5" height="12" rx="1"/><rect x="11" y="4" width="6" height="8" rx="1"/></svg>画板</button><button id="listView" aria-pressed="false"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 5h10M7 10h10M7 15h10M3 5h.5M3 10h.5M3 15h.5"/></svg>项目列表</button></div>
     <label class="search-wrap"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg><span class="sr-only">搜索项目标题</span><input id="search" type="search" placeholder="搜索项目…" autocomplete="off"></label><button id="newProject" class="primary new-project">＋ 新项目</button>
   </section>
+  <nav class="filterbar" aria-label="分类标签与展示方式">
   <section id="directionFocusBar" class="direction-focus-bar" aria-label="主方向聚焦" hidden>
     <label for="focusDirection" class="direction-focus-label"><span id="directionFocusIcon" aria-hidden="true"></span>主方向</label>
     <div class="direction-select-wrap"><select id="focusDirection" class="direction-focus-select" aria-label="聚焦主方向"><option value="">全部项目</option></select></div>
     <span id="directionFocusCount" class="direction-focus-count" aria-live="polite"></span><button id="exitDirectionFocus" class="direction-focus-exit" hidden>退出聚焦 ×</button>
   </section>
-  <nav class="filterbar" aria-label="分类标签与展示方式">
     <button id="toggleTags" class="tag-disclosure" aria-expanded="false" aria-controls="tagPanel"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 4 4 4-4 4"/></svg>分类标签<span id="selectedTagCount" class="selected-tag-count" hidden></span></button>
     <div class="filter-controls">
       <select id="logic" class="logic-select" aria-label="多标签匹配逻辑"><option value="intersection">匹配全部</option><option value="union">匹配任一</option></select>
@@ -123,15 +125,28 @@
   <dialog id="previewDialog" class="preview-dialog"><header class="editor-head"><h2 id="previewTitle">资料</h2><div><a id="previewOriginal" target="_blank" rel="noopener noreferrer">打开原文 ↗</a><button id="closePreview" aria-label="关闭资料预览">×</button></div></header><p class="muted">如受登录或网站限制未能显示，请打开原文查看、编辑。</p><iframe id="previewFrame" title="资料预览" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" referrerpolicy="no-referrer"></iframe></dialog>
   <dialog id="settingsDialog" class="workspace-settings"><header><h2>数据与备份</h2><button id="closeSettings" aria-label="关闭设置">×</button></header><p>画板先保存在本机；连接自动同步后，修改会发布到原网址。</p><p>快照仅存本机；会议记录独立维护。</p><div class="settings-links"><button id="exportData" class="primary">导出备份</button><a href="snapshots.html">查看历史快照 →</a></div></dialog>
   <script type="importmap">
-    {"imports":{
-      "./workbench-model.js":"./workbench-model.js?v=20261105-feishu","./color-presets.js":"./color-presets.js?v=20261105-feishu",
-      "./color-presets.js?v=20261030-detail":"./color-presets.js?v=20261105-feishu",
-      "./deployment-config.js":"./deployment-config.js?v=20261105-sync",
-      "./deployment-config.js?v=20261105-editions":"./deployment-config.js?v=20261105-sync",
-      "./delivery-model.js":"./delivery-model.js?v=20261102-workdays",
-      "./delivery-view.js":"./delivery-view.js?v=20261102-workdays"
-    }}
+    {
+  "imports": {
+    "./workbench-model.js": "./workbench-model.js?v=20261112-lifecycle",
+    "./color-presets.js": "./color-presets.js?v=20261105-feishu",
+    "./color-presets.js?v=20261030-detail": "./color-presets.js?v=20261105-feishu",
+    "./deployment-config.js": "./deployment-config.js?v=20261105-sync",
+    "./deployment-config.js?v=20261105-editions": "./deployment-config.js?v=20261105-sync",
+    "./delivery-model.js": "./delivery-model.js?v=20261112-lifecycle",
+    "./delivery-view.js": "./delivery-view.js?v=20261112-lifecycle",
+    "./project-lifecycle.js": "./project-lifecycle.js?v=20261112-lifecycle",
+    "./results-timeline.js": "./results-timeline.js?v=20261112-lifecycle",
+    "./project-flow.js": "./project-flow.js?v=20261112-lifecycle",
+    "./persistence.js": "./persistence.js?v=20261112-lifecycle",
+    "./project-detail-layout.js": "./project-detail-layout.js?v=20261112-lifecycle",
+    "./workbench-views.js?v=20261102-results": "./workbench-views.js?v=20261112-lifecycle",
+    "./persistence.js?v=20261030-comment-interactions": "./persistence.js?v=20261112-lifecycle",
+    "./direction-focus.js?v=20261030-direction2": "./direction-focus.js?v=20261112-lifecycle",
+    "./workbench-views.js": "./workbench-views.js?v=20261112-lifecycle",
+    "./direction-focus.js": "./direction-focus.js?v=20261112-lifecycle"
+  }
+}
   </script>
-  <script type="module" src="app.js?v=20261105-collapsed-tags"></script>
+  <script type="module" src="app.js?v=20261112-lifecycle"></script>
 </body>
 </html>

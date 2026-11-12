@@ -1,3 +1,4 @@
+import {projectLifecycle} from './project-lifecycle.js';
 import {accentForSurface} from './color-presets.js';
 /** Optional workbench views over schema-v2 project facts. No storage or remote writes. */
 const resolvedOutcomes = new Set(['已解决', '已交付', '已完成']);
@@ -7,6 +8,7 @@ const clone = value => JSON.parse(JSON.stringify(value));
 const has = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
 
 export function outcomeKind(project) {
+  if(project?.lifecycle)return {active:'open',completed:'resolved',terminated:'stopped',frozen:'open'}[projectLifecycle(project)];
   if (project?.closed === false) return 'open';
   const outcome = typeof project?.outcome === 'string' ? project.outcome.trim() : '';
   return resolvedOutcomes.has(outcome) ? 'resolved' : stoppedOutcomes.has(outcome) ? 'stopped' : project?.closed === true ? 'ended' : 'open';

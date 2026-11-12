@@ -1,4 +1,5 @@
 import {isClosedProject} from './workbench-model.js';
+import {projectLifecycle,recordProjectLifecycle,lifecycleToday,lifecycleLabels} from './project-lifecycle.js';
 
 /** Project-owned, optional progress notes. Node order never imposes a workflow. */
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -118,17 +119,20 @@ export function setFlowNodeClosing(project, id, closesProject) {
 export function setCurrentFlowNode(project, id, {date} = {}) {
   const flow = readProjectFlow(project), node = flow.nodes.find(item => item.id === id);
   if (!node) return false;
+  const from=projectLifecycle(project);
   const closedAt = node.closesProject ? closingDate(project,date) : project.closedAt;
   flow.currentId = id;
   saveFlow(project, flow);
   project.closed = node.closesProject;
   if (node.closesProject) project.closedAt = closedAt;
+  recordProjectLifecycle(project,from,node.closesProject?(from==='terminated'?'terminated':'completed'):'active',date||lifecycleToday());
   return true;
 }
 
 /** Keeps the existing finish/reopen action aligned with editable process nodes. */
-export function setProjectClosed(project, closed, {date, idFactory} = {}) {
+export function setProjectClosed(project, closed, {date, idFactory, record=true} = {}) {
   if (typeof closed !== 'boolean') throw Error('项目结束状态必须为布尔值');
+  const from=projectLifecycle(project);
   const flow = readProjectFlow(project), current = flow.nodes.find(node => node.id === flow.currentId);
   const closedAt = closed ? closingDate(project,date) : project.closedAt;
   if (closed) {
@@ -146,5 +150,17 @@ export function setProjectClosed(project, closed, {date, idFactory} = {}) {
   saveFlow(project, flow);
   project.closed = closed;
   if (closed) project.closedAt = closedAt;
+  if(record)recordProjectLifecycle(project,from,closed?(from==='terminated'?'terminated':'completed'):'active',date||lifecycleToday());
+  return true;
+}
+
+/** Freezing retains the current progress node and every placement reference. */
+export function setProjectLifecycle(project,status,{date=lifecycleToday()}={}) {
+  if(!Object.hasOwn(lifecycleLabels,status))throw Error('项目状态无效');
+  const from=projectLifecycle(project);
+  if(status!=='frozen'||isClosedProject(project))setProjectClosed(project,['completed','terminated'].includes(status),{date,record:false});
+  if(status==='frozen'){project.closed=false;project.frozenAt=date;}
+  else if(status!=='active')project.closedAt=date;
+  recordProjectLifecycle(project,from,status,date);
   return true;
 }

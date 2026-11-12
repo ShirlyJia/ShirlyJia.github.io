@@ -1,3 +1,4 @@
+import {isHistoryProject} from './project-lifecycle.js';
 import {resultsTimelineMarkup} from './results-timeline.js';
 import {mountRichEditors, flushRichEditors, destroyRichEditors} from './rich-text.js?v=20261030-card-preview';
 import {colorPickerMarkup,colorChoices} from './color-presets.js';
@@ -17,6 +18,7 @@ export function createWorkbenchViews(api) {
   const {getState,update,openProject,cardElement,navigate,editor,field,area,matches} = api;
   const boardById = id => getState().quickBoards.find(b=>b.id===id);
   const pendingText = new Map(), composing = new WeakSet();
+  let historyFilter='all';
   let flushingText = false, deferredRender = false, renameSession = null, creationDraft = null;
   function textIdentity(el){
     if(!el?.matches?.('[data-board-note],[data-board-context]'))return null;
@@ -78,7 +80,7 @@ export function createWorkbenchViews(api) {
   function renderNav(){
     const state=getState();
     $('quickBoardNav').innerHTML=[...state.quickBoards].sort((a,b)=>a.rank-b.rank).map(b=>'<button class="sidebar-item'+(state.activeBoard===b.id?' current':'')+'" data-board-open="'+esc(b.id)+'"><span class="nav-color" style="background:'+esc(b.color)+'"></span><span>'+esc(b.name)+'</span><small>'+b.projectIds.length+'</small></button>').join('') || '<button class="sidebar-item board-start" data-create-board>新建或导入分组</button>';
-    $('resultsCount').textContent=state.projects.filter(isClosedProject).length;
+    $('resultsCount').textContent=state.projects.filter(isHistoryProject).length;
     const overdue=deliveryCases(state).filter(r=>r.state.kind==='overdue'&&!r.removed).length;
     $('deliveryCount').textContent=overdue;$('deliveryCount').hidden=!overdue;
     $('deliveryReminder').hidden=!overdue||state.display!=='boards';$('deliveryReminder').textContent=overdue+' 项计划已超过承诺交付日 · 查看延期记录 →';
@@ -119,7 +121,7 @@ export function createWorkbenchViews(api) {
     }
   }
   function renderResults(view){
-    view.innerHTML=resultsTimelineMarkup(getState(),matches);
+    view.innerHTML=resultsTimelineMarkup(getState(),matches,historyFilter);
     mountRichEditors(view,{onCommit:api.commitInline,onError:api.notify});
   }
 
@@ -228,7 +230,8 @@ export function createWorkbenchViews(api) {
     if(event.target.closest('[data-board-title]')&&(event.code==='Space'||event.key===' '))event.stopPropagation();
   });
   document.addEventListener('click',e=>{
-    const b=e.target.closest('[data-board-open],[data-board-members],[data-board-edit],[data-board-rename],[data-create-board],[data-import-frames],[data-board-create-mode],[data-project-open],[data-board-remove],[data-board-star],[data-delete-board],[data-reopen-project]');if(!b)return;
+    const b=e.target.closest('[data-board-open],[data-board-members],[data-board-edit],[data-board-rename],[data-create-board],[data-import-frames],[data-board-create-mode],[data-project-open],[data-board-remove],[data-board-star],[data-delete-board],[data-reopen-project],[data-history-filter]');if(!b)return;
+    if(b.hasAttribute('data-history-filter')){if(!flush())return;historyFilter=b.dataset.historyFilter;render();$('workbenchView').querySelector('[data-history-filter="'+historyFilter+'"]')?.focus({preventScroll:true});return;}
     if(b.hasAttribute('data-board-open')){navigate('boards',b.dataset.boardOpen);return;}
     if(b.hasAttribute('data-project-open')){openProject(b.dataset.projectOpen);return;}
     if(b.hasAttribute('data-board-members')){membersEditor(b.dataset.boardMembers);return;}
@@ -253,5 +256,5 @@ export function createWorkbenchViews(api) {
   });
   document.addEventListener('compositionstart',e=>{if(textIdentity(e.target))composing.add(e.target);});
   document.addEventListener('compositionend',e=>{if(!textIdentity(e.target))return;composing.delete(e.target);saveText(e.target);if(deferredRender)render();});
-  return {render,renderNav,boardEditor,membersEditor,flush};
+  return {render,renderNav,boardEditor,membersEditor,flush,historyFilter:()=>historyFilter,setHistoryFilter:filter=>{historyFilter=filter;render();}};
 }

@@ -1,3 +1,4 @@
+import {projectLifecycle} from './project-lifecycle.js';
 import {isClosedProject} from './workbench-model.js';
 import {countWorkdays} from './china-workdays.js';
 
@@ -49,6 +50,7 @@ export function deliveryState(project,node,{today=todayDate()}={}) {
     if (completed && committed && (meta || node.dateConfirmed)) elapsed=countWorkdays(committed,completed);
   }
   else if (isClosedProject(project)) kind='closed';
+  else if (projectLifecycle(project)==='frozen') kind='frozen';
   else if (!effective) kind='none';
   else if (!node.dateConfirmed) kind='draft';
   else if (committed<today) {

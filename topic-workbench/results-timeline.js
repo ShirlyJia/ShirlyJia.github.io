@@ -1,8 +1,9 @@
-import {isClosedProject, outcomeKind} from './workbench-model.js';
+import {outcomeKind} from './workbench-model.js';
 import {parentCardMarkup} from './child-projects.js';
 import {richEditorMarkup, richHTML, richHasContent} from './rich-text.js?v=20261030-card-preview';
 import {isDeliveryDate, todayDate} from './delivery-model.js';
 import {displayDescription} from './presentation.js';
+import {projectLifecycle,isHistoryProject,lifecycleLabels,lifecycleField,lifecycleConclusionLabel,lifecycleDate} from './project-lifecycle.js';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -21,29 +22,32 @@ function entryMarkup(project, date, data) {
   const formatted = project.richText || {};
   const facts = (title, value, html) => richHasContent({text:value||'', html:html||''})
     ? '<div class="result-fact"><span class="result-label">'+title+'</span><div class="rich-content">'+richHTML(html,value)+'</div></div>' : '';
-  const conclusion = richEditorMarkup({value:project.result||'',html:formatted.result||'',label:project.name+'的结项结论',
-    placeholder:'待补结论 · 点击填写',attrs:'data-inline="result" data-timeline-pid="'+pid+'"',collapsible:true});
-  const status = project.outcome ? '<span class="outcome-chip '+outcomeKind(project)+'">'+esc(project.outcome)+'</span>' : '';
+  const kind=projectLifecycle(project),field=lifecycleField(project),label=lifecycleConclusionLabel(project);
+  const conclusion = richEditorMarkup({value:project[field]??(kind==='terminated'?project.result:'')??'',html:formatted[field]??(kind==='terminated'?formatted.result:'')??'',label:project.name+'的'+label,
+    placeholder:kind==='completed'?'待补结论 · 点击填写':'待补原因 · 点击填写',attrs:'data-inline="'+field+'" data-timeline-pid="'+pid+'"',collapsible:true});
+  const status = '<span class="lifecycle-badge '+kind+'">'+lifecycleLabels[kind]+'</span>'+(project.outcome ? '<span class="outcome-chip '+outcomeKind(project)+'">'+esc(project.outcome)+'</span>' : '');
+  const resume=kind==='frozen'?'<div class="result-conclusion"><span class="result-label">恢复条件 / 下次评估</span>'+richEditorMarkup({value:project.resumeCondition||'',html:formatted.resumeCondition||'',label:project.name+'的恢复条件',placeholder:'需要什么条件、何时重新评估…',attrs:'data-inline="resumeCondition" data-timeline-pid="'+pid+'"',collapsible:true})+'</div>':'';
   const materials = project.materials?.length || 0;
-  return `<li class="result-event">
+  return `<li class="result-event lifecycle-${kind}">
     <div class="result-stamp">${stamp}</div>
     <article class="result-record" data-project-highlight="${pid}">
       <header><h3><button type="button" data-project-open="${pid}">${esc(project.name)}</button></h3>${status}</header>
       ${parentCardMarkup(project.id,data)}
       ${facts('问题陈述',description,formatted.description)}
-      <div class="result-conclusion"><span class="result-label">结项结论</span>${conclusion}</div>
-      ${facts('影响与证据',project.impact,formatted.impact)}
+      <div class="result-conclusion"><span class="result-label">${label}</span>${conclusion}</div>${resume}
+      ${facts(kind==='completed'?'影响与证据':'已有进展与可复用信息',project.impact,formatted.impact)}
       <footer><button type="button" data-project-open="${pid}">项目详情${materials?' · '+materials+' 份资料':''} ↗</button><button type="button" data-reopen-project="${pid}">恢复跟进</button></footer>
     </article></li>`;
 }
 
-export function resultsTimelineMarkup(data, matches) {
-  const closed = data.projects.filter(isClosedProject);
-  const rows = closed.filter(matches).map(project=>({project,date:closingDay(project.closedAt)}))
+export function resultsTimelineMarkup(data, matches=()=>true, filter='all') {
+  const closed = data.projects.filter(isHistoryProject);
+  const rows = closed.filter(matches).filter(p=>filter==='all'||projectLifecycle(p)===filter).map(project=>({project,date:closingDay(lifecycleDate(project))}))
     .sort((a,b)=>b.date.localeCompare(a.date)||a.project.name.localeCompare(b.project.name,'zh-CN')||a.project.id.localeCompare(b.project.id));
-  const heading = '<div class="overview-heading"><h2>结项时间线</h2></div>';
+  const options=[['all','全部'],['completed','已完成'],['terminated','已终止'],['frozen','已冻结']];
+  const heading = '<div class="history-heading"><h2>项目时间线</h2><div class="history-filters" role="group" aria-label="历史项目状态">'+options.map(([value,label])=>'<button type="button" data-history-filter="'+value+'" class="'+(value===filter?'active':'')+'" aria-pressed="'+(value===filter)+'">'+label+'<span>'+closed.filter(p=>matches(p)&&(value==='all'||projectLifecycle(p)===value)).length+'</span></button>').join('')+'</div></div>';
   if (!rows.length) return heading + (closed.length
-    ? '<div class="view-empty"><strong>没有匹配的结项记录</strong><p>清除筛选后可查看全部记录。</p></div>'
-    : '<div class="view-empty"><strong>还没有结项记录</strong><p>项目结束后会显示在这里，也可以直接记录已结项目。</p></div>');
-  return heading + '<ol class="result-timeline" aria-label="按结项日期从近到远">'+rows.map(({project,date})=>entryMarkup(project,date,data)).join('')+'</ol>';
+    ? '<div class="view-empty"><strong>没有匹配的记录</strong><p>切换状态或清除筛选后查看。</p></div>'
+    : '<div class="view-empty"><strong>还没有历史记录</strong><p>已完成、已终止和已冻结的项目都会留在这里。</p></div>');
+  return heading + '<ol class="result-timeline" aria-label="按状态记录日期从近到远">'+rows.map(({project,date})=>entryMarkup(project,date,data)).join('')+'</ol>';
 }
