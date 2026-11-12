@@ -23,9 +23,10 @@ export function recordProjectLifecycle(project, from, to, date=lifecycleToday())
   project.lifecycle=to;
   if (from===to) return;
   project.lifecycleHistory ||= [];
-  project.lifecycleHistory.push({from,to,date,note:to==='active'?'恢复跟进':String(project[lifecycleField(project)]||''),resumeCondition:to==='frozen'?String(project.resumeCondition||''):''});
+  project.lifecycleHistory.push({from,to,date,note:to==='active'?'恢复跟进':String(project[lifecycleField(project)]||''),resumeCondition:to==='frozen'&&project.frozenNoteVersion!==1?String(project.resumeCondition||''):''});
 }
 export function validateProjectLifecycle(project,path='project') {
+  if (project.frozenNoteVersion!==undefined && project.frozenNoteVersion!==1) throw Error(path+'.frozenNoteVersion 无效');
   if (project.lifecycle!==undefined && !Object.hasOwn(lifecycleLabels,project.lifecycle)) throw Error(path+'.lifecycle 无效');
   if (project.lifecycle!==undefined && project.closed!==undefined && project.closed!==['completed','terminated'].includes(project.lifecycle)) throw Error(path+' 状态与结束标记不一致');
   for (const field of ['freezeReason','terminationReason','resumeCondition','frozenAt']) if (project[field]!==undefined && typeof project[field]!=='string') throw Error(path+'.'+field+' 必须是字符串');

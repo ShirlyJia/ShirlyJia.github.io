@@ -15,6 +15,7 @@ import {boardPublication, deployment, storageKey, useBoardEdition} from './deplo
 import {showBoardCopies} from './board-publication.js';
 import {loadSharedBoard, mountAutoSync, prepareLiveStorage} from './auto-sync.js?v=20261105-pairing2';
 import {richEditorMarkup, mountRichEditors, readRichEditor, richHTML, richHasContent, flushRichEditors, destroyRichEditors} from './rich-text.js?v=20261030-card-preview';
+import {frozenNote,saveFrozenNote} from './frozen-note.js';
 import {projectLifecycle,isHistoryProject,lifecycleLabels,lifecycleField,lifecycleConclusionLabel,lifecycleDate} from './project-lifecycle.js';
 import {readProjectFlow, setCurrentFlowNode, setProjectClosed, setProjectLifecycle} from './project-flow.js';
 import {flowMarkup, mountProjectFlow} from './project-flow-view.js';
@@ -242,7 +243,7 @@ function renderDirectionGather(target){
   }
   if(active.length)target.append(tree(active));
   if(frozen.length)target.append(tree(frozen));
-  else target.insertAdjacentHTML('beforeend','<div class="direction-focus-empty">'+(narrowed?'没有匹配的进行中项目':model.closed.length?'关联项目均已结束':'暂未关联小项目')+'</div>');
+  if(!active.length&&!frozen.length)target.insertAdjacentHTML('beforeend','<div class="direction-focus-empty">'+(narrowed?'没有匹配的进行中项目':model.closed.length?'关联项目均已结束':'暂未关联小项目')+'</div>');
   if(closed.length){const history=document.createElement('details');history.className='direction-focus-history';history.innerHTML='<summary>已结束 · '+closed.length+' 项</summary>';history.append(tree(closed));target.append(history);}
 }
 function renderGather(){canvasEditor?.sync();const show=state.mode==='gather';$('gatherMask').hidden=!show;$('gatherPanel').hidden=!show;$('gatherPanel').classList.toggle('is-direction-focus',!!focusedDirection);$('scatter').textContent=focusedDirection?'回到画板 ↗':'散回原位 ↗';if(!show)return;const target=$('gatherCards'),historyOpen=target.dataset.directionId===state.focusDirection&&target.querySelector('.direction-focus-history')?.open;target.dataset.directionId=state.focusDirection||'';target.innerHTML='';if(focusedDirection){renderDirectionGather(target);if(historyOpen&&target.querySelector('.direction-focus-history'))target.querySelector('.direction-focus-history').open=true;return;}const list=sortProjectsByPriority(projects.filter(matches));$('gatherTitle').textContent=state.tags.size?[...state.tags].map(id=>tagById[id]?.name).join(state.logic==='union'?' ∪ ':' ∩ '):state.query?'搜索结果':'全部项目';$('gatherSummary').textContent=list.length+' 个项目';list.forEach((p,n)=>{const el=gatheredCard(p);el.style.animationDelay=Math.min(n*25,150)+'ms';target.append(el);});if(!list.length)target.innerHTML='<div class="gather-empty">没有满足此标签组合的项目</div>';}
@@ -430,8 +431,8 @@ function projectSectionMarkup(p,block,keys){
 function projectDetailSections(p,nodes){
   const blocks=[{key:'description',className:'problem-statement',body:inlineText('description',detailSectionTitle(p,'description'),displayDescription(p.description),{rows:4,autogrow:true,placeholder:'描述需要解决的问题、场景与影响…'})}];
   if(projectLifecycle(p)==='completed')blocks.push({key:'result',className:'result-editor',body:inlineText('result','结项结论',p.result,{rows:3,autogrow:true,placeholder:'写下解决了什么问题，或最终作出的决定…'})+inlineText('impact','影响与证据说明',p.impact||'',{rows:2,autogrow:true,placeholder:'数据变化、落地影响、验证边界…'})+inlineText('closedAt','结束日期',p.closedAt||'',{type:'date'})});
-  const life=projectLifecycle(p);
-  if(['terminated','frozen'].includes(life))blocks.push({key:'disposition',className:'disposition-editor',body:inlineText(lifecycleField(p),lifecycleConclusionLabel(p),p[lifecycleField(p)]??(life==='terminated'?p.result:'')??'',{rows:3,autogrow:true,placeholder:'记录作出这个决定的原因…'})+(life==='frozen'?inlineText('resumeCondition','恢复条件 / 下次评估',p.resumeCondition||'',{rows:2,autogrow:true,placeholder:'需要什么条件、何时重新评估…'}):'')+inlineText('impact','已有进展与可复用信息',p.impact||'',{rows:2,autogrow:true})+inlineText(life==='frozen'?'frozenAt':'closedAt',life==='frozen'?'冻结日期':'终止日期',lifecycleDate(p)||'',{type:'date'})});
+  const life=projectLifecycle(p),freeze=frozenNote(p);
+  if(['terminated','frozen'].includes(life))blocks.push({key:'disposition',className:'disposition-editor',body:inlineText(lifecycleField(p),lifecycleConclusionLabel(p),life==='frozen'?freeze.text:p.terminationReason??p.result??'',{rows:3,autogrow:true,html:life==='frozen'?freeze.html:undefined,placeholder:'记录作出这个决定的原因…'})+(life==='frozen'?'':inlineText('impact','已有进展与可复用信息',p.impact||'',{rows:2,autogrow:true}))+inlineText(life==='frozen'?'frozenAt':'closedAt',life==='frozen'?'冻结日期':'终止日期',lifecycleDate(p)||'',{type:'date'})});
   (p.customSections||[]).forEach(section=>blocks.push({key:'custom:'+section.id,className:'custom-section',body:inlineText('body','栏目内容',section.body,{section:section.id,rows:3,autogrow:true,placeholder:'记录这个栏目下的内容…'})}));
   blocks.push({key:'comments',className:'comment-pool',body:commentPoolMarkup(p)},...inlineRelations(p.id));const history=directionHistory(p);if(history)blocks.push(history);
   if(nodes.length)blocks.push({key:'plans',body:nodes.map(node=>inlinePlan(node,nodes.length)).join(''),action:actionButton('＋ 计划','inline-node-add')});
@@ -470,7 +471,7 @@ function inlineText(key,label,value='',options={}){
   if(!options.title&&['description','result','impact','freezeReason','terminationReason','resumeCondition','body','note','context','commentDraft'].includes(key)){
     const p=byId[state.detail];
     const target=options.section?p?.customSections?.find(s=>s.id===options.section):options.comment?p?.comments?.find(c=>c.id===options.comment):options.node?p?.planNodes?.find(n=>n.id===options.node):options.relation?state.relations.find(r=>r.id===options.relation):p;
-    return '<div class="inline-field"><span>'+esc(label)+'</span>'+richEditorMarkup({value,html:target?.richText?.[key]||'',label,placeholder:options.placeholder||'点击填写，支持粘贴图片',attrs,collapsible:key!=='commentDraft'})+'</div>';
+    return '<div class="inline-field"><span>'+esc(label)+'</span>'+richEditorMarkup({value,html:options.html??target?.richText?.[key]??'',label,placeholder:options.placeholder||'点击填写，支持粘贴图片',attrs,collapsible:key!=='commentDraft'})+'</div>';
   }
   return '<label class="inline-field'+(options.title?' inline-title':'')+'"><span'+(options.title?' class="sr-only"':'')+'>'+esc(label)+'</span><textarea'+attrs+' class="inline-text" rows="'+(options.rows||2)+'" placeholder="'+esc(options.placeholder||'点击填写')+'">'+esc(value)+'</textarea></label>';
 }
@@ -527,16 +528,18 @@ function check(name,label,value){return '<label class="check-field"><input name=
 function editor(title,html,onSubmit,button='保存'){lastEditor=onSubmit;destroyRichEditors($('editorFields'));$('editorTitle').textContent=title;$('editorFields').innerHTML=html;mountRichEditors($('editorFields'),{onError:toast});$('editorSubmit').textContent=button;$('editorSubmit').disabled=false;$('editorError').hidden=true;if(!$('editorDialog').open)$('editorDialog').showModal();}
 function richArea(name,label,value='',html=''){return '<div class="form-field"><span>'+esc(label)+'</span>'+richEditorMarkup({value,html,label,placeholder:'输入内容，或直接粘贴图片…',attrs:'data-rich-name="'+esc(name)+'"'})+'</div>';}
 function lifecycleFields(kind,p={}){
+  const freeze=frozenNote(p);
   return selectField('recordLifecycle','记录为',kind,['completed','terminated','frozen'].map(value=>[value,lifecycleLabels[value]]))+
     '<div class="lifecycle-fields" data-lifecycle-fields="completed"'+(kind!=='completed'?' hidden':'')+'>'+richArea('result','结项结论（必填）',p.result,p.richText?.result)+'</div>'+
     '<div class="lifecycle-fields" data-lifecycle-fields="terminated"'+(kind!=='terminated'?' hidden':'')+'>'+richArea('terminationReason','终止原因与结论',p.terminationReason??(projectLifecycle(p)==='terminated'?p.result:''),p.richText?.terminationReason??(projectLifecycle(p)==='terminated'?p.richText?.result:''))+'</div>'+
-    '<div class="lifecycle-fields" data-lifecycle-fields="frozen"'+(kind!=='frozen'?' hidden':'')+'><p class="lifecycle-form-hint">保留在画板原位置，恢复后继续跟进。</p>'+richArea('freezeReason','冻结原因',p.freezeReason,p.richText?.freezeReason)+richArea('resumeCondition','恢复条件 / 下次评估',p.resumeCondition,p.richText?.resumeCondition)+'</div>'+
-    richArea('impact','影响与可复用信息',p.impact,p.richText?.impact)+field('recordDate','记录日期',(projectLifecycle(p)===kind?(kind==='frozen'?p.frozenAt:p.closedAt):'')||todayDate(),'date','required');
+    '<div class="lifecycle-fields" data-lifecycle-fields="frozen"'+(kind!=='frozen'?' hidden':'')+'><p class="lifecycle-form-hint">保留在画板原位置，恢复后继续跟进。</p>'+richArea('freezeReason','冻结原因',freeze.text,freeze.html)+'</div>'+
+    '<div class="lifecycle-fields" data-lifecycle-fields="completed terminated"'+(kind==='frozen'?' hidden':'')+'>'+richArea('impact','影响与可复用信息',p.impact,p.richText?.impact)+'</div>'+field('recordDate','记录日期',(projectLifecycle(p)===kind?(kind==='frozen'?p.frozenAt:p.closedAt):'')||todayDate(),'date','required');
 }
 function applyLifecycleForm(project,form){
   const kind=form.get('recordLifecycle'),key=lifecycleField({lifecycle:kind});
   if(kind==='completed'&&!richHasContent({text:form.get('result')||'',html:form.get('_rich:result')||''}))throw Error('请填写结项结论，再记录成果。');
-  for(const field of [key,'impact',...(kind==='frozen'?['resumeCondition']:[])]){project[field]=(form.get(field)||'').trim();project.richText||={};project.richText[field]=form.get('_rich:'+field)||'';}
+  for(const field of kind==='frozen'?[key]:[key,'impact']){project[field]=(form.get(field)||'').trim();project.richText||={};project.richText[field]=form.get('_rich:'+field)||'';}
+  if(kind==='frozen')saveFrozenNote(project,{text:project.freezeReason,html:project.richText.freezeReason});
   setProjectLifecycle(project,kind,{date:form.get('recordDate')});
   setDetailSectionHidden(project,kind==='completed'?'result':'disposition',false);
 }
@@ -544,7 +547,7 @@ function lifecycleEditor(pid,kind){
   const p=byId[pid];if(!p)return;
   editor('更新项目状态',lifecycleFields(kind,p),form=>{const ok=mutate(()=>applyLifecycleForm(byId[pid],form),'项目状态已更新',{rollbackOnSaveFailure:true});if(ok&&state.display==='results')workbench?.setHistoryFilter(form.get('recordLifecycle'));return ok;});
 }
-document.addEventListener('change',e=>{if(e.target.matches('[name="recordLifecycle"]'))$('editorFields').querySelectorAll('[data-lifecycle-fields]').forEach(section=>section.hidden=section.dataset.lifecycleFields!==e.target.value);});
+document.addEventListener('change',e=>{if(e.target.matches('[name="recordLifecycle"]'))$('editorFields').querySelectorAll('[data-lifecycle-fields]').forEach(section=>section.hidden=!section.dataset.lifecycleFields.split(' ').includes(e.target.value));});
 function projectEditor(pid=null){
   const creatingHistory=!pid&&state.display==='results';
   const p=byId[pid]||{name:'',kind:'project',priority:'',description:'',outcome:''};
@@ -642,7 +645,7 @@ function commitInline(el){
   if(!target)return false;
   if(key==='name'&&!value.trim()){el.setAttribute('aria-invalid','true');toast('项目标题不能为空');return false;}
   if(target[key]===value&&(!rich||target.richText?.[key]===rich.html)){if(dirty&&!save(false))return false;delete el.dataset.pending;return true;}
-  const ok=mutate(()=>{target[key]=value;if(rich){target.richText??={};target.richText[key]=rich.html;}if(key==='focus'&&value)p.planNodes.filter(n=>n.id!==el.dataset.nodeId).forEach(n=>n.focus=false);if(el.dataset.commentId)target.updatedAt=new Date().toISOString();},'',el.dataset.timelinePid
+  const ok=mutate(()=>{target[key]=value;if(rich){target.richText??={};target.richText[key]=rich.html;}if(key==='freezeReason')saveFrozenNote(target,{text:value,html:rich?.html||''});if(key==='focus'&&value)p.planNodes.filter(n=>n.id!==el.dataset.nodeId).forEach(n=>n.focus=false);if(el.dataset.commentId)target.updatedAt=new Date().toISOString();},'',el.dataset.timelinePid
     ?{keepMain:true,keepDetail:state.detail!==pid,rollbackOnSaveFailure:true}:{keepDetail:true});
   if(ok){delete el.dataset.pending;el.removeAttribute('aria-invalid');if(key==='focus')$('detailBody').querySelectorAll('[data-inline="focus"]').forEach(box=>box.checked=!!p.planNodes.find(n=>n.id===box.dataset.nodeId)?.focus);}return ok;
 }

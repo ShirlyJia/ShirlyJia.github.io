@@ -1,3 +1,4 @@
+import {frozenNote} from './frozen-note.js';
 import {outcomeKind} from './workbench-model.js';
 import {parentCardMarkup} from './child-projects.js';
 import {richEditorMarkup, richHTML, richHasContent} from './rich-text.js?v=20261030-card-preview';
@@ -23,10 +24,11 @@ function entryMarkup(project, date, data) {
   const facts = (title, value, html) => richHasContent({text:value||'', html:html||''})
     ? '<div class="result-fact"><span class="result-label">'+title+'</span><div class="rich-content">'+richHTML(html,value)+'</div></div>' : '';
   const kind=projectLifecycle(project),field=lifecycleField(project),label=lifecycleConclusionLabel(project);
-  const conclusion = richEditorMarkup({value:project[field]??(kind==='terminated'?project.result:'')??'',html:formatted[field]??(kind==='terminated'?formatted.result:'')??'',label:project.name+'的'+label,
+  const freeze=frozenNote(project);
+  const conclusion = richEditorMarkup({value:kind==='frozen'?freeze.text:project[field]??(kind==='terminated'?project.result:'')??'',html:kind==='frozen'?freeze.html:formatted[field]??(kind==='terminated'?formatted.result:'')??'',label:project.name+'的'+label,
     placeholder:kind==='completed'?'待补结论 · 点击填写':'待补原因 · 点击填写',attrs:'data-inline="'+field+'" data-timeline-pid="'+pid+'"',collapsible:true});
   const status = '<span class="lifecycle-badge '+kind+'">'+lifecycleLabels[kind]+'</span>'+(project.outcome ? '<span class="outcome-chip '+outcomeKind(project)+'">'+esc(project.outcome)+'</span>' : '');
-  const resume=kind==='frozen'?'<div class="result-conclusion"><span class="result-label">恢复条件 / 下次评估</span>'+richEditorMarkup({value:project.resumeCondition||'',html:formatted.resumeCondition||'',label:project.name+'的恢复条件',placeholder:'需要什么条件、何时重新评估…',attrs:'data-inline="resumeCondition" data-timeline-pid="'+pid+'"',collapsible:true})+'</div>':'';
+
   const materials = project.materials?.length || 0;
   return `<li class="result-event lifecycle-${kind}">
     <div class="result-stamp">${stamp}</div>
@@ -34,8 +36,8 @@ function entryMarkup(project, date, data) {
       <header><h3><button type="button" data-project-open="${pid}">${esc(project.name)}</button></h3>${status}</header>
       ${parentCardMarkup(project.id,data)}
       ${facts('问题陈述',description,formatted.description)}
-      <div class="result-conclusion"><span class="result-label">${label}</span>${conclusion}</div>${resume}
-      ${facts(kind==='completed'?'影响与证据':'已有进展与可复用信息',project.impact,formatted.impact)}
+      <div class="result-conclusion"><span class="result-label">${label}</span>${conclusion}</div>
+      ${kind==='frozen'?'':facts(kind==='completed'?'影响与证据':'已有进展与可复用信息',project.impact,formatted.impact)}
       <footer><button type="button" data-project-open="${pid}">项目详情${materials?' · '+materials+' 份资料':''} ↗</button><button type="button" data-reopen-project="${pid}">恢复跟进</button></footer>
     </article></li>`;
 }
