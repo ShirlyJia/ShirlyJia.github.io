@@ -19,10 +19,14 @@
 .lifecycle-form-hint{font-size:11px;color:#7a7a74;margin:0 0 8px}.lifecycle-fields[hidden]{display:none!important}
 .lifecycle-badge.frozen{gap:6px;padding:2px 8px;border:1px solid #e0e7ef;border-radius:20px;background:#f3f6fa;color:#5d7188;font-weight:500}
 .lifecycle-badge.frozen:before{box-sizing:border-box;width:6px;height:7px;border-left:2px solid currentColor;border-right:2px solid currentColor;border-radius:0;background:transparent;flex:none;opacity:.85}
-.project-card.lifecycle-frozen{border-style:solid}
-.project-card.lifecycle-frozen:not(.is-active-project,.selected,.match,.direction-root,.direction-match){border-color:#dbe3ec;background:#fff;box-shadow:inset 2px 0 0 #d3deea,var(--card-shadow,0 2px 8px #182f4b06)}
+.project-card.lifecycle-frozen{border-style:solid;background:#e8eef6}
+.project-card.lifecycle-frozen:not(.is-active-project,.selected,.match,.direction-root,.direction-match){border-color:#c9d5e4;box-shadow:var(--card-shadow,0 2px 8px #182f4b06)}
+.project-card.lifecycle-frozen:is(.is-active-project,.selected,.match,.direction-root,.direction-match){background:#dfe8f4}
+.project-card.lifecycle-frozen .card-title{color:#33445d}
+.project-card.lifecycle-frozen .card-note{color:#55657a}
 .project-card.lifecycle-frozen .card-eyebrow{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:9px}
-.result-event.lifecycle-frozen .result-record:not(.is-active-project){border-color:#e0e6ed}
+.result-event.lifecycle-frozen .result-record{background:#e8eef6;border-color:#c9d5e4}
+.result-event.lifecycle-frozen .result-record.is-active-project{background:#dfe8f4}
 .lifecycle-control:has(option[value="frozen"]:checked) select{color:#5d7188;background:#f5f8fc;border-color:#dbe3ec}
-@media(hover:hover){.project-card.lifecycle-frozen:not(.is-active-project,.selected,.match,.direction-root,.direction-match):hover{border-color:#b9cada;box-shadow:inset 2px 0 0 #bdcedf,0 3px 12px #24394f0a}}
+@media(hover:hover){.project-card.lifecycle-frozen:hover{background:#e2eaf4}.project-card.lifecycle-frozen:is(.is-active-project,.selected,.match,.direction-root,.direction-match):hover{background:#dfe8f4}.project-card.lifecycle-frozen:not(.is-active-project,.selected,.match,.direction-root,.direction-match):hover{border-color:#adc0d6;box-shadow:0 3px 12px #24394f0a}}
 @media(max-width:760px){.history-heading{gap:10px;margin-bottom:18px}.history-heading h2{font-size:17px}.history-filters{width:100%}.history-filters button{padding:6px 9px}}
