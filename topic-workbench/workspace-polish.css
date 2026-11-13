@@ -79,15 +79,15 @@ body.list-view .mobile-list {gap:22px;padding-top:28px;padding-bottom:56px;}
 
 /* Compact priorities and a quiet, directly editable comment stream. */
 .priority-editor:is([data-priority="P0"],[data-priority="P1"],[data-priority="P2"]){width:46px;min-width:46px;max-width:46px;flex:none;padding:2px 3px 2px 6px!important}
-.comment-pool #commentForm{padding:0;border:1px solid #e5e4df;border-radius:10px;background:#fafaf8;transition:border-color .15s}
-.comment-pool #commentForm:focus-within{border-color:#aaaFA8;background:#fff}
-.comment-pool #commentForm>.inline-field{margin:0}
-.comment-pool #commentForm>.inline-field>span{display:none}
-.comment-pool #commentForm .rich-editor{display:flex;flex-direction:column;border:0;background:transparent;border-radius:10px}
-.comment-pool #commentForm .rich-editor-input{order:0;min-height:100px;padding:16px 16px 12px;font-size:13px;line-height:1.8}
-.comment-pool #commentForm .rich-toolbar{order:1;padding:6px 10px;border-top:1px solid #eeede8;border-bottom:0;opacity:1;color:#8a8b83}
-.comment-pool #commentForm .rich-image-tools,.comment-pool #commentForm .rich-editor-message{order:2}
-.comment-pool #commentForm .comment-compose-actions{gap:12px;margin:0;padding:9px 14px 12px;border-top:1px solid #eeede8}
+.comment-pool :is(#commentForm,.comment-composer){padding:0;border:1px solid #e5e4df;border-radius:10px;background:#fafaf8;transition:border-color .15s}
+.comment-pool :is(#commentForm,.comment-composer):focus-within{border-color:#aaaFA8;background:#fff}
+.comment-pool :is(#commentForm,.comment-composer)>.inline-field{margin:0}
+.comment-pool :is(#commentForm,.comment-composer)>.inline-field>span{display:none}
+.comment-pool :is(#commentForm,.comment-composer) .rich-editor{display:flex;flex-direction:column;border:0;background:transparent;border-radius:10px}
+.comment-pool :is(#commentForm,.comment-composer) .rich-editor-input{order:0;min-height:100px;padding:16px 16px 12px;font-size:13px;line-height:1.8}
+.comment-pool :is(#commentForm,.comment-composer) .rich-toolbar{order:1;padding:6px 10px;border-top:1px solid #eeede8;border-bottom:0;opacity:1;color:#8a8b83}
+.comment-pool :is(#commentForm,.comment-composer) .rich-image-tools,.comment-pool :is(#commentForm,.comment-composer) .rich-editor-message{order:2}
+.comment-pool :is(#commentForm,.comment-composer) .comment-compose-actions{gap:12px;margin:0;padding:9px 14px 12px;border-top:1px solid #eeede8}
 .comment-pool .comment-compose-actions input{font-size:12px;padding:5px 0;color:#686b63}
 .comment-pool .comment-compose-actions button{display:flex;align-items:center;gap:9px;padding:6px 11px;border:1px solid #42483f;border-radius:6px;background:#42483f;color:#fff;font-size:12px;line-height:18px}
 .comment-pool .comment-compose-actions button:hover{background:#30382f;border-color:#30382f}
@@ -129,8 +129,8 @@ body.comment-sorting,body.comment-sorting *{cursor:grabbing!important;user-selec
 .comment-pool .comment-entry .rich-editor.is-editing .rich-editor-input{min-height:100px;padding:12px 14px}
 .comment-pool .comment-entry .rich-toolbar{position:static;width:auto;max-width:none;padding:7px 8px;border-bottom:1px solid #e8eaee;background:#fff;opacity:1;visibility:visible;pointer-events:auto}
 .comment-pool .comment-entry .rich-paste-hint{display:none}
-@media(max-width:760px){.comment-pool #commentForm .rich-editor-input,.comment-pool .comment-entry .rich-editor-input{font-size:16px}.comment-pool .comment-entry>.inline-field{margin-left:0}.comment-pool .comment-meta{gap:4px 9px}.comment-pool .comment-entry header>button{opacity:1}}
-@media(prefers-reduced-motion:reduce){.comment-pool #commentForm{transition:none}}
+@media(max-width:760px){.comment-pool :is(#commentForm,.comment-composer) .rich-editor-input,.comment-pool .comment-entry .rich-editor-input{font-size:16px}.comment-pool .comment-entry>.inline-field{margin-left:0}.comment-pool .comment-meta{gap:4px 9px}.comment-pool .comment-entry header>button{opacity:1}}
+@media(prefers-reduced-motion:reduce){.comment-pool :is(#commentForm,.comment-composer){transition:none}}
 
 @media (min-width:761px) and (max-width:1100px) {
   .app-header {gap:10px;}

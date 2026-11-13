@@ -286,8 +286,8 @@ textarea[data-autogrow] {resize:none;overflow-y:hidden;}
 .comment-pool {border-top:1px solid #eae7e1;padding-top:18px;margin:8px 0 24px;}
 .comment-pool .section-row {margin:0 7px 12px;}
 .comment-pool h3 {font-size:13px;color:#575149;}
-#commentForm {background:#faf9f6;border:1px solid #eeeae3;border-radius:6px;padding:5px;}
-#commentForm:focus-within {border-color:#b6c4cd;background:#fff;}
+:is(#commentForm,.comment-composer) {background:#faf9f6;border:1px solid #eeeae3;border-radius:6px;padding:5px;}
+:is(#commentForm,.comment-composer):focus-within {border-color:#b6c4cd;background:#fff;}
 .comment-draft {font-size:12px;background:transparent;min-height:74px;}
 .comment-draft:hover,.comment-draft:focus {border-color:transparent;box-shadow:none;}
 .comment-compose-actions {display:flex;gap:10px;justify-content:space-between;align-items:center;padding:3px 6px 6px;}

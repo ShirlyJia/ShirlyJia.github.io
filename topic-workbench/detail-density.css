@@ -44,10 +44,10 @@
 #detail .relation-row{padding:12px;margin:10px 0}
 #detail .material-row{padding:9px 10px;margin:8px 0}
 #detail .detail-section-additions{gap:12px;margin:18px 0}
-#detail #commentForm>.inline-field{margin:0}
-#detail .comment-pool #commentForm .rich-editor-input{min-height:44px;padding:10px 12px;font-size:13px}
-#detail .comment-pool #commentForm:not(:focus-within):not(:has(.rich-editor-input[data-empty="false"])) :is(.rich-toolbar,.comment-compose-actions){display:none}
-#detail .comment-pool #commentForm:focus-within .rich-editor-input,#detail .comment-pool #commentForm:has(.rich-editor-input[data-empty="false"]) .rich-editor-input{min-height:76px}
+#detail :is(#commentForm,.comment-composer)>.inline-field{margin:0}
+#detail .comment-pool :is(#commentForm,.comment-composer) .rich-editor-input{min-height:44px;padding:10px 12px;font-size:13px}
+#detail .comment-pool :is(#commentForm,.comment-composer):not(:focus-within):not(:has(.rich-editor-input[data-empty="false"])) :is(.rich-toolbar,.comment-compose-actions){display:none}
+#detail .comment-pool :is(#commentForm,.comment-composer):focus-within .rich-editor-input,#detail .comment-pool :is(#commentForm,.comment-composer):has(.rich-editor-input[data-empty="false"]) .rich-editor-input{min-height:76px}
 #detail .comment-pool .comment-entries{gap:12px;margin-top:14px}
 #detail .comment-pool .comment-entry{padding:11px 12px 10px}
 #detail .comment-pool .comment-entry>.inline-field{margin:6px 0 0 36px}
@@ -73,7 +73,7 @@
   #detail .detail-top{min-height:46px;padding:8px 18px}
   #detail .detail-body{padding:12px 20px max(32px,env(safe-area-inset-bottom))}
   #detail .inline-title textarea{font-size:21px;line-height:1.4}
-  #detail .rich-editor-input,#detail .comment-pool #commentForm .rich-editor-input,#detail .comment-pool .comment-entry .rich-editor-input{font-size:16px;line-height:1.75}
+  #detail .rich-editor-input,#detail .comment-pool :is(#commentForm,.comment-composer) .rich-editor-input,#detail .comment-pool .comment-entry .rich-editor-input{font-size:16px;line-height:1.75}
   #detail .detail-edit-properties{gap:8px 12px}
   #detail .detail-edit-properties .free-status{min-width:140px}
   #detail .detail-delivery-summary{grid-template-columns:minmax(0,1fr);gap:4px}
