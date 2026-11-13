@@ -1,4 +1,4 @@
-import {createCollaboration} from './collaboration.js?v=20261113-comment-pool';
+import {createCollaboration} from './collaboration.js?v=20261113-login-recovery';
 import {createCanvasEditor} from './canvas-editor.js?v=20261030-detail';
 import {canvasItemBounds, translateCanvasItem, restoreYellowNotes} from './canvas-items.js?v=20261030-detail';
 import {enrichProjectContent} from './project-content.js';

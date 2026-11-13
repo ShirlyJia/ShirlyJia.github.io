@@ -1,4 +1,5 @@
 import {collaborationConfig as config} from './collaboration-config.js';
+import {createIdentitySession} from './collaboration-session.js?v=20261113-login-recovery';
 import {richEditorMarkup,mountRichEditors,readRichEditor,richHTML,richHasContent,destroyRichEditors,flushRichEditors} from './rich-text.js?v=20261030-card-preview';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const key='topic-feishu-session-v1',proofKey='topic-feishu-login-proof';
@@ -8,25 +9,37 @@ const date=v=>new Date(v).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',
 const drafts=new Map();
 export function createCollaboration({notify=()=>{},onIdentity=()=>{},onLegacyPosted=()=>{},localOwner=false}={}){
  let user=null,token='',root=null,pid='',records=[],loading=false,ready=false,poll=0,editing=null,busy=false;
+ let loginBusy=false;
  const recordDrafts=new Map(),recordWrites=new Map();
+ const identity=createIdentitySession({storage:localStorage,key,fetchUser:async credential=>(await api('/api/me',{},credential)).user,onChange:(next,previous)=>{
+  const changed=JSON.stringify(next.user)!==JSON.stringify(previous.user);
+  if(changed)keepDraft();token=next.token;user=next.user;renderAccount();
+  if(ready&&changed){render();onIdentity();}
+ }});
  function isOwner(){return !config.enabled||localOwner||user?.role==='owner';}
- async function api(path,options={}){
-  let response;try {response=await fetch(config.origin+path,{...options,headers:{...(options.body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:'Bearer '+token}:{}),...options.headers},cache:'no-store',signal:AbortSignal.timeout(20000)});}catch{throw Error('协作服务暂时无法连接，内容仍保留在输入框中');}
-  let data;try{data=await response.json();}catch{throw Error('协作服务返回异常，请稍后重试');}
-  if(response.status===401){token='';user=null;localStorage.removeItem(key);renderAccount();onIdentity();}
+ async function api(path,options={},credential=token){
+  let response;try {response=await fetch(config.origin+path,{...options,headers:{...(options.body?{'Content-Type':'application/json'}:{}),...(credential?{Authorization:'Bearer '+credential}:{}),...options.headers},cache:'no-store',signal:AbortSignal.timeout(20000)});}catch{throw Error('登录或留言服务暂时无法连接，请稍后重试；输入内容已保留');}
+  let data;try{data=await response.json();}catch{throw Error(response.status===403?'登录服务被网络安全服务拦截，请稍后重试；当前画板和输入内容已保留':'协作服务返回异常，请稍后重试');}
+  if(response.status===401&&credential)identity.forget(credential);
   if(!response.ok)throw Object.assign(Error(data.error||'操作未完成'),{status:response.status});return data;
  }
  async function login(){
-  keepDraft();const verifier=base64(crypto.getRandomValues(new Uint8Array(32)));
-  sessionStorage.setItem(proofKey,JSON.stringify({verifier,createdAt:Date.now()}));
-  const back=new URL(location.href);back.hash='';if(pid)back.searchParams.set('project',pid);
-  const url=new URL(config.origin+'/auth/feishu/start');url.searchParams.set('return_to',back.href);url.searchParams.set('challenge',await hash(verifier));location.assign(url.href);
+  if(loginBusy)return;keepDraft();loginBusy=true;renderAccount();
+  try{
+   if(identity.hasCredential){await identity.refresh({force:true});if(identity.snapshot.status==='unavailable')throw identity.snapshot.error;if(user){notify('已使用 '+user.name+' 登录');return;}}
+   const verifier=base64(crypto.getRandomValues(new Uint8Array(32)));
+   const back=new URL(location.href);back.hash='';if(pid)back.searchParams.set('project',pid);
+   const result=await api('/api/auth/start',{method:'POST',body:JSON.stringify({return_to:back.href,challenge:await hash(verifier)})});
+   const auth=new URL(result.authorizeUrl);if(auth.origin!=='https://accounts.feishu.cn'||auth.pathname!=='/open-apis/authen/v1/authorize')throw Error('登录地址无效，请稍后重试');
+   sessionStorage.setItem(proofKey,JSON.stringify({verifier,createdAt:Date.now()}));location.assign(auth.href);
+  }finally{loginBusy=false;renderAccount();}
  }
  function renderAccount(){
   const el=document.getElementById('feishuAccount');if(!el)return;
-  el.innerHTML=user?'<span class="feishu-person">'+(user.avatar?'<img src="'+esc(user.avatar)+'" alt="" referrerpolicy="no-referrer">':'')+esc(user.name)+'</span><button data-feishu-logout title="退出飞书登录">退出</button>':'<button class="feishu-login" data-feishu-login>飞书登录</button>';
+  const checking=loginBusy||identity.snapshot.status==='checking',uncertain=identity.snapshot.status==='unavailable';
+  el.innerHTML=user?'<span class="feishu-person">'+(user.avatar?'<img src="'+esc(user.avatar)+'" alt="" referrerpolicy="no-referrer">':'')+esc(user.name)+'</span>'+(uncertain?'<button data-feishu-login title="登录状态暂未确认，点击重试">重新验证</button>':'')+'<button data-feishu-logout title="退出飞书登录">退出</button>':'<button class="feishu-login" data-feishu-login'+(checking?' disabled':'')+' title="'+esc(uncertain?'登录状态暂未确认，点击重试':'使用飞书账号登录')+'">'+(checking?'正在确认登录…':uncertain?'重试登录':'飞书登录')+'</button>';
   el.querySelector('[data-feishu-login]')?.addEventListener('click',()=>login().catch(e=>notify(e.message)));
-  el.querySelector('[data-feishu-logout]')?.addEventListener('click',async()=>{try{await api('/api/logout',{method:'POST',body:'{}'});}catch(e){notify(e.message);return;}keepDraft();token='';user=null;localStorage.removeItem(key);renderAccount();render();onIdentity();});
+  el.querySelector('[data-feishu-logout]')?.addEventListener('click',async()=>{try{await api('/api/logout',{method:'POST',body:'{}'});}catch(e){notify(e.message);return;}keepDraft();identity.forget(token);});
   document.body.classList.add('collaboration-enabled');document.body.classList.toggle('board-reader',!isOwner());
  }
  async function init(){
@@ -40,13 +53,15 @@ export function createCollaboration({notify=()=>{},onIdentity=()=>{},onLegacyPos
     sessionStorage.removeItem(proofKey);
     if(!proof||Date.now()-proof.createdAt>600000)throw Error('请从当前画板重新发起飞书登录');
     const result=await api('/api/auth/exchange',{method:'POST',body:JSON.stringify({code,verifier:proof.verifier})});
-    token=result.token;user=result.user;localStorage.setItem(key,JSON.stringify(result));notify('已使用 '+user.name+' 登录');
+    identity.accept(result);notify('已使用 '+user.name+' 登录');
    }else{
-    let saved;try{saved=JSON.parse(localStorage.getItem(key)||'null');}catch{}
-    if(saved?.expiresAt>Date.now()){token=saved.token;user=(await api('/api/me')).user;if(!user){token='';localStorage.removeItem(key);}}
+    await identity.refresh({force:true});
    }
-  }catch(error){token='';user=null;notify(error.message);}
+  }catch(error){notify(error.message);await identity.refresh({force:true});}
   ready=true;renderAccount();onIdentity();
+  window.addEventListener('storage',event=>{if(event.key===key||event.key===null)identity.refresh();});
+  window.addEventListener('focus',()=>identity.refresh());
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')identity.refresh();});
  }
  function keepDraft(){
   for(const record of records)if(recordDraft(record.id))commitRecord(record.id);
