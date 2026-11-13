@@ -1,4 +1,4 @@
-import {createCollaboration} from './collaboration.js?v=20261113-simple';
+import {createCollaboration} from './collaboration.js?v=20261113-freeze-comment';
 import {createCanvasEditor} from './canvas-editor.js?v=20261030-detail';
 import {canvasItemBounds, translateCanvasItem, restoreYellowNotes} from './canvas-items.js?v=20261030-detail';
 import {enrichProjectContent} from './project-content.js';
@@ -17,6 +17,7 @@ import {showBoardCopies} from './board-publication.js';
 import {loadSharedBoard, mountAutoSync, prepareLiveStorage} from './auto-sync.js?v=20261105-pairing2';
 import {richEditorMarkup, mountRichEditors, readRichEditor, richHTML, richHasContent, flushRichEditors, destroyRichEditors} from './rich-text.js?v=20261030-card-preview';
 import {frozenNote,saveFrozenNote} from './frozen-note.js';
+import {freezeCommentPickerMarkup,mountFreezeCommentPickers} from './freeze-comment-picker.js';
 import {projectLifecycle,isHistoryProject,lifecycleLabels,lifecycleField,lifecycleConclusionLabel,lifecycleDate} from './project-lifecycle.js';
 import {readProjectFlow, setCurrentFlowNode, setProjectClosed, setProjectLifecycle} from './project-flow.js';
 import {flowMarkup, mountProjectFlow} from './project-flow-view.js';
@@ -437,7 +438,7 @@ function projectDetailSections(p,nodes){
   const blocks=[{key:'description',className:'problem-statement',body:inlineText('description',detailSectionTitle(p,'description'),displayDescription(p.description),{rows:4,autogrow:true,placeholder:'描述需要解决的问题、场景与影响…'})}];
   if(projectLifecycle(p)==='completed')blocks.push({key:'result',className:'result-editor',body:inlineText('result','结项结论',p.result,{rows:3,autogrow:true,placeholder:'写下解决了什么问题，或最终作出的决定…'})+inlineText('impact','影响与证据说明',p.impact||'',{rows:2,autogrow:true,placeholder:'数据变化、落地影响、验证边界…'})+inlineText('closedAt','结束日期',p.closedAt||'',{type:'date'})});
   const life=projectLifecycle(p),freeze=frozenNote(p);
-  if(['terminated','frozen'].includes(life))blocks.push({key:'disposition',className:'disposition-editor',body:inlineText(lifecycleField(p),lifecycleConclusionLabel(p),life==='frozen'?freeze.text:p.terminationReason??p.result??'',{rows:3,autogrow:true,html:life==='frozen'?freeze.html:undefined,placeholder:'记录作出这个决定的原因…'})+(life==='frozen'?'':inlineText('impact','已有进展与可复用信息',p.impact||'',{rows:2,autogrow:true}))+inlineText(life==='frozen'?'frozenAt':'closedAt',life==='frozen'?'冻结日期':'终止日期',lifecycleDate(p)||'',{type:'date'})});
+  if(['terminated','frozen'].includes(life))blocks.push({key:'disposition',className:'disposition-editor',action:life==='frozen'&&canMaintain()?'<button type="button" class="text-action" data-select-freeze-comment="'+esc(p.id)+'">选择已有评论</button>':'',body:inlineText(lifecycleField(p),lifecycleConclusionLabel(p),life==='frozen'?freeze.text:p.terminationReason??p.result??'',{rows:3,autogrow:true,html:life==='frozen'?freeze.html:undefined,placeholder:'记录作出这个决定的原因…'})+(life==='frozen'?'':inlineText('impact','已有进展与可复用信息',p.impact||'',{rows:2,autogrow:true}))+inlineText(life==='frozen'?'frozenAt':'closedAt',life==='frozen'?'冻结日期':'终止日期',lifecycleDate(p)||'',{type:'date'})});
   (p.customSections||[]).forEach(section=>blocks.push({key:'custom:'+section.id,className:'custom-section',body:inlineText('body','栏目内容',section.body,{section:section.id,rows:3,autogrow:true,placeholder:'记录这个栏目下的内容…'})}));
   blocks.push({key:'comments',className:'comment-pool',body:commentPoolMarkup(p)},...inlineRelations(p.id));const history=directionHistory(p);if(history)blocks.push(history);
   if(nodes.length)blocks.push({key:'plans',body:nodes.map(node=>inlinePlan(node,nodes.length)).join(''),action:actionButton('＋ 计划','inline-node-add')});
@@ -532,14 +533,14 @@ function field(name,label,value='',type='text',extra=''){return '<label class="f
 function area(name,label,value='',rows=3){return '<label class="form-field"><span>'+label+'</span><textarea name="'+name+'" rows="'+rows+'">'+esc(value)+'</textarea></label>';}
 function selectField(name,label,value,options){return '<label class="form-field"><span>'+label+'</span><select name="'+name+'">'+options.map(([v,t])=>'<option value="'+esc(v)+'"'+(v===value?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select></label>';}
 function check(name,label,value){return '<label class="check-field"><input name="'+name+'" type="checkbox"'+(value?' checked':'')+'>'+label+'</label>';}
-function editor(title,html,onSubmit,button='保存'){if(!canMaintain()){toast('画板由维护者调整');return;}lastEditor=onSubmit;destroyRichEditors($('editorFields'));$('editorTitle').textContent=title;$('editorFields').innerHTML=html;mountRichEditors($('editorFields'),{onError:toast});$('editorSubmit').textContent=button;$('editorSubmit').disabled=false;$('editorError').hidden=true;if(!$('editorDialog').open)$('editorDialog').showModal();}
+function editor(title,html,onSubmit,button='保存'){if(!canMaintain()){toast('画板由维护者调整');return;}lastEditor=onSubmit;destroyRichEditors($('editorFields'));$('editorTitle').textContent=title;$('editorFields').innerHTML=html;mountRichEditors($('editorFields'),{onError:toast});mountFreezeCommentPickers($('editorFields'),{getProject:id=>byId[id],loadRecords:collaboration?.enabled?id=>collaboration.listRecords(id):null,onChoose:option=>{const input=$('editorFields').querySelector('[data-rich-name="freezeReason"]');if(!input||!canMaintain())return false;input.innerHTML=richHTML(option.html,option.text);input.dispatchEvent(new Event('input',{bubbles:true}));input.focus({preventScroll:true});input.scrollIntoView({block:'nearest'});}});$('editorSubmit').textContent=button;$('editorSubmit').disabled=false;$('editorError').hidden=true;if(!$('editorDialog').open)$('editorDialog').showModal();}
 function richArea(name,label,value='',html=''){return '<div class="form-field"><span>'+esc(label)+'</span>'+richEditorMarkup({value,html,label,placeholder:'输入内容，或直接粘贴图片…',attrs:'data-rich-name="'+esc(name)+'"'})+'</div>';}
 function lifecycleFields(kind,p={}){
   const freeze=frozenNote(p);
   return selectField('recordLifecycle','记录为',kind,['completed','terminated','frozen'].map(value=>[value,lifecycleLabels[value]]))+
     '<div class="lifecycle-fields" data-lifecycle-fields="completed"'+(kind!=='completed'?' hidden':'')+'>'+richArea('result','结项结论（必填）',p.result,p.richText?.result)+'</div>'+
     '<div class="lifecycle-fields" data-lifecycle-fields="terminated"'+(kind!=='terminated'?' hidden':'')+'>'+richArea('terminationReason','终止原因与结论',p.terminationReason??(projectLifecycle(p)==='terminated'?p.result:''),p.richText?.terminationReason??(projectLifecycle(p)==='terminated'?p.richText?.result:''))+'</div>'+
-    '<div class="lifecycle-fields" data-lifecycle-fields="frozen"'+(kind!=='frozen'?' hidden':'')+'><p class="lifecycle-form-hint">保留在画板原位置，恢复后继续跟进。</p>'+richArea('freezeReason','冻结原因',freeze.text,freeze.html)+'</div>'+
+    '<div class="lifecycle-fields" data-lifecycle-fields="frozen"'+(kind!=='frozen'?' hidden':'')+'><p class="lifecycle-form-hint">保留在画板原位置，恢复后继续跟进。</p>'+freezeCommentPickerMarkup(p.id)+richArea('freezeReason','冻结原因',freeze.text,freeze.html)+'</div>'+
     '<div class="lifecycle-fields" data-lifecycle-fields="completed terminated"'+(kind==='frozen'?' hidden':'')+'>'+richArea('impact','影响与可复用信息',p.impact,p.richText?.impact)+'</div>'+field('recordDate','记录日期',(projectLifecycle(p)===kind?(kind==='frozen'?p.frozenAt:p.closedAt):'')||todayDate(),'date','required');
 }
 function applyLifecycleForm(project,form){
@@ -554,6 +555,7 @@ function lifecycleEditor(pid,kind){
   const p=byId[pid];if(!p)return;
   editor('更新项目状态',lifecycleFields(kind,p),form=>{const ok=mutate(()=>applyLifecycleForm(byId[pid],form),'项目状态已更新',{rollbackOnSaveFailure:true});if(ok&&state.display==='results')workbench?.setHistoryFilter(form.get('recordLifecycle'));return ok;});
 }
+document.addEventListener('click',e=>{const button=e.target.closest('[data-select-freeze-comment]');if(!button||!canMaintain()||!flushInline())return;lifecycleEditor(button.dataset.selectFreezeComment,'frozen');const picker=$('editorFields').querySelector('[data-freeze-comment-picker]');if(picker)picker.open=true;});
 document.addEventListener('change',e=>{if(e.target.matches('[name="recordLifecycle"]'))$('editorFields').querySelectorAll('[data-lifecycle-fields]').forEach(section=>section.hidden=!section.dataset.lifecycleFields.split(' ').includes(e.target.value));});
 function projectEditor(pid=null){
   const creatingHistory=!pid&&state.display==='results';

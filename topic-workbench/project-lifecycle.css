@@ -17,6 +17,22 @@
 .lifecycle-log li{position:relative;margin:0 0 10px}.lifecycle-log li:before{content:'';position:absolute;width:5px;height:5px;border-radius:50%;background:#c5c8c8;left:-20px;top:5px}
 .lifecycle-log time{margin-right:8px;color:#b65750}.lifecycle-log p{margin:4px 0;white-space:pre-wrap;color:#777}
 .lifecycle-form-hint{font-size:11px;color:#7a7a74;margin:0 0 8px}.lifecycle-fields[hidden]{display:none!important}
+.freeze-comment-picker{margin:8px 0 14px;font-size:12px}
+.freeze-comment-picker>summary{cursor:pointer;list-style:none;color:#607a9d;padding:5px 0;width:max-content}
+.freeze-comment-picker>summary::-webkit-details-marker{display:none}
+.freeze-comment-picker>summary:before{content:'›';display:inline-block;margin-right:6px;transition:transform .15s}
+.freeze-comment-picker[open]>summary:before{transform:rotate(90deg)}
+.freeze-comment-options{max-height:250px;overflow-y:auto;border:1px solid #e3e8ef;border-radius:7px;background:#fafbfc;margin-top:5px;padding:4px}
+.freeze-comment-option{display:block;width:100%;padding:10px 11px;text-align:left;border-radius:5px;white-space:normal}
+.freeze-comment-option+.freeze-comment-option{border-top:1px solid #edf0f4}
+.freeze-comment-option:hover,.freeze-comment-option:focus-visible{background:#eaf0f8}
+.freeze-comment-heading{display:flex;align-items:baseline;gap:10px}
+.freeze-comment-heading strong{flex:1;min-width:0;overflow-wrap:anywhere;font-size:12px;font-weight:550}
+.freeze-comment-heading small{font-size:10px;color:#8a929e;flex:none}
+.freeze-comment-heading time{color:#b65750;margin-left:4px}
+.freeze-comment-preview{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;color:#737d8a;font-size:12px;line-height:1.6;margin-top:4px;white-space:pre-wrap}
+.freeze-comment-status{font-size:12px;color:#858d98;margin:8px;padding:2px}
+.freeze-comment-status button{font-size:12px;color:#607a9d;padding:2px 5px}
 .lifecycle-badge.frozen{gap:6px;padding:2px 8px;border:1px solid #e0e7ef;border-radius:20px;background:#f3f6fa;color:#5d7188;font-weight:500}
 .lifecycle-badge.frozen:before{box-sizing:border-box;width:6px;height:7px;border-left:2px solid currentColor;border-right:2px solid currentColor;border-radius:0;background:transparent;flex:none;opacity:.85}
 .project-card.lifecycle-frozen{border-style:solid;background:#e8eef6}

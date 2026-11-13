@@ -1,5 +1,13 @@
 import {richHTML,richHasContent} from './rich-text.js?v=20261030-card-preview';
 import {projectLifecycle} from './project-lifecycle.js';
+import {orderedComments} from './comment-order.js';
+
+/** Copy the selected content, keeping the decision independent of later comment edits. */
+export function freezeCommentOptions(project={},sharedRecords=[]) {
+  const shared=sharedRecords.map(record=>({id:'shared:'+record.id,title:record.title||'留言',author:record.actor?.name||'',createdAt:record.createdAt||'',text:record.body||'',html:record.html||''}));
+  const local=orderedComments(project.comments||[]).map(comment=>({id:'local:'+comment.id,title:comment.author||'随手记录',author:'',createdAt:comment.createdAt||'',text:comment.body||'',html:comment.richText?.body||''}));
+  return [...shared,...local].filter(richHasContent);
+}
 
 /** Present older optional notes in one editable field without deleting their originals. */
 export function frozenNote(project={}) {

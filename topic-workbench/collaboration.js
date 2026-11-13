@@ -101,5 +101,6 @@ export function createCollaboration({notify=()=>{},onIdentity=()=>{},localOwner=
   container.querySelectorAll('[data-flow-current]').forEach(el=>el.disabled=true);
  }
  function markup(){return config.enabled?'<div class="collaboration" data-collaboration></div>':'';}
- return {init,isOwner,markup,mount,applyReadonly,keepDraft,login,get user(){return user;},get enabled(){return config.enabled;},get ready(){return ready;}};
+ async function listRecords(project){return config.enabled?(await api('/api/projects/'+encodeURIComponent(project)+'/records')).records:[];}
+ return {init,isOwner,markup,mount,applyReadonly,keepDraft,login,listRecords,get user(){return user;},get enabled(){return config.enabled;},get ready(){return ready;}};
 }
