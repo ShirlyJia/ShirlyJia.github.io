@@ -6,7 +6,7 @@
 .history-filters button span{font-size:11px;opacity:.65}
 .lifecycle-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 7px;border-radius:4px;font-size:10px;line-height:1.5;white-space:nowrap;font-weight:500;color:#64748b;background:#f1f4f8}
 .lifecycle-badge:before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}
-.lifecycle-badge.completed{color:#338353;background:#edf6ef}.lifecycle-badge.terminated{color:#85613c;background:#f7f1e9}.lifecycle-badge.frozen{color:#607a9d;background:#edf2f8}
+.lifecycle-badge.completed{color:#338353;background:#edf6ef}.lifecycle-badge.terminated{color:#85613c;background:#f7f1e9}
 .result-record>header{flex-wrap:wrap}.result-record>header h3{flex:1 1 220px}
 .result-event.lifecycle-terminated:before{background:#b48b63}.result-event.lifecycle-frozen:before{background:#8a9eb9}
 .detail-edit-properties .lifecycle-control{flex:0 0 auto;min-width:86px}
@@ -33,16 +33,29 @@
 .freeze-comment-preview{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;color:#737d8a;font-size:12px;line-height:1.6;margin-top:4px;white-space:pre-wrap}
 .freeze-comment-status{font-size:12px;color:#858d98;margin:8px;padding:2px}
 .freeze-comment-status button{font-size:12px;color:#607a9d;padding:2px 5px}
-.lifecycle-badge.frozen{gap:6px;padding:2px 8px;border:1px solid #e0e7ef;border-radius:20px;background:#f3f6fa;color:#5d7188;font-weight:500}
-.lifecycle-badge.frozen:before{box-sizing:border-box;width:6px;height:7px;border-left:2px solid currentColor;border-right:2px solid currentColor;border-radius:0;background:transparent;flex:none;opacity:.85}
-.project-card.lifecycle-frozen{border-style:solid;background:#e8eef6}
-.project-card.lifecycle-frozen:not(.is-active-project,.selected,.match,.direction-root,.direction-match){border-color:#c9d5e4;box-shadow:var(--card-shadow,0 2px 8px #182f4b06)}
-.project-card.lifecycle-frozen:is(.is-active-project,.selected,.match,.direction-root,.direction-match){background:#dfe8f4}
-.project-card.lifecycle-frozen .card-title{color:#33445d}
-.project-card.lifecycle-frozen .card-note{color:#55657a}
-.project-card.lifecycle-frozen .card-eyebrow{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:9px}
-.result-event.lifecycle-frozen .result-record{background:#e8eef6;border-color:#c9d5e4}
-.result-event.lifecycle-frozen .result-record.is-active-project{background:#dfe8f4}
-.lifecycle-control:has(option[value="frozen"]:checked) select{color:#5d7188;background:#f5f8fc;border-color:#dbe3ec}
-@media(hover:hover){.project-card.lifecycle-frozen:hover{background:#e2eaf4}.project-card.lifecycle-frozen:is(.is-active-project,.selected,.match,.direction-root,.direction-match):hover{background:#dfe8f4}.project-card.lifecycle-frozen:not(.is-active-project,.selected,.match,.direction-root,.direction-match):hover{border-color:#adc0d6;box-shadow:0 3px 12px #24394f0a}}
+/* A single frost treatment follows the project from its card into the detail pane. */
+.lifecycle-badge.frozen{gap:5px;padding:2px 7px;border:0;border-radius:5px;background:#dfeef4;color:#496b7d;font-size:10px;font-weight:550;letter-spacing:.025em}
+.lifecycle-badge.frozen:before{width:11px;height:11px;border:0;border-radius:0;background:currentColor;flex:none;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cg fill='none' stroke='black' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 1.5v13M2.4 4.75l11.2 6.5M2.4 11.25l11.2-6.5M6 2.5l2 2 2-2M6 13.5l2-2 2 2M2.3 7l2.8-.7-.7-2.8M11.6 12.5l-.7-2.8 2.8-.7M4.4 12.5l.7-2.8-2.8-.7M13.7 7l-2.8-.7.7-2.8'/%3E%3C/g%3E%3C/svg%3E") center/contain no-repeat}
+.project-card.lifecycle-frozen{border-style:solid;background:#eef5f8;box-shadow:inset 0 1px 0 #ffffffb3,0 2px 4px #284b5d05,0 6px 18px #284b5d06}
+.project-card.lifecycle-frozen:not(.is-active-project,.selected,.match,.direction-root,.direction-match){border-color:#ccdee7}
+.project-card.lifecycle-frozen:is(.is-active-project,.selected,.match,.direction-root,.direction-match){background:#e4f0f6}
+.project-card.lifecycle-frozen .card-title{color:#334f60}
+.project-card.lifecycle-frozen .card-note{color:#58717f}
+.project-card.lifecycle-frozen .card-eyebrow{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.result-event.lifecycle-frozen .result-record{background:#eef5f8;border-color:#ccdee7}
+.result-event.lifecycle-frozen .result-record.is-active-project{background:#e4f0f6}
+.history-filters button[data-history-filter="frozen"].active{background:#dfeef4;color:#496b7d}
+.lifecycle-control:has(option[value="frozen"]:checked) select{color:#496b7d;background:#dfeef4;border-color:transparent;border-radius:5px;font-weight:500}
+#detail[data-lifecycle="frozen"]{background:#f2f7fa;border-left-color:#cddfe8;box-shadow:-8px 0 28px #284b5d0a}
+#detail[data-lifecycle="frozen"] .detail-top{background:#e9f2f7;border-bottom-color:#d4e3eb;color:#647f8e}
+#detail[data-lifecycle="frozen"] .detail-top button:hover{background:#dcebf3;color:#35596e}
+#detail[data-lifecycle="frozen"] :is(.inline-title textarea,.project-section-head>.section-title-input){color:#334f60}
+#detail[data-lifecycle="frozen"] .rich-editor-input{color:#455f70}
+#detail[data-lifecycle="frozen"] :is(.project-content-section,.detail-section,.detail-tags){border-color:#d9e6ed}
+#detail[data-lifecycle="frozen"] .rich-collapsible:not(.is-editing):hover{background:#e7f0f6}
+#detail[data-lifecycle="frozen"] .rich-collapsible.is-editing{background:#fff;border-color:#93b2c4;box-shadow:0 0 0 2px #93b2c412}
+#detail[data-lifecycle="frozen"] .disposition-editor{padding:12px 14px;border:1px solid #d3e3ec;border-radius:9px;background:#eaf3f8}
+#detail[data-lifecycle="frozen"] .comment-entry{border-color:#d9e6ee;background:#fafdff;box-shadow:0 1px 3px #284b5d04}
+#detail[data-lifecycle="frozen"] :is(#commentForm,.comment-composer){border-color:#d9e6ee;background:#edf5f9}
+@media(hover:hover){.project-card.lifecycle-frozen:hover{background:#e9f3f8}.project-card.lifecycle-frozen:is(.is-active-project,.selected,.match,.direction-root,.direction-match):hover{background:#e4f0f6}.project-card.lifecycle-frozen:not(.is-active-project,.selected,.match,.direction-root,.direction-match):hover{border-color:#abc8d8;box-shadow:inset 0 1px 0 #ffffffb3,0 4px 14px #284b5d0c}}
 @media(max-width:760px){.history-heading{gap:10px;margin-bottom:18px}.history-heading h2{font-size:17px}.history-filters{width:100%}.history-filters button{padding:6px 9px}}

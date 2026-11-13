@@ -118,7 +118,7 @@ function tagMarkup(id,removable=false){const t=tagById[id];if(!t)return '';retur
 function cardMarkup(p,{instance=null}={}){
   const nodes=visibleNodes(p),node=nodes.find(n=>n.focus)||nodes.find(n=>n.owner||n.targetDate||n.estimatedDate),children=childProjectRows(p.id,state);
   const expandable=p.kind==='direction',expanded=expandable&&(instance?instance.childrenExpanded===true:expandedDirectionTrees.has(p.id));
-  const priority=displayPriority(p),eyebrow=[p.kind==='direction'?'<button type="button" class="direction-card-focus" data-focus-direction="'+esc(p.id)+'" aria-label="聚焦方向：'+esc(p.name)+'" aria-pressed="'+(state.focusDirection===p.id)+'" title="聚焦此方向及关联小项目">'+directionIcon+'方向</button>':'',projectLifecycle(p)==='frozen'?'<span class="lifecycle-badge frozen">已冻结</span>':'',esc(p.outcome)].filter(Boolean).join(' · ');
+  const priority=displayPriority(p),eyebrow=[p.kind==='direction'?'<button type="button" class="direction-card-focus" data-focus-direction="'+esc(p.id)+'" aria-label="聚焦方向：'+esc(p.name)+'" aria-pressed="'+(state.focusDirection===p.id)+'" title="聚焦此方向及关联小项目">'+directionIcon+'方向</button>':'',projectLifecycle(p)==='frozen'?'<span class="lifecycle-badge frozen">'+lifecycleLabels.frozen+'</span>':'',esc(p.outcome)].filter(Boolean).join(' · ');
   const actions=instance?'<div class="card-placement-actions" role="group" aria-label="此处卡片操作">'+
     '<button type="button" class="card-copy" data-copy-instance="'+esc(instance.id)+'" data-hint="复制到画板" aria-keyshortcuts="Control+D Meta+D" aria-label="复制'+esc(p.name)+'到画板"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M13 5V3H3v10h2"/></svg></button>'+
     '<button type="button" class="card-remove-reference" data-remove-instance="'+esc(instance.id)+'" data-hint="移除此处引用" aria-label="移除此处引用"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M6.5 10h7" stroke-linecap="round"/></svg></button></div>':'';
@@ -234,7 +234,7 @@ function renderDirectionGather(target){
   const active=model.active.filter(r=>matchesContent(r.project)),frozen=model.frozen.filter(r=>matchesContent(r.project)),closed=model.closed.filter(r=>matchesContent(r.project));
   const narrowed=active.length+frozen.length+closed.length!==model.rows.length;
   $('gatherTitle').innerHTML='<span class="direction-focus-heading">'+directionIcon+'主方向聚焦</span><button type="button" class="direction-focus-title" data-open="'+esc(model.direction.id)+'" aria-label="查看主方向：'+esc(model.direction.name)+'">'+esc(model.direction.name)+'<span aria-hidden="true">↗</span></button>';
-  $('gatherSummary').textContent=(isClosedProject(model.direction)?'方向已结束 · ':'')+model.active.length+' 项推进中'+(model.frozen.length?' · '+model.frozen.length+' 项冻结':'')+(model.closed.length?' · '+model.closed.length+' 项已结束':'')+(narrowed?' · 筛选显示 '+(active.length+frozen.length+closed.length)+' 项':'');
+  $('gatherSummary').textContent=(isClosedProject(model.direction)?'方向已结束 · ':'')+model.active.length+' 项推进中'+(model.frozen.length?' · '+model.frozen.length+' Frozen':'')+(model.closed.length?' · '+model.closed.length+' 项已结束':'')+(narrowed?' · 筛选显示 '+(active.length+frozen.length+closed.length)+' 项':'');
   function tree(rows){
     const list=document.createElement('div');list.className='direction-focus-tree';list.setAttribute('role','list');list.setAttribute('aria-label','方向关联项目');
     for(const row of rows){
@@ -509,7 +509,7 @@ function openDetail(pid,instanceId=null,resetScroll=true){
   if(flowEditor?.flush()===false)return;
   if(state.detail&&state.detail!==pid&&!flushInline())return;
   collaboration?.keepDraft();
-  const p=byId[pid];if(!p)return;const scroll=$('detailBody').scrollTop;state.detail=pid;state.detailInstance=instanceId||null;
+  const p=byId[pid];if(!p)return;const scroll=$('detailBody').scrollTop;state.detail=pid;state.detailInstance=instanceId||null;$('detail').dataset.lifecycle=projectLifecycle(p);
   const instance=state.instances.find(i=>i.id===instanceId&&i.pid===pid),nodes=visibleNodes(p);
   const detailBlocks=projectDetailSections(p,nodes),availableSections=detailBlocks.map(block=>block.key);
   const additions=actionButton('新栏目','section-add')+actionButton('计划','inline-node-add')+actionButton('资料链接','material-add')+actionButton('小项目','children-show')+actionButton('所属主项目','relation-add-child')+actionButton('放到其他画板分组','reference')+(instance?actionButton('本处备注与重点','placement',instance.id):'')+detailRestoreMenu(p,availableSections);

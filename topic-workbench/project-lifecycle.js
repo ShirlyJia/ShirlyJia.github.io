@@ -1,5 +1,5 @@
 /** Project disposition is independent of priority, free-form outcome and board placement. */
-export const lifecycleLabels = Object.freeze({active:'推进中',completed:'已完成',terminated:'已终止',frozen:'已冻结'});
+export const lifecycleLabels = Object.freeze({active:'推进中',completed:'已完成',terminated:'已终止',frozen:'Frozen'});
 const resolved = new Set(['已解决','已交付','已完成']);
 const stopped = new Set(['已结束未解决','停止推进','不再推进','暂停终止']);
 export function projectLifecycle(project) {

@@ -46,10 +46,10 @@ export function resultsTimelineMarkup(data, matches=()=>true, filter='all') {
   const closed = data.projects.filter(isHistoryProject);
   const rows = closed.filter(matches).filter(p=>filter==='all'||projectLifecycle(p)===filter).map(project=>({project,date:closingDay(lifecycleDate(project))}))
     .sort((a,b)=>b.date.localeCompare(a.date)||a.project.name.localeCompare(b.project.name,'zh-CN')||a.project.id.localeCompare(b.project.id));
-  const options=[['all','全部'],['completed','已完成'],['terminated','已终止'],['frozen','已冻结']];
+  const options=[['all','全部'],['completed','已完成'],['terminated','已终止'],['frozen',lifecycleLabels.frozen]];
   const heading = '<div class="history-heading"><h2>项目时间线</h2><div class="history-filters" role="group" aria-label="历史项目状态">'+options.map(([value,label])=>'<button type="button" data-history-filter="'+value+'" class="'+(value===filter?'active':'')+'" aria-pressed="'+(value===filter)+'">'+label+'<span>'+closed.filter(p=>matches(p)&&(value==='all'||projectLifecycle(p)===value)).length+'</span></button>').join('')+'</div></div>';
   if (!rows.length) return heading + (closed.length
     ? '<div class="view-empty"><strong>没有匹配的记录</strong><p>切换状态或清除筛选后查看。</p></div>'
-    : '<div class="view-empty"><strong>还没有历史记录</strong><p>已完成、已终止和已冻结的项目都会留在这里。</p></div>');
+    : '<div class="view-empty"><strong>还没有历史记录</strong><p>结项、终止或暂时搁置的项目都会留在这里。</p></div>');
   return heading + '<ol class="result-timeline" aria-label="按状态记录日期从近到远">'+rows.map(({project,date})=>entryMarkup(project,date,data)).join('')+'</ol>';
 }

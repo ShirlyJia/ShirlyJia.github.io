@@ -12,7 +12,7 @@ function label(state,today,node) {
     return state.calendarComplete?'已交付':'已交付 · 工作日历待补全';
   }
   if(state.kind==='closed')return '项目已结束';
-  if(state.kind==='frozen')return '项目已冻结';
+  if(state.kind==='frozen')return 'Frozen';
   if(node?.delivery&&!node.dateConfirmed)return '已撤回确认';
   if(state.kind==='scheduled'){
     if(!state.calendarComplete)return state.date<today?'到期未交付 · 工作日历待补全':'工作日历待补全';
