@@ -1,4 +1,4 @@
-import {createCollaboration} from './collaboration.js?v=20261112-feishu';
+import {createCollaboration} from './collaboration.js?v=20261113-simple';
 import {createCanvasEditor} from './canvas-editor.js?v=20261030-detail';
 import {canvasItemBounds, translateCanvasItem, restoreYellowNotes} from './canvas-items.js?v=20261030-detail';
 import {enrichProjectContent} from './project-content.js';
@@ -90,7 +90,7 @@ function scheduleViewSave() {
 function restoreData(data) {const {tags,...rest}=data;state = {...state,...rest,canvasItems:data.canvasItems||[],tagDefinitions:tags}; indexData();}
 function indexData() {projects=state.projects; byId=Object.fromEntries(projects.map(p=>[p.id,p]));tagById=Object.fromEntries(state.tagDefinitions.map(t=>[t.id,t]));}
 function mutate(fn, message='', options={}) {
-  if(!canMaintain()){toast('画板与项目结构由维护者调整；可在团队记录中补充内容');return false;}
+  if(!canMaintain()){toast('画板与项目由维护者调整；登录后可在评论池留言');return false;}
   if(!flushRichEditors($('detailBody')))return false;
   if(canvasEditor?.flush()===false)return false;
   const before=clone(documentData());
@@ -798,7 +798,7 @@ $('tagDialog').addEventListener('cancel',e=>{if(!tagEditor.flush())e.preventDefa
 $('newTagColorControl').innerHTML=colorPickerMarkup('#8c8981','data-new-tag-color','new','标签颜色',{inputId:'newTagColor'});
 for(const [id,edge] of [['bringFrameFront','front'],['sendFrameBack','back']])$(id).addEventListener('click',()=>{if(!state.selectedFrames.size)return;mutate(()=>state.frames=moveFramesToEdge(state.frames,state.selectedFrames,edge),'',{keepDetail:true,rollbackOnSaveFailure:true});});
 mountDetailResize({panel:$('detail'),handle:$('detailResize'),container:document.querySelector('.workspace'),key:storageKey('topic-workbench-detail-width'),onResize:()=>{document.querySelector('.app-shell').style.setProperty('--detail-width',$('detail').style.getPropertyValue('--detail-width'));if(state?.detail)resizeInlineFields();}});
-bindInlineEditing();bindProjectContent();bindHoverMenus();bindDeliveryActions();$('jumpComments').addEventListener('click',()=>{if(!flushInline())return;const p=byId[state.detail];if(p&&detailLayout(p).hidden.includes('comments'))mutate(()=>setDetailSectionHidden(p,'comments',false));$('commentForm')?.scrollIntoView({block:'center'});$('commentForm')?.querySelector('[data-inline="commentDraft"]').focus({preventScroll:true});});$('detailSaveStatus').addEventListener('click',()=>{flushInline();save(false);});
+bindInlineEditing();bindProjectContent();bindHoverMenus();bindDeliveryActions();$('jumpComments').addEventListener('click',()=>{if(!flushInline())return;const p=byId[state.detail];if(p&&detailLayout(p).hidden.includes('comments'))mutate(()=>setDetailSectionHidden(p,'comments',false));const composer=$('detailBody').querySelector('.collaboration [data-collab-compose],.collaboration .collab-signin')||$('commentForm');composer?.scrollIntoView({block:'center',behavior:'smooth'});if(!collaboration?.enabled)composer?.querySelector('[data-inline="commentDraft"]').focus({preventScroll:true});});$('detailSaveStatus').addEventListener('click',()=>{flushInline();save(false);});
 $('snapshots').addEventListener('click',snapshotsPanel);$('reviewIssues').addEventListener('click',reviewPanel);
 document.addEventListener('click',e=>{const b=e.target.closest('[data-snapshot-read],[data-snapshot-export],[data-snapshot-delete],[data-review-project]');if(!b)return;try{if(b.hasAttribute('data-snapshot-read'))snapshotPreview(b.dataset.snapshotRead);if(b.hasAttribute('data-snapshot-export'))storage.download(snapshots.export(b.dataset.snapshotExport));if(b.hasAttribute('data-snapshot-delete')){const id=b.dataset.snapshotDelete;editor('删除快照','<p>仅删除这份历史快照，当前项目和布局保留。</p>',()=>{snapshots.remove(id);toast('快照已删除');},'确认删除');}if(b.hasAttribute('data-review-project')){$('editorDialog').close();openDetail(b.dataset.reviewProject);}}catch(error){toast(error.message);}});
 
