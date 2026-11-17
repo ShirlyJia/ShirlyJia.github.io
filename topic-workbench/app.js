@@ -1,4 +1,4 @@
-import {applyViewerMode,removeRetiredSession,recoverCommentDrafts} from './viewer-mode.js';
+import {applyViewerMode,removeRetiredSession} from './viewer-mode.js';
 import {buildSearchIndex,matchesKeywords} from './global-search.js';
 import {mountGlobalSearch} from './global-search-view.js';
 import {createMeetingStore,loadMeetingStore} from './meetings.js?v=20261117-global-search';
@@ -749,7 +749,7 @@ function bindProjectContent(){
   mountCommentSorting($('detailBody'),{getComments:()=>byId[state.detail]?.comments||[],beforeMove:flushInline,onMove:(id,target,side)=>{const p=byId[state.detail];if(!p)return;const next=moveComment(p.comments,id,target,side);if(next!==p.comments)mutate(()=>p.comments=next,'顺序已保存',{rollbackOnSaveFailure:true});}});
   $('detailBody').addEventListener('submit',e=>{
     if(e.target.id!=='commentForm')return;e.preventDefault();if(!flushInline())return;
-    const p=byId[state.detail],body=(p.commentDraft||'').trim();if(!body){e.target.querySelector('[data-inline="commentDraft"]').focus();return;}
+    const p=byId[state.detail],body=(p.commentDraft||'').trim();if(!richHasContent({text:body,html:p.richText?.commentDraft||''})){e.target.querySelector('[data-inline="commentDraft"]').focus();return;}
     mutate(()=>{p.comments.push({id:uid('comment'),body,richText:{body:p.richText?.commentDraft||''},author:(p.commentAuthor||'').trim(),createdAt:new Date().toISOString()});p.commentDraft='';p.commentAuthor='';if(p.richText)delete p.richText.commentDraft;},'已记入评论池');
     $('commentForm')?.querySelector('[data-inline="commentDraft"]').focus();
   });
@@ -1154,7 +1154,6 @@ async function boot(){
   if(!loaded.data.projectContentVersion&&loaded.fromStorage)localStorage.setItem(storageKey('topic-workbench-v2-before-project-content'),JSON.stringify(loaded.data));
   const enriched=applyProfessionalColors(restoreYellowNotes(detachSourceMetadata(enrichProjectContent(applyDomainTags(enrichWorkbench(loaded.data)))).data));
   if(!loaded.data.workbenchVersion&&loaded.fromStorage)localStorage.setItem(storageKey('topic-workbench-v2-before-workbench-upgrade'),JSON.stringify(loaded.data));
-  if(canMaintain())recoverCommentDrafts(enriched.projects,sessionStorage);
   const {tags,...data}=enriched;
   state={...data,canvasItems:data.canvasItems||[],tagDefinitions:tags,selected:new Set(),selectedFrames:new Set(),tags:new Set(),logic:'intersection',mode:'highlight',query:'',tool:'select',detail:null,detailInstance:null,display:'canvas',activeBoard:null,scopeFrame:null,focusDirection:null,deliveryFilter:'active',deliveryQuery:''};
   reconcileDelivery(state);
