@@ -1,4 +1,7 @@
-import {createCollaboration} from './collaboration.js?v=20261113-login-recovery';
+import {applyViewerMode,removeRetiredSession,recoverCommentDrafts} from './viewer-mode.js';
+import {buildSearchIndex,matchesKeywords} from './global-search.js';
+import {mountGlobalSearch} from './global-search-view.js';
+import {createMeetingStore,loadMeetingStore} from './meetings.js?v=20261117-global-search';
 import {createCanvasEditor} from './canvas-editor.js?v=20261030-detail';
 import {canvasItemBounds, translateCanvasItem, restoreYellowNotes} from './canvas-items.js?v=20261030-detail';
 import {enrichProjectContent} from './project-content.js';
@@ -56,8 +59,10 @@ const navigationArea = $('canvasNavigation');
 let recoveryCheck = 0, viewPaintFrame = 0, viewSaveTimer = 0, paintedScale;
 $('saveStatus').title='修改保存在当前浏览器；数据与备份见设置';
 let cloudSync = null;
-let collaboration = null;
-const canMaintain = () => !collaboration || collaboration.isOwner();
+let localMaintainer = !deployment.public, globalSearch = null, searchMeetings = [], searchEntries = [], searchMeetingStatus = '正在读取会议记录…', projectSearchText = new Map();
+const canMaintain = () => localMaintainer;
+function refreshSearchIndex(){searchEntries=buildSearchIndex(state,searchMeetings);projectSearchText=new Map(searchEntries.filter(r=>r.type==='project').map(r=>[r.id,r.text]));}
+async function refreshSearchMeetings(){const result=await loadMeetingStore(createMeetingStore(localStorage),(url,options)=>fetch(url,{...options,signal:AbortSignal.timeout(6000)}));searchMeetings=result.data?.meetings||[];searchMeetingStatus=result.error?'会议记录暂未载入，请稍后重新搜索':'';refreshSearchIndex();globalSearch?.refresh();}
 let storage = createPersistence({key:storageKey('topic-workbench-v2'),onStatus: result => {
   if (result?.ok === false || result?.success === false) setSaveStatus(false);
 }});
@@ -89,9 +94,9 @@ function scheduleViewSave() {
   viewSaveTimer = setTimeout(flushViewSave, 180);
 }
 function restoreData(data) {const {tags,...rest}=data;state = {...state,...rest,canvasItems:data.canvasItems||[],tagDefinitions:tags}; indexData();}
-function indexData() {projects=state.projects; byId=Object.fromEntries(projects.map(p=>[p.id,p]));tagById=Object.fromEntries(state.tagDefinitions.map(t=>[t.id,t]));}
+function indexData() {projects=state.projects; byId=Object.fromEntries(projects.map(p=>[p.id,p]));tagById=Object.fromEntries(state.tagDefinitions.map(t=>[t.id,t]));refreshSearchIndex();}
 function mutate(fn, message='', options={}) {
-  if(!canMaintain()){toast('画板与项目由维护者调整；登录后可在评论池留言');return false;}
+  if(!canMaintain()){toast('画板与项目由维护者调整');return false;}
   if(!flushRichEditors($('detailBody')))return false;
   if(canvasEditor?.flush()===false)return false;
   const before=clone(documentData());
@@ -108,7 +113,7 @@ function mutateFlow(pid,fn,message,options){
 }
 function toast(message) {$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,4000);}
 function mobileScope(){return state.frames.find(f=>f.id===state.scopeFrame)||null;}
-function matchesContent(p){const q=state.query.trim().toLowerCase(),tags=[...state.tags];return (!q||(p.name+' '+p.id+' '+p.summary+' '+p.description+' '+(p.result||'')+' '+(p.impact||'')+' '+(p.comments||[]).map(c=>(c.author||'')+' '+c.body).join(' ')+' '+(p.customSections||[]).map(s=>s.title+' '+s.body).join(' ')).toLowerCase().includes(q))&&(!tags.length||(state.logic==='union'?tags.some(t=>p.tagIds.includes(t)):tags.every(t=>p.tagIds.includes(t))));}
+function matchesContent(p){const tags=[...state.tags];return matchesKeywords(projectSearchText.get(p.id)||p.name,state.query)&&(!tags.length||(state.logic==='union'?tags.some(t=>p.tagIds.includes(t)):tags.every(t=>p.tagIds.includes(t))));}
 function matchesScope(p){if(focusedDirection&&!focusedDirection.ids.has(p.id))return false;if(state.display==='list'&&projectList&&!projectList.matches(p))return false;if(state.display==='results'&&!isHistoryProject(p))return false;if(['canvas','list','boards'].includes(state.display)&&isClosedProject(p))return false;const board=state.display==='boards'&&state.quickBoards.find(b=>b.id===state.activeBoard);if(board&&!board.projectIds.includes(p.id))return false;return true;}
 function matches(p){return matchesScope(p)&&(focusedDirection?.direction.id===p.id||matchesContent(p));}
 function matchesAnyFilter(){return !!focusedDirection||state.tags.size>0||state.query.trim().length>0||(state.display==='list'&&projectList?.hasFilters());}
@@ -347,6 +352,19 @@ function centerOnBoxes(boxes,{frameId=null,maxScale=1,readingTargets=[],persist=
   applyView();
   if (persist) save(false);
 }
+function openSearchResult(row){
+  if(!flushInline())return;
+  if(row.type==='meeting'){const url=new URL('./meetings.html',location.href);url.searchParams.set('meeting',row.id);location.href=url.href;return;}
+  if(row.type==='project'){
+    openDetail(row.id);
+    if(row.section){const target=[...$('detailBody').querySelectorAll('[data-detail-section]')].find(el=>el.dataset.detailSection===row.section);target?.scrollIntoView({block:'nearest'});}
+    return;
+  }
+  if(row.type==='board'){navigate('boards',row.id);return;}
+  navigate('canvas');
+  if(row.type==='frame'){focusFrame(row.id);return;}
+  const item=state.canvasItems.find(i=>i.id===row.id);if(item)centerOnBoxes([canvasItemBounds(item)],{maxScale:1.1,persist:false});
+}
 function focusFrame(id) {
   const frame = state.frames.find(f => f.id === id);
   if (!frame) return;
@@ -456,7 +474,7 @@ function commentPoolMarkup(p){
     if(c.createdAt&&!Number.isNaN(Date.parse(c.createdAt)))time=new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(c.createdAt));
     return '<article class="comment-entry'+(c.pinned?' is-pinned':'')+'" data-comment-card="'+esc(c.id)+'"><header><button type="button" class="comment-drag-handle" data-comment-drag="'+esc(c.id)+'" aria-label="拖动记录：'+esc(title||'随手记录')+'" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown" title="拖动排序，也可按 Alt + ↑ / ↓"><svg viewBox="0 0 16 20" aria-hidden="true"><circle cx="5" cy="4" r="1"/><circle cx="11" cy="4" r="1"/><circle cx="5" cy="10" r="1"/><circle cx="11" cy="10" r="1"/><circle cx="5" cy="16" r="1"/><circle cx="11" cy="16" r="1"/></svg></button><div class="comment-meta"><input class="comment-title" data-inline="author" data-comment-id="'+esc(c.id)+'" aria-label="记录标题" title="点击修改标题" placeholder="随手记录" maxlength="120" value="'+esc(title)+'">'+(time?'<time datetime="'+esc(c.createdAt)+'">'+esc(time)+'</time>':'')+'</div><div class="comment-actions"><button type="button" class="comment-pin" data-pin-comment="'+esc(c.id)+'" aria-label="'+(c.pinned?'取消置顶':'置顶这条记录')+'" title="'+(c.pinned?'取消置顶':'置顶')+'" aria-pressed="'+Boolean(c.pinned)+'"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3h6l-1 5 3 3v2H5v-2l3-3-1-5Zm3 10v5"/></svg>'+(c.pinned?'<span>置顶</span>':'')+'</button><button type="button" data-delete-comment="'+esc(c.id)+'" aria-label="删除这条记录" title="删除记录">×</button></div></header>'+inlineText('body','记录内容',c.body,{comment:c.id,rows:2,autogrow:true,placeholder:'记录内容'})+'</article>';
   }).join('');
-  const composer=collaboration?.enabled?collaboration.markup():'<form id="commentForm">'+inlineText('commentDraft','记录新信息',p.commentDraft||'',{placeholder:'记下想法、讨论或进展…'})+'<div class="comment-compose-actions"><input data-inline="commentAuthor" aria-label="新记录标题" placeholder="标题（选填）" maxlength="120" value="'+esc(p.commentAuthor||'')+'"><button class="primary" type="submit">记一条 <span aria-hidden="true">↗</span></button></div></form>';
+  const composer='<form id="commentForm">'+inlineText('commentDraft','记录新信息',p.commentDraft||'',{placeholder:'记下想法、讨论或进展…'})+'<div class="comment-compose-actions"><input data-inline="commentAuthor" aria-label="新记录标题" placeholder="标题（选填）" maxlength="120" value="'+esc(p.commentAuthor||'')+'"><button class="primary" type="submit">记一条 <span aria-hidden="true">↗</span></button></div></form>';
   return composer+'<div class="comment-entries" aria-label="已记录的信息">'+entries+'</div>';
 }
 function bindHoverMenus(){
@@ -508,7 +526,6 @@ function openDetail(pid,instanceId=null,resetScroll=true){
   if(!flushRichEditors($('detailBody')))return;
   if(flowEditor?.flush()===false)return;
   if(state.detail&&state.detail!==pid&&!flushInline())return;
-  collaboration?.keepDraft();
   const p=byId[pid];if(!p)return;const scroll=$('detailBody').scrollTop;state.detail=pid;state.detailInstance=instanceId||null;$('detail').dataset.lifecycle=projectLifecycle(p);
   const instance=state.instances.find(i=>i.id===instanceId&&i.pid===pid),nodes=visibleNodes(p);
   const detailBlocks=projectDetailSections(p,nodes),availableSections=detailBlocks.map(block=>block.key);
@@ -526,7 +543,7 @@ function openDetail(pid,instanceId=null,resetScroll=true){
   if(instance&&(instance.focus||instance.context))html+=section('本处备注',(instance.focus?'<p>★ 本处重点</p>':'')+(instance.context?'<div class="rich-content">'+richHTML(instance.richText?.context,instance.context)+'</div>':''),actionButton('编辑','placement',instance.id));
   html+='<details class="board-membership"><summary>行动看板 <span>'+state.quickBoards.filter(b=>b.projectIds.includes(pid)).map(b=>esc(b.name)).join(' · ')+'</span></summary><div>'+state.quickBoards.map(b=>'<label><input type="checkbox" data-project-board="'+esc(b.id)+'"'+(b.projectIds.includes(pid)?' checked':'')+'><span class="nav-color" style="background:'+esc(b.color)+'"></span>'+esc(b.name)+'</label>').join('')+'</div></details>';
   $('detailBody').querySelectorAll('[data-inline]').forEach(el=>{clearTimeout(inlineTimers.get(el));inlineTimers.delete(el);});flowEditor?.destroy();destroyRichEditors($('detailBody'));$('detailBody').innerHTML=html;if(canMaintain())mountRichEditors($('detailBody'),{onError:toast,onCommit:commitInline});flowEditor=mountProjectFlow($('detailBody'),{getProject:()=>byId[pid],mutate:(fn,message,options)=>mutateFlow(pid,fn,message,options),toast,onChange:({kind})=>{if(kind==='current')openDetail(pid,state.detailInstance,false);}});$('detail').hidden=false;$('detailBody').scrollTop=resetScroll?0:scroll;resizeInlineFields();syncActiveProject();if(resetScroll){$('closeDetail').focus({preventScroll:true});revealActiveProject();}
-  if(collaboration?.enabled){let host=$('detailBody').querySelector('[data-collaboration]');if(!host){host=document.createElement('div');host.className='collaboration';$('detailBody').append(host);}collaboration.mount(host,pid,{legacyDraft:{text:p.commentDraft||'',html:p.richText?.commentDraft||'',title:p.commentAuthor||''}});collaboration.applyReadonly($('detailBody'));}
+  applyViewerMode($('detailBody'),canMaintain());
   $('projectTagForm').addEventListener('submit',e=>{e.preventDefault();const name=$('projectTagName').value.trim();if(!name)return;mutate(()=>{let t=state.tagDefinitions.find(t=>t.name.toLocaleLowerCase()===name.toLocaleLowerCase());if(!t){t={id:uid('tag'),name,color:'#8a8982',rank:Math.max(-1,...state.tagDefinitions.map(t=>t.rank||0))+1};state.tagDefinitions.push(t);}if(!byId[pid].tagIds.includes(t.id))byId[pid].tagIds.push(t.id);},'标签已添加');});
 }
 function closeDetail(){if(!flushInline())return;state.detail=null;state.detailInstance=null;$('detail').hidden=true;workbench?.render();syncActiveProject();}
@@ -534,7 +551,7 @@ function field(name,label,value='',type='text',extra=''){return '<label class="f
 function area(name,label,value='',rows=3){return '<label class="form-field"><span>'+label+'</span><textarea name="'+name+'" rows="'+rows+'">'+esc(value)+'</textarea></label>';}
 function selectField(name,label,value,options){return '<label class="form-field"><span>'+label+'</span><select name="'+name+'">'+options.map(([v,t])=>'<option value="'+esc(v)+'"'+(v===value?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select></label>';}
 function check(name,label,value){return '<label class="check-field"><input name="'+name+'" type="checkbox"'+(value?' checked':'')+'>'+label+'</label>';}
-function editor(title,html,onSubmit,button='保存'){if(!canMaintain()){toast('画板由维护者调整');return;}lastEditor=onSubmit;destroyRichEditors($('editorFields'));$('editorTitle').textContent=title;$('editorFields').innerHTML=html;mountRichEditors($('editorFields'),{onError:toast});mountFreezeCommentPickers($('editorFields'),{getProject:id=>byId[id],loadRecords:collaboration?.enabled?id=>collaboration.listRecords(id):null,onChoose:option=>{const input=$('editorFields').querySelector('[data-rich-name="freezeReason"]');if(!input||!canMaintain())return false;input.innerHTML=richHTML(option.html,option.text);input.dispatchEvent(new Event('input',{bubbles:true}));input.focus({preventScroll:true});input.scrollIntoView({block:'nearest'});}});$('editorSubmit').textContent=button;$('editorSubmit').disabled=false;$('editorError').hidden=true;if(!$('editorDialog').open)$('editorDialog').showModal();}
+function editor(title,html,onSubmit,button='保存'){if(!canMaintain()){toast('画板由维护者调整');return;}lastEditor=onSubmit;destroyRichEditors($('editorFields'));$('editorTitle').textContent=title;$('editorFields').innerHTML=html;mountRichEditors($('editorFields'),{onError:toast});mountFreezeCommentPickers($('editorFields'),{getProject:id=>byId[id],onChoose:option=>{const input=$('editorFields').querySelector('[data-rich-name="freezeReason"]');if(!input||!canMaintain())return false;input.innerHTML=richHTML(option.html,option.text);input.dispatchEvent(new Event('input',{bubbles:true}));input.focus({preventScroll:true});input.scrollIntoView({block:'nearest'});}});$('editorSubmit').textContent=button;$('editorSubmit').disabled=false;$('editorError').hidden=true;if(!$('editorDialog').open)$('editorDialog').showModal();}
 function richArea(name,label,value='',html=''){return '<div class="form-field"><span>'+esc(label)+'</span>'+richEditorMarkup({value,html,label,placeholder:'输入内容，或直接粘贴图片…',attrs:'data-rich-name="'+esc(name)+'"'})+'</div>';}
 function lifecycleFields(kind,p={}){
   const freeze=frozenNote(p);
@@ -801,7 +818,7 @@ $('tagDialog').addEventListener('cancel',e=>{if(!tagEditor.flush())e.preventDefa
 $('newTagColorControl').innerHTML=colorPickerMarkup('#8c8981','data-new-tag-color','new','标签颜色',{inputId:'newTagColor'});
 for(const [id,edge] of [['bringFrameFront','front'],['sendFrameBack','back']])$(id).addEventListener('click',()=>{if(!state.selectedFrames.size)return;mutate(()=>state.frames=moveFramesToEdge(state.frames,state.selectedFrames,edge),'',{keepDetail:true,rollbackOnSaveFailure:true});});
 mountDetailResize({panel:$('detail'),handle:$('detailResize'),container:document.querySelector('.workspace'),key:storageKey('topic-workbench-detail-width'),onResize:()=>{document.querySelector('.app-shell').style.setProperty('--detail-width',$('detail').style.getPropertyValue('--detail-width'));if(state?.detail)resizeInlineFields();}});
-bindInlineEditing();bindProjectContent();bindHoverMenus();bindDeliveryActions();$('jumpComments').addEventListener('click',()=>{if(!flushInline())return;const p=byId[state.detail];if(p&&detailLayout(p).hidden.includes('comments'))mutate(()=>setDetailSectionHidden(p,'comments',false));const composer=$('detailBody').querySelector('.collaboration [data-collab-compose],.collaboration .collab-signin')||$('commentForm');composer?.scrollIntoView({block:'center',behavior:'smooth'});if(!collaboration?.enabled)composer?.querySelector('[data-inline="commentDraft"]').focus({preventScroll:true});});$('detailSaveStatus').addEventListener('click',()=>{flushInline();save(false);});
+bindInlineEditing();bindProjectContent();bindHoverMenus();bindDeliveryActions();$('jumpComments').addEventListener('click',()=>{if(!flushInline())return;const p=byId[state.detail];if(p&&detailLayout(p).hidden.includes('comments'))mutate(()=>setDetailSectionHidden(p,'comments',false));const composer=canMaintain()?$('commentForm'):$('detailBody').querySelector('.comment-entries');composer?.scrollIntoView({block:'center',behavior:'smooth'});if(canMaintain())composer?.querySelector('[data-inline="commentDraft"]').focus({preventScroll:true});});$('detailSaveStatus').addEventListener('click',()=>{flushInline();save(false);});
 $('snapshots').addEventListener('click',snapshotsPanel);$('reviewIssues').addEventListener('click',reviewPanel);
 document.addEventListener('click',e=>{const b=e.target.closest('[data-snapshot-read],[data-snapshot-export],[data-snapshot-delete],[data-review-project]');if(!b)return;try{if(b.hasAttribute('data-snapshot-read'))snapshotPreview(b.dataset.snapshotRead);if(b.hasAttribute('data-snapshot-export'))storage.download(snapshots.export(b.dataset.snapshotExport));if(b.hasAttribute('data-snapshot-delete')){const id=b.dataset.snapshotDelete;editor('删除快照','<p>仅删除这份历史快照，当前项目和布局保留。</p>',()=>{snapshots.remove(id);toast('快照已删除');},'确认删除');}if(b.hasAttribute('data-review-project')){$('editorDialog').close();openDetail(b.dataset.reviewProject);}}catch(error){toast(error.message);}});
 
@@ -830,7 +847,7 @@ window.addEventListener('pageshow',event => {
   }
 });
 
-$('search').addEventListener('input',e=>{state.query=e.target.value;applyFilter();});$('logic').addEventListener('change',e=>{state.logic=e.target.value;applyFilter();});
+globalSearch=mountGlobalSearch({input:$('search'),getIndex:()=>searchEntries,getStatus:()=>searchMeetingStatus,onQuery:query=>{state.query=query;applyFilter();},onOpen:openSearchResult});$('search').addEventListener('focus',refreshSearchMeetings);window.addEventListener('storage',e=>{if(e.key?.endsWith('topic-workbench-meetings-v1'))refreshSearchMeetings();});$('logic').addEventListener('change',e=>{state.logic=e.target.value;applyFilter();});
 $('directionFocusIcon').innerHTML=directionIcon;$('focusDirection').addEventListener('change',e=>setDirectionFocus(e.target.value));$('exitDirectionFocus').addEventListener('click',()=>setDirectionFocus(''));
 $('highlight').addEventListener('click',()=>{state.mode='highlight';applyFilter();renderSelection();});$('gather').addEventListener('click',()=>{state.mode=state.mode==='gather'?'highlight':'gather';applyFilter();renderSelection();});$('scatter').addEventListener('click',scatter);$('gatherMask').addEventListener('click',scatter);
 $('clear').addEventListener('click',()=>{if(projectList?.clearFilters()===false)return;state.scopeFrame=null;state.tags.clear();state.query='';$('search').value='';if(!state.focusDirection)state.mode='highlight';renderTags();applyFilter();renderSelection();renderFrameNav();});
@@ -1103,8 +1120,9 @@ async function boot(){
   const syncKey = storageKey('topic-workbench-auto-sync');
   let connection = '';
   try { connection = localStorage.getItem(syncKey + ':connection') || ''; } catch {}
-  collaboration=createCollaboration({notify:toast,localOwner:Boolean(connection)||(!deployment.public&&location.hostname==='127.0.0.1'),onLegacyPosted:(pid,draft)=>{const p=byId[pid];if(!p||!canMaintain()||(p.commentDraft||'')!==draft.text||(p.commentAuthor||'')!==draft.title||(p.richText?.commentDraft||'')!==draft.html)return;p.commentDraft='';p.commentAuthor='';if(p.richText)delete p.richText.commentDraft;save(false);},onIdentity:()=>{if(state){renderAll();if(state.detail)openDetail(state.detail,state.detailInstance,false);}}});
-  await collaboration.init();
+  localMaintainer=Boolean(connection)||!deployment.public;
+  document.body.classList.toggle('board-reader',!canMaintain());
+  removeRetiredSession({local:localStorage,session:sessionStorage,location,history});
   const release = await loadSharedBoard({connection, publicSite:deployment.public});
   if (release) useBoardEdition(release.updatedAt.slice(0,10) + '-' + release.revision.slice(0,16));
   const live = release && (!boardPublication.edition || boardPublication.active === boardPublication.edition);
@@ -1136,6 +1154,7 @@ async function boot(){
   if(!loaded.data.projectContentVersion&&loaded.fromStorage)localStorage.setItem(storageKey('topic-workbench-v2-before-project-content'),JSON.stringify(loaded.data));
   const enriched=applyProfessionalColors(restoreYellowNotes(detachSourceMetadata(enrichProjectContent(applyDomainTags(enrichWorkbench(loaded.data)))).data));
   if(!loaded.data.workbenchVersion&&loaded.fromStorage)localStorage.setItem(storageKey('topic-workbench-v2-before-workbench-upgrade'),JSON.stringify(loaded.data));
+  if(canMaintain())recoverCommentDrafts(enriched.projects,sessionStorage);
   const {tags,...data}=enriched;
   state={...data,canvasItems:data.canvasItems||[],tagDefinitions:tags,selected:new Set(),selectedFrames:new Set(),tags:new Set(),logic:'intersection',mode:'highlight',query:'',tool:'select',detail:null,detailInstance:null,display:'canvas',activeBoard:null,scopeFrame:null,focusDirection:null,deliveryFilter:'active',deliveryQuery:''};
   reconcileDelivery(state);
@@ -1145,6 +1164,7 @@ async function boot(){
   renderAll();setDisplay(state.display);save(loaded.fromStorage&&!loaded.data.frameBoardSyncVersion&&data.quickBoards.some(board=>board.sourceFrameId));
   localStorage.setItem(storageKey('topic-workbench-active-key'),dataKey);
   cloudSync?.start();
+  refreshSearchMeetings();
   if (deployment.public && !release) toast('最新线上画板暂时无法读取，当前显示上次发布版');
   showBoardCopies($('settingsDialog').querySelector('.settings-links'), boardPublication);
   try { snapshots.list(); } catch(error) { toast(error.message); }

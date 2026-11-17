@@ -328,6 +328,9 @@ function bootMeetings() {
     $('exportRaw').disabled = store.original() === null; $('undoDelete').disabled = true;$('openTrash').disabled=!!result.error;
     if (result.error) { $('loadErrorText').textContent = result.error; status('需要恢复',true); selected = null; }
     else { const rows=categoryMeetings();selected=rows.some(meeting=>meeting.id===selected)?selected:rows[0]?.id||null;status(fromStorage?'已保存到此浏览器':'已就绪');if(result.migrated){dirty=true;save();} }
+    const linkedId=new URLSearchParams(location.search).get('meeting');
+    const linked=data?.meetings.find(meeting=>meeting.id===linkedId);
+    if(linked&&!result.error){selected=linked.id;activeCategory=meetingCategory(linked);}
     refreshProjects(); renderList(); renderEditor();
   }
   function focusTitle() {

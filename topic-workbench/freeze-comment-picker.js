@@ -13,7 +13,7 @@ export function mountFreezeCommentPickers(root,{getProject,loadRecords,onChoose}
     let options=[],request=0;
     const current=version=>version===request&&picker.isConnected&&picker.open;
     function render({loading=false,error=false}={}) {
-      body.innerHTML=(loading?'<p class="freeze-comment-status">正在读取留言…</p>':'')+(error?'<p class="freeze-comment-status">飞书留言暂时无法读取 <button type="button" data-freeze-comment-retry>重试</button></p>':'')+
+      body.innerHTML=(loading?'<p class="freeze-comment-status">正在读取留言…</p>':'')+(error?'<p class="freeze-comment-status">留言暂时无法读取 <button type="button" data-freeze-comment-retry>重试</button></p>':'')+
         options.map(option=>'<button type="button" class="freeze-comment-option" data-freeze-comment="'+esc(option.id)+'"><span class="freeze-comment-heading"><strong>'+esc(option.title)+'</strong><small>'+esc(option.author)+(date(option.createdAt)?' <time datetime="'+esc(option.createdAt)+'">'+date(option.createdAt)+'</time>':'')+'</small></span><span class="freeze-comment-preview">'+esc(option.text||'图片记录')+'</span></button>').join('')+
         (!loading&&!options.length?'<p class="freeze-comment-status">暂无可选评论，可直接填写冻结原因。</p>':'');
     }

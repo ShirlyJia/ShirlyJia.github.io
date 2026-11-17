@@ -28,7 +28,8 @@
   <link rel="stylesheet" href="date-styles.css?v=20261030-dates">
   <link rel="stylesheet" href="workspace-header.css?v=20261112">
   <link rel="stylesheet" href="project-lifecycle.css?v=20261113-frozen-style">
-  <link rel="stylesheet" href="collaboration.css?v=20261113-comment-pool">
+  <link rel="stylesheet" href="viewer-mode.css?v=20261117">
+  <link rel="stylesheet" href="global-search.css?v=20261117">
 </head>
 <body>
   <a class="sr-only skip-link" href="#viewport">跳到画板</a>
@@ -56,7 +57,7 @@
   <button id="deliveryReminder" class="delivery-reminder" hidden></button>
   <section class="database-toolbar" aria-label="视图与搜索">
     <div class="view-tabs" role="group" aria-label="项目展示方式"><button id="canvasView" class="active" aria-pressed="true"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4" width="5" height="12" rx="1"/><rect x="11" y="4" width="6" height="8" rx="1"/></svg>画板</button><button id="listView" aria-pressed="false"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 5h10M7 10h10M7 15h10M3 5h.5M3 10h.5M3 15h.5"/></svg>项目列表</button></div>
-    <label class="search-wrap"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg><span class="sr-only">搜索项目标题</span><input id="search" type="search" placeholder="搜索项目…" autocomplete="off"></label><button id="newProject" class="primary new-project">＋ 新项目</button>
+    <div class="search-wrap"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg><span class="sr-only">搜索全局关键词</span><input id="search" aria-label="搜索全局关键词" type="search" placeholder="搜索全局关键词…" autocomplete="off"></div><button id="newProject" class="primary new-project">＋ 新项目</button>
   </section>
   <nav class="filterbar" aria-label="分类标签与展示方式">
   <section id="directionFocusBar" class="direction-focus-bar" aria-label="主方向聚焦" hidden>
@@ -103,7 +104,7 @@
     <div id="canvasItemTools" class="canvas-item-tools" role="toolbar" aria-label="画板元素样式" hidden></div>
     <div id="canvasToolHint" class="canvas-tool-hint" role="status" hidden></div>
     <div id="selectionActions" class="selection-actions" hidden><span id="selectionCount" class="selected-count"></span><button id="groupSelection">成组</button><button id="duplicateSelection">复制</button><button id="referenceSelection">放到分组</button><span id="frameStyleControls" class="frame-style-controls" hidden><span class="frame-background-control">背景 <span id="selectedFrameColor"></span></span><button id="bringFrameFront">置于顶层</button><button id="sendFrameBack">置于底层</button></span><button id="clearSelection">取消</button></div>
-    <div id="searchEmpty" class="empty" hidden><strong>没有匹配的项目</strong><p>试试其他标题，或清除标签筛选。</p></div>
+    <div id="searchEmpty" class="empty" hidden><strong>没有匹配的项目</strong><p>试试其他关键词，或清除标签筛选。</p></div>
     <div id="mobileList" class="mobile-list">
       <div class="project-list-toolbar" role="region" aria-label="项目列表筛选与排序">
         <div class="list-filter-controls"><label><span class="sr-only">分组筛选</span><select id="listGroupFilter" aria-label="分组筛选"><option value="">全部分组</option></select></label><label><span class="sr-only">优先级筛选</span><select id="listPriorityFilter" aria-label="优先级筛选"><option value="">全部优先级</option></select></label></div>
@@ -149,6 +150,6 @@
   }
 }
   </script>
-  <script type="module" src="app.js?v=20261113-login-recovery"></script>
+  <script type="module" src="app.js?v=20261117-global-search"></script>
 </body>
 </html>
