@@ -1,14 +1,15 @@
 /** Small shared editor. Rich HTML is optional; plain text stays available to cards/search. */
 import {safeImageWidth,mountImageResize} from './rich-image-resize.js';
 import {colorChoices} from './color-presets.js';
+import {richToolbarMarkup,copyRichStyles,mountRichFormatting} from './rich-formatting.js?v=20261117-full-editor';
+import {createRichHistory} from './rich-history.js?v=20261117-full-editor';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c]));
 const supportedImages = /^image\/(png|jpeg|webp|gif)$/i;
 const imageData = /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/i;
 const MAX_IMAGE_DATA = 850000;
 const mounts = new WeakMap();
 const defaultTextColor = '#37352f';
-let activeColorPopup = null;
-const allowTags = new Set('P DIV BR STRONG B EM I U S DEL H1 H2 H3 UL OL LI BLOCKQUOTE PRE CODE A IMG HR TABLE THEAD TBODY TFOOT TR TH TD FIGURE FIGCAPTION'.split(' '));
+const allowTags = new Set('P DIV BR STRONG B EM I U S STRIKE DEL H1 H2 H3 UL OL LI BLOCKQUOTE PRE CODE A IMG HR TABLE THEAD TBODY TFOOT TR TH TD FIGURE FIGCAPTION'.split(' '));
 const dropTags = new Set('SCRIPT STYLE IFRAME FRAME OBJECT EMBED SVG MATH FORM INPUT BUTTON TEXTAREA SELECT OPTION META LINK BASE AUDIO VIDEO SOURCE TEMPLATE NOSCRIPT'.split(' '));
 const blockTags = new Set('P DIV H1 H2 H3 LI BLOCKQUOTE PRE TABLE TR FIGURE FIGCAPTION'.split(' '));
 
@@ -27,8 +28,7 @@ export function safeTextColor(value) {
   if(!rgb||rgb.slice(1,4).some(v=>Number(v)>255))return '';
   return '#'+rgb.slice(1,4).map(v=>Number(v).toString(16).padStart(2,'0')).join('');
 }
-function nodeTextColor(node) { return safeTextColor(node.style?.color || (node.tagName==='FONT'?node.getAttribute('color'):'')); }
-function copyTextColor(node, target) { const color=nodeTextColor(node);if(color)target.style.color=color; }
+function copyStyles(node,target) { copyRichStyles(node,target,safeTextColor); }
 function plainHTML(value) { return String(value ?? '').split(/\r?\n/).map(line => `<div>${esc(line) || '<br>'}</div>`).join(''); }
 function taskBox(checked, interactive = false) {
   const box=document.createElement('span');box.dataset.richTaskBox='';box.contentEditable='false';
@@ -55,14 +55,8 @@ export function richHTML(html, plain = '') {
     }
     if (!allowTags.has(node.tagName)) {
       let next = parent;
-      const color=nodeTextColor(node);
-      if(color){const span=document.createElement('span');span.style.color=color;next.append(span);next=span;}
-      if (node.tagName === 'SPAN') {
-        const style = node.getAttribute('style') || '';
-        for (const [pattern, tag] of [[/font-weight\s*:\s*(bold|[6-9]00)/i,'strong'], [/font-style\s*:\s*italic/i,'em']]) {
-          if (pattern.test(style)) { const element = document.createElement(tag); next.append(element); next = element; }
-        }
-      }
+      const span=document.createElement('span');copyStyles(node,span);
+      if(span.hasAttribute('style')){next.append(span);next=span;}
       for (const child of node.childNodes) copy(child, next);
       return;
     }
@@ -70,11 +64,13 @@ export function richHTML(html, plain = '') {
       const href = safeRichLink(node.getAttribute('href'));
       if (!href) { for (const child of node.childNodes) copy(child, parent); return; }
       const link = document.createElement('a'); link.href = href; link.target = '_blank'; link.rel = 'noopener noreferrer';
-      copyTextColor(node,link);
+      copyStyles(node,link);
       parent.append(link); for (const child of node.childNodes) copy(child, link); return;
     }
     const element = document.createElement(node.tagName.toLowerCase());
-    copyTextColor(node,element);
+    copyStyles(node,element);
+    if(['TD','TH'].includes(node.tagName)){for(const key of ['colspan','rowspan']){const value=node.getAttribute(key);if(/^\d{1,2}$/.test(value||'')&&Number(value)>1&&Number(value)<=20)element.setAttribute(key,value);}}
+    if(node.tagName==='OL'&&/^\d{1,4}$/.test(node.getAttribute('start')||''))element.setAttribute('start',node.getAttribute('start'));
     if(node.tagName==='UL'&&node.getAttribute('data-rich-list')==='task')element.dataset.richList='task';
     if(node.tagName==='LI'&&parent.matches('ul[data-rich-list="task"]')){
       const checked=node.getAttribute('data-rich-task')==='true';element.dataset.richTask=String(checked);element.append(taskBox(checked));
@@ -92,10 +88,11 @@ function plainFromHTML(html) {
     if (node.tagName === 'IMG') return '[图片]';
     if (node.tagName === 'BR') return '\n';
     const body = Array.from(node.childNodes).map(walk).join('');
+    if(['TD','TH'].includes(node.tagName))return body+'\t';
     if(node.tagName==='LI'&&node.hasAttribute('data-rich-task'))return (node.dataset.richTask==='true'?'☑ ':'☐ ')+body+'\n';
     return blockTags.has(node.tagName) ? body + '\n' : body;
   }
-  return Array.from(holder.childNodes).map(walk).join('').replace(/\u00a0/g,' ').replace(/\n{3,}/g,'\n\n').replace(/\n+$/,'');
+  return Array.from(holder.childNodes).map(walk).join('').replace(/\u00a0/g,' ').replace(/\t+\n/g,'\n').replace(/\n{3,}/g,'\n\n').replace(/\n+$/,'');
 }
 /** Pasted URLs become links; copied rich text keeps its formatting and safe links. */
 export function pastedRichHTML(html, plain = '') {
@@ -126,22 +123,13 @@ export function readRichEditor(editor) { const html = richHTML(editor.innerHTML)
 export function setRichEditor(editor, {text = '', html = ''} = {}) {
   if (!editor) return;
   const mounted = mounts.get(editor);
-  if (mounted) { mounted.closeColors?.();mounted.resize?.cancel();mounted.revision++; mounted.range = null; mounted.image = null; }
-  editor.innerHTML = richHTML(html, text); syncTaskControls(editor);updateEmpty(editor); updateImageTools(editor);
+  if (mounted) { mounted.closeTools?.();mounted.resize?.cancel();mounted.revision++; mounted.range = null; mounted.image = null;mounted.nextFontSize=null; }
+  editor.innerHTML = richHTML(html, text); syncTaskControls(editor);updateEmpty(editor); updateImageTools(editor);mounted?.history?.reset();
 }
 export function richHasContent({text = '', html = ''} = {}) { return Boolean(text.trim() || /<img\b/i.test(html)); }
-function updateEmpty(editor) { editor.dataset.empty = String(!editor.textContent.trim() && !editor.querySelector('img,hr,ul,ol,blockquote')); }
-const tool = (command, title, label, extra = '') => `<button type="button" data-rich-command="${command}" title="${title}" aria-label="${title}" ${extra}>${label}</button>`;
-const richIcon = content => `<svg viewBox="0 0 24 24" aria-hidden="true">${content}</svg>`;
-const richIcons = {
-  ordered:richIcon('<text x="2" y="7">1</text><text x="2" y="14">2</text><text x="2" y="21">3</text><path d="M10 5h11M10 12h11M10 19h11"/>'),
-  bullets:richIcon('<circle cx="4" cy="5" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="19" r="1"/><path d="M10 5h11M10 12h11M10 19h11"/>'),
-  task:richIcon('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="m7 12 3 3 7-7"/>'),
-  quote:richIcon('<path d="M10 5H6a3 3 0 0 0-3 3v7h7V9H3m18-4h-4a3 3 0 0 0-3 3v7h7V9h-7"/>')
-};
+function updateEmpty(editor) { editor.dataset.empty = String(!editor.textContent.trim() && !editor.querySelector('img,hr,ul,ol,blockquote,table,pre')); }
 export function richEditorMarkup({value = '', html = '', label = '内容', placeholder = '输入内容，可直接粘贴图片', attrs = '', collapsible = false} = {}) {
-  const separator='<span class="rich-tool-separator" aria-hidden="true"></span>';
-  const toolbar=tool('bold','加粗','<b>B</b>')+tool('italic','斜体','<i>I</i>')+tool('underline','下划线','<u>U</u>')+tool('strikeThrough','删除线','<s>S</s>')+tool('heading','小标题','H')+tool('foreColor','文字颜色','<span class="rich-color-letter" aria-hidden="true">A</span><span class="rich-color-chevron" aria-hidden="true">⌄</span>','aria-haspopup="menu" aria-expanded="false"')+separator+tool('insertOrderedList','编号列表',richIcons.ordered)+tool('insertUnorderedList','项目符号',richIcons.bullets)+tool('taskList','任务列表',richIcons.task)+tool('blockquote','引用',richIcons.quote);
+  const toolbar=richToolbarMarkup();
   return `<div class="rich-editor${collapsible?' rich-collapsible':''}"><div class="rich-toolbar" role="toolbar" aria-label="${esc(label)}格式"${collapsible?' hidden':''}>${toolbar}</div><div class="rich-editor-input rich-content" contenteditable="${!collapsible}" tabindex="0" role="textbox" aria-readonly="${collapsible}" aria-multiline="true" aria-label="${esc(label)}" data-placeholder="${esc(placeholder)}" spellcheck="false" ${attrs}>${richHTML(html, value)}</div><div class="rich-image-tools" hidden><label>宽度 <input type="number" min="24" max="4096" step="1" data-rich-image-width aria-label="图片宽度"> px</label><button type="button" data-rich-command="resetImageSize">恢复原尺寸</button><button type="button" data-rich-command="removeImage">删除图片</button></div><p class="rich-editor-message" role="status" hidden></p>${collapsible?'<div class="rich-edit-actions" hidden><button type="button" data-rich-done>完成</button></div>':''}</div>`;
 }
 function taskItem(editor, node) {
@@ -209,8 +197,15 @@ function updateImageTools(editor) {
   editor.querySelectorAll('img').forEach(img => img.classList.toggle('rich-image-selected', img === image));
   state?.resize?.sync();
 }
-function notify(editor) { editor.dispatchEvent(new Event('input', {bubbles:true})); }
-function edit(editor, operation) { const before=mounts.get(editor)?.inputs;operation();if(mounts.get(editor)?.inputs===before)notify(editor); }
+function notify(editor,inputType='') { editor.dispatchEvent(new InputEvent('input', {bubbles:true,inputType})); }
+function edit(editor,operation) {
+  const state=mounts.get(editor);if(!state){operation();return;}state.history?.begin();state.transactionDepth=(state.transactionDepth||0)+1;
+  try{operation();}finally{
+    state.transactionDepth--;
+    if(!state.transactionDepth){const inputType=state.transactionInputType||'';state.transactionInputType='';notify(editor,inputType);}
+    state.history?.end();
+  }
+}
 function insertHTML(editor, html) {
   if (document.execCommand('insertHTML', false, html)) return;
   const selection = window.getSelection(), range = selection?.rangeCount ? selection.getRangeAt(0) : null;
@@ -254,8 +249,8 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
     state.resize=mountImageResize(editor,{getImage:()=>state.image,notify:()=>notify(editor),message,signal:controller.signal});
     const colorTrigger=wrapper.querySelector('[data-rich-command="foreColor"]');
     const remember = () => {
-      const range = editorRange(editor);if(range)state.range=range;
-      if(range&&colorTrigger){const color=safeTextColor(document.queryCommandValue('foreColor'))||defaultTextColor;colorTrigger.style.setProperty('--rich-text-color',color);}
+      const range = editorRange(editor);if(range)state.range=range;state.history?.remember();
+      if(range&&colorTrigger){const color=safeTextColor(document.queryCommandValue('foreColor'))||defaultTextColor;colorTrigger.style.setProperty('--rich-text-color',color);const highlight=safeTextColor(document.queryCommandValue('hiliteColor'))||'#f7d86b';wrapper.querySelector('[data-rich-command=highlight]')?.style.setProperty('--rich-highlight-color',highlight);}
       if(range){
         const inTasks=currentList(editor)?.dataset.richList==='task';
         for(const command of ['bold','italic','underline','strikeThrough','insertOrderedList','insertUnorderedList','taskList','blockquote']){
@@ -268,7 +263,7 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
     const setEditing=(editing,{restoreFocus=true}={})=>{
       if(!editing){
         if(!flushRichEditors(wrapper)||onCommit?.(editor)===false)return;
-        state.closeColors?.();state.resize.cancel();state.image=null;updateImageTools(editor);
+        state.closeTools?.();state.resize.cancel();state.image=null;updateImageTools(editor);
       }
       state.editing=editing;wrapper.classList.toggle('is-editing',editing);editor.contentEditable=String(editing);editor.setAttribute('aria-readonly',String(!editing));
       wrapper.querySelector('.rich-toolbar').hidden=!editing;
@@ -278,7 +273,7 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
       else if(wrapper.contains(document.activeElement))document.activeElement.blur();
     };
     const toggleTask=box=>{
-      const item=box.parentElement;item.dataset.richTask=String(item.dataset.richTask!=='true');notify(editor);
+      const item=box.parentElement;edit(editor,()=>{item.dataset.richTask=String(item.dataset.richTask!=='true');notify(editor);});
       if(!state.editing)onCommit?.(editor);
     };
     if(wrapper.classList.contains('rich-collapsible')){
@@ -286,55 +281,10 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
       // Wait for click, not pointerdown: collapsing the editor must not move a
       // control out from under the pointer before its click has been delivered.
       listen(document,'click',event=>{
-        if(!state.editing||!editor.isConnected||event.button>0||wrapper.contains(event.target)||state.colorPopup?.menu.contains(event.target))return;
+        if(!state.editing||!editor.isConnected||event.button>0||wrapper.contains(event.target)||state.popup?.menu.contains(event.target))return;
         setEditing(false,{restoreFocus:false});
       },{capture:true});
     }
-    const closeColors=()=>{
-      const popup=state.colorPopup;if(!popup)return;
-      state.colorPopup=null;popup.controller.abort();popup.menu.remove();wrapper.classList.remove('rich-color-open');colorTrigger.setAttribute('aria-expanded','false');
-      if(activeColorPopup===closeColors)activeColorPopup=null;
-    };
-    state.closeColors=closeColors;controller.signal.addEventListener('abort',closeColors,{once:true});
-    const openColors=()=>{
-      if(state.colorPopup){closeColors();selectRange(editor,state.range);return;}
-      activeColorPopup?.();remember();activeColorPopup=closeColors;
-      const menu=document.createElement('div'),popupController=new AbortController();
-      menu.className='rich-color-menu';menu.setAttribute('role','menu');menu.setAttribute('aria-label','文字颜色');
-      const choices=[{name:'默认颜色',value:defaultTextColor},...colorChoices('ink')];
-      const selected=safeTextColor(document.queryCommandValue('foreColor'))||defaultTextColor;
-      menu.innerHTML=choices.map(c=>'<button type="button" role="menuitemradio" aria-checked="'+(selected===c.value)+'" data-rich-color="'+c.value+'"><span class="rich-color-sample" style="color:'+c.value+'" aria-hidden="true">A</span><span>'+esc(c.name)+'</span><span class="rich-color-check" aria-hidden="true">✓</span></button>').join('');
-      if(typeof menu.showPopover==='function')menu.setAttribute('popover','manual');
-      (wrapper.closest('dialog[open]')||document.body).append(menu);state.colorPopup={menu,controller:popupController};
-      wrapper.classList.add('rich-color-open');colorTrigger.setAttribute('aria-expanded','true');
-      if(typeof menu.showPopover==='function')menu.showPopover();
-      const position=()=>{
-        if(!editor.isConnected){closeColors();return;}
-        const r=colorTrigger.getBoundingClientRect(),h=menu.offsetHeight,w=menu.offsetWidth;
-        menu.style.left=Math.max(8,Math.min(r.left,innerWidth-w-8))+'px';
-        menu.style.top=Math.max(8,Math.min(r.bottom+6+h<=innerHeight-8?r.bottom+6:r.top-h-6,innerHeight-h-8))+'px';
-      };
-      position();
-      const popupListen=(target,event,fn,options={})=>target.addEventListener(event,fn,{...options,signal:popupController.signal});
-      popupListen(menu,'mousedown',event=>event.preventDefault());
-      popupListen(menu,'click',event=>{
-        const choice=event.target.closest('[data-rich-color]');if(!choice)return;
-        event.preventDefault();event.stopPropagation();const color=safeTextColor(choice.dataset.richColor);if(!color)return;
-        closeColors();selectRange(editor,state.range);edit(editor,()=>document.execCommand('foreColor',false,color));remember();
-      });
-      popupListen(menu,'keydown',event=>{
-        event.stopPropagation();
-        if(event.key==='Escape'){event.preventDefault();closeColors();selectRange(editor,state.range);return;}
-        if(event.key==='Tab'){event.preventDefault();closeColors();selectRange(editor,state.range);return;}
-        if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key))return;
-        event.preventDefault();const buttons=[...menu.querySelectorAll('button')],index=buttons.indexOf(document.activeElement);
-        const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowUp'?-1:1)+buttons.length)%buttons.length;
-        buttons[next].focus({preventScroll:true});
-      });
-      popupListen(document,'pointerdown',event=>{if(!menu.contains(event.target)&&!colorTrigger.contains(event.target))closeColors();},true);
-      popupListen(window,'resize',position);popupListen(document,'scroll',position,true);
-      (menu.querySelector('[aria-checked="true"]')||menu.querySelector('button')).focus({preventScroll:true});
-    };
     const addImages = async (files, accompaniment = '') => {
       if (state.pending) { message('图片正在处理中，请稍候。',true); return; }
       const images = Array.from(files).filter(file => file.type.startsWith('image/'));
@@ -351,7 +301,7 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
       } catch(error) { if (editor.isConnected) message(error.message || '图片插入失败，请重试。',true); }
       finally { state.pending=0; delete editor.dataset.richPending; }
     };
-    listen(editor,'input',event=>{state.inputs++;if(event.inputType==='insertParagraph'){const item=taskItem(editor,window.getSelection()?.anchorNode);if(item)item.dataset.richTask='false';}syncTaskControls(editor);updateEmpty(editor);updateImageTools(editor);remember();onChange?.(readRichEditor(editor),editor);});
+    listen(editor,'input',event=>{state.inputs++;if(state.transactionDepth){state.transactionInputType=event.inputType||state.transactionInputType;event.stopPropagation();return;}if(!state.composing)formatting.normalizeInput();if(event.inputType==='insertParagraph'){const item=taskItem(editor,window.getSelection()?.anchorNode);if(item)item.dataset.richTask='false';}syncTaskControls(editor);updateEmpty(editor);updateImageTools(editor);remember();if(!state.composing)state.history?.record(event.inputType||'');onChange?.(readRichEditor(editor),editor);});
     listen(editor,'compositionstart',()=>state.composing=true); listen(editor,'compositionend',()=>{state.composing=false;remember();const before=state.inputs;queueMicrotask(()=>{if(editor.isConnected&&state.inputs===before)notify(editor);});});
     listen(editor,'keyup',remember); listen(editor,'mouseup',remember); listen(editor,'focus',remember);
     listen(editor,'click',event=>{
@@ -372,6 +322,7 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
         else if(event.key.length===1&&!event.ctrlKey&&!event.metaKey&&!event.altKey)setEditing(true);
         else return;
       }
+      if(!state.composing&&(event.metaKey||event.ctrlKey)&&['z','y'].includes(event.key.toLowerCase())){event.preventDefault();if(!state.pending)state.history[event.key.toLowerCase()==='y'||event.shiftKey?'redo':'undo']();remember();return;}
       if(!state.composing&&event.key==='Enter'&&!event.shiftKey&&window.getSelection()?.isCollapsed){
         const item=taskItem(editor,window.getSelection()?.anchorNode);
         if(item&&!item.textContent.trim()&&!item.querySelector('img')){
@@ -405,7 +356,8 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
     listen(wrapper.querySelector('.rich-toolbar'),'mousedown',event=>{if(event.target.closest('button')){remember();event.preventDefault();}});
     listen(wrapper,'click',event=>{
       const command=event.target.closest('[data-rich-command]')?.dataset.richCommand;if(!command)return;event.preventDefault();event.stopPropagation();
-      if(command==='foreColor'){openColors();return;}
+      if(command==='undo'||command==='redo'){if(!state.pending&&!state.composing)state.history[command]();remember();return;}
+      if(formatting.handle(command))return;
       if(command==='removeImage'){if(state.image){const range=document.createRange();range.selectNode(state.image);selectRange(editor,range);edit(editor,()=>document.execCommand('delete'));state.image=null;updateImageTools(editor);}return;}
       if(command==='resetImageSize'){state.resize.reset();return;}
       selectRange(editor,state.range);
@@ -420,6 +372,9 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
       remember();
     });
     syncTaskControls(editor);updateEmpty(editor);
+    state.history=createRichHistory(editor,{read:()=>readRichEditor(editor).html,restore:html=>{state.range=null;state.image=null;state.nextFontSize=null;editor.innerHTML=html;syncTaskControls(editor);updateEmpty(editor);updateImageTools(editor);notify(editor);},onState:availability=>{for(const name of ['undo','redo'])wrapper.querySelector('[data-rich-command="'+name+'"]').disabled=!availability[name];}});
+    const formatting=mountRichFormatting({editor,wrapper,state,listen,remember,selectRange,edit,insertHTML,addImages,safeLink:safeRichLink,safeColor:safeTextColor,colorChoices});
+    listen(editor,'beforeinput',event=>{if(['historyUndo','historyRedo'].includes(event.inputType)){event.preventDefault();if(!state.pending&&!state.composing)state.history[event.inputType==='historyUndo'?'undo':'redo']();return;}state.history.remember();});
   }
   return () => added.forEach(editor=>{mounts.get(editor)?.controller.abort();mounts.delete(editor);});
 }

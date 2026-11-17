@@ -82,3 +82,61 @@
 .comment-pool .rich-editor-input{min-height:65px}
 .comment-entry .rich-toolbar{padding-top:0}.comment-entry .rich-editor-input{min-height:42px}
 @media(max-width:760px){.rich-toolbar{opacity:1}.rich-editor{border-color:#ecece6}.rich-paste-hint{display:none}.rich-toolbar button{min-height:34px;padding:4px 7px}.rich-editor-input{font-size:16px}.rich-content img{max-height:480px}}
+
+/* One quiet, horizontally scrollable row; menus stay above the detail panel. */
+.rich-toolbar{flex-wrap:nowrap;gap:2px;padding:7px 8px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#dce1e8 transparent}
+.rich-toolbar button{display:inline-flex;align-items:center;justify-content:center;gap:4px;flex:none;min-width:30px;height:30px;padding:4px 6px;border-radius:5px;font-size:16px;line-height:1;color:#4b515c}
+.rich-toolbar button svg{width:19px;height:19px}
+.rich-toolbar button:hover,.rich-toolbar button:focus-visible{background:#f0f2f5;color:#242831}
+.rich-toolbar button:focus-visible{outline:2px solid #9db7ef;outline-offset:-2px}
+.rich-toolbar button[aria-pressed=true],.rich-toolbar button[aria-expanded=true]{background:#eaf0ff;color:#245bdb}
+.rich-toolbar button:disabled{color:#c5c9d0;cursor:default;background:transparent}
+.rich-toolbar .rich-tool-separator{height:20px;margin:0 4px;background:#e6e8ed}
+.rich-toolbar .rich-color-letter{font-weight:500;font-size:17px;line-height:19px}
+.rich-toolbar .rich-type-icon{font-size:17px;letter-spacing:-.6px}
+.rich-toolbar .rich-color-chevron{font-size:11px;color:currentColor;opacity:.7}
+.rich-editor.rich-menu-open .rich-toolbar,.comment-pool .comment-entry .rich-editor.rich-menu-open .rich-toolbar{opacity:1;visibility:visible;pointer-events:auto}
+.rich-collapsible.is-editing{border-color:#91aaf3;box-shadow:0 0 0 1px #91aaf310}
+.rich-collapsible.is-editing>.rich-toolbar{background:#fbfcfe;border-radius:5px 5px 0 0;border-bottom-color:#e5e8ef}
+.rich-format-menu{position:fixed;inset:auto;z-index:2100;box-sizing:border-box;width:190px;max-width:calc(100vw - 16px);max-height:min(440px,calc(100dvh - 16px));margin:0;padding:6px;overflow:auto;border:1px solid #e1e5ec;border-radius:9px;background:#fff;color:#3a414c;box-shadow:0 8px 30px #1d30491c,0 2px 6px #1d304908;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif}
+.rich-format-menu::backdrop{background:transparent}
+.rich-format-menu button{display:flex;align-items:center;gap:10px;box-sizing:border-box;width:100%;min-height:34px;margin:0;padding:6px 9px;border:0;border-radius:5px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.rich-format-menu button:hover,.rich-format-menu button:focus-visible{outline:none;background:#f0f4fc;color:#245bdb}
+.rich-format-menu button[aria-pressed=true]{background:#edf2ff;color:#245bdb}
+.rich-format-menu hr{border:0;border-top:1px solid #edf0f3;margin:5px 0}
+.rich-format-menu label{display:block;font-size:12px;color:#737c8a}
+.rich-format-menu input,.rich-format-menu select{box-sizing:border-box;width:100%;min-width:0;height:34px;margin-top:5px;padding:5px 8px;border:1px solid #dce1e8;border-radius:5px;background:#fff;color:#353c47;font:inherit;font-size:13px;line-height:1.4;outline:none}
+.rich-format-menu input:focus,.rich-format-menu select:focus{border-color:#8fabf6;box-shadow:0 0 0 2px #3370ff0d}
+.rich-format-menu [hidden]{display:none!important}
+.rich-format-menu .rich-color-check{margin-left:auto}
+.rich-format-menu .rich-color-sample{width:23px;height:23px;border-color:#e5e9f0;background:#fafbfc}
+.rich-format-menu .rich-menu-note{margin:5px 7px 8px;font-size:12px;color:#8b919b}
+.rich-style-menu{width:222px}
+.rich-style-p{font-size:13px}.rich-style-h1{font-size:22px;font-weight:650}.rich-style-h2{font-size:18px;font-weight:650}.rich-style-h3{font-size:15px;font-weight:650}
+.rich-style-settings{display:grid;grid-template-columns:1.5fr 1fr;gap:10px;padding:5px 8px 8px}
+.rich-link-menu{width:300px;padding:13px}
+.rich-link-form label+label{margin-top:12px}
+.rich-format-menu .rich-menu-error{margin:6px 0;color:#bf3d3d;font-size:12px}
+.rich-menu-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px}
+.rich-format-menu .rich-menu-actions button{width:auto;min-height:32px;padding:5px 12px}
+.rich-format-menu .rich-menu-primary{background:#3370ff;color:#fff}
+.rich-format-menu .rich-menu-primary:hover,.rich-format-menu .rich-menu-primary:focus-visible{background:#245bdb;color:#fff}
+.rich-table-menu{width:236px;padding:10px}
+.rich-table-size{margin:0 0 8px;font-size:12px;color:#737c8a}
+.rich-table-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.rich-table-grid button{display:block;min-height:23px;height:23px;min-width:0;padding:0;border:1px solid #dce2ea;border-radius:3px}
+.rich-table-grid button.is-included{background:#eaf0ff;border-color:#91aef0}
+.rich-table-grid button:focus-visible{outline:2px solid #3370ff;outline-offset:1px}
+.rich-emoji-menu{display:grid;grid-template-columns:repeat(8,1fr);width:292px;gap:2px;padding:8px}
+.rich-emoji-menu button{display:grid;place-items:center;min-width:0;min-height:32px;padding:4px;font-size:20px}
+.rich-painting .rich-editor-input,.rich-painting .rich-editor-input *{cursor:copy}
+.rich-content h1{font-size:1.65em;line-height:1.5}.rich-content h2{font-size:1.35em;line-height:1.5}.rich-content h3{font-size:1.12em}
+.rich-content table{width:max-content;max-width:100%;border-radius:4px}
+.rich-content th,.rich-content td{min-width:80px;padding:7px 10px;border-color:#dfe4ec;vertical-align:top;font-weight:400}
+.rich-content th{background:#f4f6fa;font-weight:600}
+.rich-content td:focus-within,.rich-content th:focus-within{outline:1px solid #abc0ee;outline-offset:-1px}
+.rich-content code{background:#f1f3f7;color:#4d5b72;padding:2px 5px}
+.rich-content pre{margin:.6em 0;padding:12px 14px;border:1px solid #e7ebf1;background:#f6f8fb;border-radius:6px;tab-size:2;white-space:pre-wrap}
+.rich-content pre code{padding:0;border:0;background:none;color:inherit;font-size:inherit}
+.rich-content blockquote{margin:.7em 0;padding:3px 0 3px 13px;border-color:#b7c7e0;color:#69778a}
+@media(pointer:coarse){.rich-toolbar button{min-width:36px;height:36px}.rich-format-menu button{min-height:38px}.rich-table-grid button{min-height:23px}.rich-format-menu input,.rich-format-menu select{font-size:16px;height:38px}}
