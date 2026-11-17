@@ -5,6 +5,6 @@
 .global-search-result[aria-selected=true],.global-search-result:focus-visible{background:#f3f5f8;outline:none}
 .global-search-result strong{font-size:13px;font-weight:600;overflow-wrap:anywhere}.global-search-result small{font-size:10px;color:#8f959e}.global-search-result>span{font-size:12px;color:#666b73;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
 .global-search-result mark{background:#fff0c2;color:inherit;padding:0 1px;border-radius:2px}
-@media(max-width:760px){.global-search-results{position:fixed;left:16px;right:16px;top:90px;width:auto;max-height:65vh}.global-search-result{padding:12px 9px}.global-search-result strong{font-size:14px}}
+@media(max-width:760px){.app-shell>.database-toolbar{display:flex}.database-toolbar .search-wrap{width:auto;min-width:90px;flex:1;margin-left:auto}.database-toolbar .new-project{flex:none}.global-search-results{max-height:60vh}.global-search-result{padding:12px 9px}.global-search-result strong{font-size:14px}}
 
 .global-search-notice{display:block;margin-top:5px;color:#a37847}
