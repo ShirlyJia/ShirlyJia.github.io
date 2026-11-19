@@ -1,5 +1,5 @@
 import {isHistoryProject} from './project-lifecycle.js';
-import {resultsTimelineMarkup} from './results-timeline.js';
+import {DEFAULT_HISTORY_FILTER,resultsTimelineMarkup} from './results-timeline.js';
 import {mountRichEditors, flushRichEditors, destroyRichEditors} from './rich-text.js?v=20261030-card-preview';
 import {colorPickerMarkup,colorChoices} from './color-presets.js';
 import {deliveryCases} from './delivery-model.js';
@@ -18,7 +18,7 @@ export function createWorkbenchViews(api) {
   const {getState,update,openProject,cardElement,navigate,editor,field,area,matches} = api;
   const boardById = id => getState().quickBoards.find(b=>b.id===id);
   const pendingText = new Map(), composing = new WeakSet();
-  let historyFilter='all';
+  let historyFilter=DEFAULT_HISTORY_FILTER;
   let flushingText = false, deferredRender = false, renameSession = null, creationDraft = null;
   function textIdentity(el){
     if(!el?.matches?.('[data-board-note],[data-board-context]'))return null;
