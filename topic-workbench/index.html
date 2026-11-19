@@ -23,6 +23,7 @@
   <link rel="stylesheet" href="direction-focus.css?v=20261030-direction2">
   <link rel="stylesheet" href="card-surfaces.css?v=20261030-two-line-previews">
   <link rel="stylesheet" href="detail-density.css?v=20261113-comment-pool">
+  <link rel="stylesheet" href="detail-navigation.css?v=20261119-detail-nav">
   <link rel="stylesheet" href="project-list.css?v=20261030-two-line-previews">
   <link rel="stylesheet" href="canvas-navigation.css?v=20261102-pan-fit">
   <link rel="stylesheet" href="date-styles.css?v=20261030-dates">
@@ -116,7 +117,7 @@
     <div id="workbenchView" class="workbench-view" hidden></div>
     <div id="gatherMask" class="gather-mask" hidden></div>
     <section id="gatherPanel" class="gather-panel" hidden aria-label="临时聚集结果"><div class="gather-head"><div><h2 id="gatherTitle">临时聚集</h2><p id="gatherSummary"></p></div><button id="scatter">散回原位 ↗</button></div><div id="gatherCards" class="gather-cards"></div></section>
-    <aside id="detail" class="detail-panel" hidden aria-label="项目详情"><div id="detailResize" class="detail-resize-handle" tabindex="0" role="separator" aria-orientation="vertical" aria-label="调整项目详情宽度" title="拖动调整宽度，双击恢复默认"></div><div class="detail-top"><span>项目详情</span><button id="jumpComments" class="detail-comment-shortcut" title="跳到评论池">评论池 ↓</button><button id="detailSaveStatus" class="detail-save-status" title="保存状态，点击重试">已保存</button><button id="closeDetail" aria-label="关闭项目详情">×</button></div><div id="detailBody" class="detail-body"></div></aside>
+    <aside id="detail" class="detail-panel" hidden aria-label="项目详情"><div id="detailResize" class="detail-resize-handle" tabindex="0" role="separator" aria-orientation="vertical" aria-label="调整项目详情宽度" title="拖动调整宽度，双击恢复默认"></div><div class="detail-top"><span id="detailCaption">项目详情</span><button type="button" id="detailBack" hidden>← <span></span></button><button id="jumpComments" class="detail-comment-shortcut" title="跳到评论池">评论池 ↓</button><button id="detailSaveStatus" class="detail-save-status" title="保存状态，点击重试">已保存</button><button id="closeDetail" aria-label="关闭项目详情">×</button></div><div id="detailBody" class="detail-body"></div></aside>
     <div id="toast" class="toast" role="status" hidden></div>
   </main>
   </div>
@@ -153,6 +154,6 @@
   }
 }
   </script>
-  <script type="module" src="app.js?v=20261117-global-search2"></script>
+  <script type="module" src="app.js?v=20261119-detail-nav"></script>
 </body>
 </html>

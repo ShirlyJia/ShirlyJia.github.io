@@ -1,0 +1,33 @@
+/* The two header controls share the same disclosure and keyboard behavior. */
+#detail .detail-navigation{display:flex;gap:4px;align-items:center;min-width:0}
+#detail .detail-popover{position:relative}
+#detail .detail-popover-trigger{display:flex;gap:5px;align-items:center;justify-content:center;min-height:29px;padding:3px 7px;border:1px solid transparent;border-radius:6px;color:#68665f;font-size:12px;white-space:nowrap}
+#detail .detail-popover-trigger svg{width:15px;height:15px;flex:none}
+#detail .detail-popover-trigger svg:last-child:not(:first-child){width:12px;height:12px;color:#88867c}
+#detail .detail-popover-trigger small{font-size:10px;font-variant-numeric:tabular-nums;color:#66655d;background:#eeede9;border-radius:4px;padding:0 4px}
+#detail .detail-popover-trigger:is(:hover,[aria-expanded="true"]){background:#f2f1ee;border-color:#e8e6e0;color:#37352f}
+#detail .detail-popover-panel{position:absolute;z-index:12;right:0;top:100%;width:218px;max-width:calc(100vw - 40px);max-height:min(64dvh,434px);overflow:auto;overscroll-behavior:contain;padding:5px;background:#fff;border:1px solid #e4e2db;border-radius:8px;box-shadow:0 8px 26px #37352f16;scrollbar-width:thin}
+#detail #detailChildrenMenu{width:278px;max-width:calc(100vw - 76px)}
+#detail .detail-nav-group+.detail-nav-group,#detail .detail-nav-projects+.detail-nav-group{border-top:1px solid #eeece7;margin-top:4px;padding-top:4px}
+#detail .detail-nav-label{color:#726e64;font-size:10px;letter-spacing:.03em;padding:5px 8px 3px}
+#detail .detail-nav-row{display:flex;align-items:center;text-align:left;gap:7px;width:100%;min-height:30px;padding:5px 8px;border-radius:5px;font-size:12px;line-height:1.5;color:#413f38}
+#detail .detail-nav-row>span:first-child{min-width:0;flex:1;overflow-wrap:anywhere}
+#detail .detail-nav-project>span:first-child{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#detail .detail-nav-row:is(:hover,:focus-visible){background:#f4f3ef}
+#detail .detail-nav-row small,#detail .detail-nav-arrow{color:#76746c;font-size:10px;white-space:nowrap}
+#detail .detail-nav-row .detail-nav-status{padding:1px 4px;border-radius:4px;background:#f0efeb}
+#detail .detail-nav-status.completed{color:#536b5a;background:#ebf1eb}
+#detail .detail-nav-status.frozen{color:#496b7d;background:#e4f0f6}
+#detail .detail-nav-empty{margin:0;padding:6px 8px;color:#77746b;font-size:12px}
+#detail .detail-nav-danger .detail-nav-row{color:#995849}
+#detail .detail-nav-danger .detail-nav-row:hover{background:#fbf0eb}
+#detail .detail-top #detailBack{display:flex;align-items:center;gap:5px;min-width:0;width:auto;height:auto;max-width:58%;padding:4px 6px;font-size:11px;color:#5f6259;line-height:1.5}
+#detail #detailBack span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#detail .project-content-section:focus{outline:1px solid #c5d2dd;outline-offset:5px;border-radius:3px}
+.project-card.detail-location-target{outline:2px solid #6c8da7;outline-offset:4px}
+#detail .detail-navigation button:focus-visible,#detail #detailBack:focus-visible{outline:2px solid #7e9bb0;outline-offset:-2px}
+@media(max-width:760px){
+  #detail .detail-popover-trigger{min-height:36px;padding:4px 8px}
+  #detail .detail-nav-row{min-height:37px;font-size:13px}
+  #detail .detail-top #detailBack{max-width:42%;min-height:30px}
+}
