@@ -1,0 +1,31 @@
+/* Keep controls compact while reserving the canvas as the main workspace. */
+.app-shell>.app-header{height:48px;flex:0 0 48px;gap:10px;padding:0 24px;border-bottom:1px solid #f1f1ef}
+.workspace-title{font-size:18px;line-height:1.4;font-weight:650;letter-spacing:-.25px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:72px}
+.app-header .header-spacer{min-width:8px}
+.app-header #syncStatus{max-width:230px;overflow:hidden;text-overflow:ellipsis}
+.load-caption{margin:0;padding:5px 24px;color:#73726e;font-size:11px}
+.load-caption:empty{display:none}
+.app-shell>.database-toolbar{flex:0 0 42px;height:42px;margin:0 24px;gap:18px}
+.database-toolbar .search-wrap{margin-left:auto;width:220px}
+.app-shell>.filterbar{flex:0 0 auto;min-height:42px;height:auto;padding:5px 24px;gap:6px 16px;flex-wrap:wrap}
+.filterbar>.direction-focus-bar{min-height:30px;flex:0 1 auto;margin:0;padding:0 16px 0 0;border:0;border-right:1px solid #e9e9e6;gap:8px;flex-wrap:nowrap;max-width:55%}
+.filterbar .direction-select-wrap{min-width:90px;max-width:230px;flex:0 1 auto}
+.filterbar .direction-focus-select{width:100%;padding-top:4px;padding-bottom:4px}
+.filterbar .direction-focus-count:empty{display:none}
+.filterbar .filter-controls{margin-left:auto}
+.filterbar .tag-panel{flex-basis:100%;padding:5px 0 3px;max-height:150px;overflow:auto}
+.filterbar .direction-focus-label{font-size:11px;flex-shrink:0}
+@media(min-width:761px){
+ .project-detail-open .app-shell>.database-toolbar{height:42px;min-height:42px;margin-left:24px;padding-bottom:0}
+ .project-detail-open .app-shell>.filterbar{min-height:42px;padding:5px 24px;gap:6px 12px}
+ .project-detail-open .filterbar>.direction-focus-bar{max-width:100%;min-height:28px}
+ .project-detail-open .filterbar .direction-select-wrap{max-width:160px}
+}
+@media(max-width:1000px){.app-header #saveStatus{display:none}.app-header #syncStatus{max-width:160px}.filterbar .direction-focus-count{display:none}}
+@media(max-width:760px){
+ .app-shell>.app-header{height:44px;flex-basis:44px;padding:0 12px;gap:5px}
+ .workspace-title{font-size:16px}.app-header #syncStatus{max-width:105px;font-size:10px}
+ .app-shell>.database-toolbar{margin:0 16px;gap:10px}.database-toolbar .search-wrap{width:160px;flex:1;max-width:none}
+ .app-shell>.filterbar{padding:5px 16px;gap:5px 10px;min-height:40px;align-content:start}
+ .filterbar>.direction-focus-bar{max-width:100%;padding-right:10px}.filterbar .direction-select-wrap{max-width:150px}
+}

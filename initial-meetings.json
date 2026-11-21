@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "meetingContentVersion": 1,
+  "updatedAt": "",
+  "meetings": [
+    {
+      "id": "demo-meeting",
+      "title": "需求评审（示例）",
+      "date": "",
+      "category": "cross-team",
+      "type": "其他",
+      "attendees": "",
+      "notes": "讨论搜索优化的验证范围。",
+      "conclusions": "",
+      "followUp": "",
+      "projectIds": [
+        "demo-child"
+      ],
+      "createdAt": "",
+      "updatedAt": "",
+      "materials": [
+        {
+          "id": "demo-material",
+          "title": "评审资料（示例链接）",
+          "url": "https://example.com/"
+        }
+      ],
+      "originNote": ""
+    }
+  ],
+  "deletedMeetings": [],
+  "deletedItems": []
+}

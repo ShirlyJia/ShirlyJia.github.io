@@ -1,0 +1,33 @@
+/* Elevation only. Keep the original card, text and focus colors. */
+:where(.world,.gather-cards,.mobile-list) .project-card{
+  --card-shadow:0 1px 2px rgb(0 0 0 / .035),0 5px 16px rgb(0 0 0 / .025);
+  border-radius:8px;
+  box-shadow:var(--card-shadow);
+}
+@media(hover:hover){
+  :where(.world,.gather-cards,.mobile-list) .project-card:hover{
+    box-shadow:0 2px 4px rgb(0 0 0 / .035),0 8px 22px rgb(0 0 0 / .035);
+  }
+}
+.world .project-card.direction-root{box-shadow:0 0 0 1px #9da98e,var(--card-shadow);}
+:where(.world,.gather-cards,.mobile-list) .project-card:is(.is-active-project,.is-active-project:hover){
+  box-shadow:0 2px 4px rgb(0 0 0 / .035),0 8px 22px rgb(0 0 0 / .035);
+}
+.world .project-card.dragging{
+  box-shadow:0 3px 7px rgb(0 0 0 / .04),0 14px 30px rgb(0 0 0 / .04);
+}
+
+/* Keep problem previews compact, including on hover. */
+:where(.world,.gather-cards,.mobile-list) .project-card .card-note{
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:var(--card-preview-lines,2);
+  white-space:normal;
+  overflow-wrap:anywhere;
+  line-height:1.65;
+  overflow:hidden;
+}
+@media(hover:hover){
+  .world .project-card:hover{z-index:7}
+  .world .project-card.dragging{z-index:8}
+}

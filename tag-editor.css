@@ -1,0 +1,87 @@
+.filter-token{position:relative}
+.filter-tag[data-tag]{cursor:grab;user-select:none}
+.filter-tag[data-tag]:active{cursor:grabbing}
+.tag-name-editor{box-sizing:border-box;flex:none;min-width:90px;max-width:330px;margin:0;padding:4px 7px;border:1px solid #b7c5cb;border-radius:4px;outline:none;background:#fff;font:inherit;font-size:11px;line-height:1.5;color:#37352f}
+.tag-name-editor[aria-invalid=true],.tag-row input[aria-invalid=true]{border-color:#bb8175;background:#fff8f5}
+.tag-row[data-tag-row]{position:relative;cursor:grab;touch-action:pan-y}
+.tag-row[data-tag-row] input{cursor:text}
+.tag-dragging{opacity:.4}
+.tag-drop-before:before,.tag-drop-after:after{content:"";position:absolute;pointer-events:none;border-radius:2px;background:#7c96a4}
+.filter-token.tag-drop-before:before{left:-5px;top:2px;bottom:2px;width:2px}
+.filter-token.tag-drop-after:after{right:-5px;top:2px;bottom:2px;width:2px}
+.tag-row.tag-drop-before:before{left:0;right:0;top:0;height:2px}
+.tag-row.tag-drop-after:after{left:0;right:0;bottom:0;height:2px}
+.tag-row[tabindex]:focus-visible{outline:2px solid #a6becd;outline-offset:3px;border-radius:4px}
+
+.filter-tag[data-tag]{touch-action:none}
+.tag-drag-preview{position:fixed;z-index:2001;pointer-events:none;padding:7px 11px;border:1px solid #bdc8ce;border-radius:5px;background:#fff;color:#4e4b44;font:12px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;box-shadow:0 4px 14px #37352f14;white-space:nowrap}
+.tag-list.tag-sorting .color-control{width:0;flex-basis:0;opacity:0;pointer-events:none}
+
+/* One quiet colour family across filters, cards and historical records. */
+.filter-token,.card-tag,.snapshot-tag{
+  --tag-ink:color-mix(in srgb,var(--tag-color,#85867f) 34%,#343b38);
+  --tag-surface:color-mix(in srgb,var(--tag-color,#85867f) 10%,#fff);
+  --tag-border:color-mix(in srgb,var(--tag-color,#85867f) 22%,#fff);
+}
+.tag-list{gap:8px}
+.filter-token{border-radius:8px}
+.filter-token .filter-tag{
+  min-height:30px;gap:7px;padding:5px 10px;border:1px solid var(--tag-border);border-radius:8px;
+  color:var(--tag-ink);background:var(--tag-surface);font-size:11px;line-height:18px;font-weight:500;
+  transition:background .15s ease,border-color .15s ease;
+}
+.filter-token .tag-dot{width:6px;height:6px;background:var(--tag-color);border-radius:50%}
+.filter-token .filter-tag-count{min-width:1ch;margin-left:1px;font-size:10px;font-weight:450;font-variant-numeric:tabular-nums;opacity:.65;text-align:right}
+.filter-token .filter-tag::after{
+  content:"";box-sizing:border-box;flex:0 0 9px;width:9px;height:5px;margin-left:2px;
+  border-left:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
+  transform:translateY(-1px) rotate(-45deg);opacity:0;transition:opacity .15s ease;
+}
+.filter-token .filter-tag:hover{background:color-mix(in srgb,var(--tag-color) 16%,#fff);border-color:color-mix(in srgb,var(--tag-color) 38%,#fff)}
+/* Selection uses the check mark; emphasis belongs to matching project cards. */
+.filter-token .filter-tag.active,.filter-token .filter-tag.active:hover{background:var(--tag-surface);border-color:var(--tag-border);color:var(--tag-ink)}
+.filter-token .filter-tag.active::after{opacity:1}
+.filter-tag:focus-visible{outline:2px solid var(--tag-color);outline-offset:2px}
+
+/* The existing colour control sits on the dot, so hovering never shifts neighbours. */
+.filter-token .color-control,.filter-token:hover .color-control,.filter-token:focus-within .color-control{
+  position:absolute;left:3px;top:50%;transform:translateY(-50%);width:22px;height:22px;flex-basis:22px;
+  border-radius:50%;background:transparent;opacity:0;
+}
+.filter-token:hover .color-control,.filter-token:focus-within .color-control{opacity:1}
+.filter-token .preset-color-trigger{border-radius:50%}
+.filter-token .preset-color-trigger:hover,.filter-token .preset-color-trigger[aria-expanded=true]{background:color-mix(in srgb,var(--tag-color) 24%,#fff)}
+.filter-token .preset-color-dot{width:6px!important;height:6px!important;border:0;border-radius:50%}
+.filter-token:has(.tag-name-editor) .color-control,.tag-list.tag-sorting .color-control{opacity:0;pointer-events:none}
+.tag-name-editor{min-height:30px;padding:5px 10px;border-color:var(--tag-color,#9aa99e);border-radius:8px;font-size:11px;line-height:18px;color:var(--tag-ink,#37352f);box-shadow:0 0 0 2px var(--tag-surface,#f3f4f1)}
+
+.card-tag,.snapshot-tag{
+  display:inline-flex;align-items:center;gap:5px;box-sizing:border-box;min-height:22px;padding:2px 7px;
+  border:1px solid var(--tag-border);border-radius:6px;background:var(--tag-surface);color:var(--tag-ink);
+  font-size:10.5px;line-height:16px;font-weight:450;vertical-align:middle;
+}
+.card-tag[style*="--tag-color"]::before,.snapshot-tag::before{content:"";flex:0 0 4px;width:4px;height:4px;border-radius:50%;background:var(--tag-color)}
+.snapshot-tag{--tag-color:var(--snapshot-accent,#85867f);margin-bottom:4px}
+.card-tags{align-items:center}
+.detail-tags .card-tag{position:relative;min-height:27px;padding:3px 7px 3px 23px;gap:5px;font-size:11px;line-height:19px}
+.detail-tags .card-tag::before{display:none}
+.detail-tags .card-tag .color-control{position:absolute;left:4px;top:50%;transform:translateY(-50%);width:18px;height:20px;opacity:1;background:transparent}
+.detail-tags .card-tag .preset-color-trigger{min-width:18px;min-height:20px;border-radius:50%;opacity:1}
+.detail-tags .card-tag .preset-color-dot{width:6px!important;height:6px!important;border:0;border-radius:50%}
+.detail-tags .card-tag button[data-detach-tag]{padding:0;width:14px;min-height:18px;margin-left:1px;border-radius:4px;color:var(--tag-ink);font-size:14px}
+.detail-tags .card-tag button[data-detach-tag]:hover{background:color-mix(in srgb,var(--tag-color) 20%,#fff)}
+.tag-drag-preview{border-radius:8px;padding:6px 10px}
+@media(hover:none){.filter-token .color-control{opacity:1}.filter-token .filter-tag{min-height:34px}}
+@media(prefers-reduced-motion:reduce){.filter-token .filter-tag,.filter-token .filter-tag::after{transition:none}}
+
+/* Keep the canvas quiet on entry; filters stay available without an extra dialog. */
+.app-shell>.filterbar{flex-basis:auto;height:auto;min-height:40px;flex-wrap:wrap;gap:7px 14px;align-items:center}
+.filterbar .tag-disclosure{display:inline-flex;align-items:center;gap:6px;padding:5px 0;color:#646a73;font-size:11px;line-height:20px;cursor:pointer}
+.tag-disclosure svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.4;transition:transform .15s ease}
+.tag-disclosure[aria-expanded=true] svg{transform:rotate(90deg)}
+.filterbar .filter-controls{margin-left:auto;width:auto;min-height:0;padding-top:0}
+.filterbar .tag-panel{display:flex;align-items:flex-start;gap:10px;flex:0 0 100%;min-width:0;padding:2px 0 5px}
+.filterbar .tag-panel .tag-list{flex:1;order:0;flex-wrap:wrap;overflow:auto;max-height:124px;gap:8px;min-height:0}
+.filterbar .tag-manage{flex:none;min-width:28px;height:30px;padding:3px;color:#8f959e;font-size:17px}
+.selected-tag-count{padding:0 5px;border-radius:4px;background:#f2f3f5;color:#4e5969;font-size:10px;font-variant-numeric:tabular-nums}
+@media(prefers-reduced-motion:reduce){.tag-disclosure svg{transition:none}}

@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 2,
+  "workbenchVersion": 1,
+  "frameBoardSyncVersion": 1,
+  "domainTagVersion": 1,
+  "projectContentVersion": 1,
+  "canvasNoteStyleVersion": 1,
+  "sourceDetachedVersion": 1,
+  "quickBoards": [],
+  "deliveryEvents": [],
+  "projects": [
+    {
+      "id": "demo-direction",
+      "name": "搜索体验（示例）",
+      "description": "让用户更容易找到需要的内容。",
+      "kind": "direction",
+      "tagIds": [
+        "demo-tag"
+      ],
+      "priority": "",
+      "planNodes": [],
+      "materials": [],
+      "comments": [],
+      "customSections": [],
+      "closed": false
+    },
+    {
+      "id": "demo-child",
+      "name": "优化关键词匹配",
+      "description": "验证同义词和简写是否能返回正确结果。",
+      "kind": "project",
+      "tagIds": [
+        "demo-tag"
+      ],
+      "priority": "P1",
+      "planNodes": [],
+      "materials": [],
+      "comments": [],
+      "customSections": [],
+      "closed": false
+    },
+    {
+      "id": "demo-outcome",
+      "name": "完善空结果提示",
+      "description": "为未找到结果的用户提供下一步建议。",
+      "kind": "project",
+      "tagIds": [
+        "demo-tag"
+      ],
+      "priority": "",
+      "planNodes": [],
+      "materials": [],
+      "comments": [],
+      "customSections": [],
+      "closed": true,
+      "result": "已加入可操作的搜索建议。",
+      "closedAt": "2026-01-08",
+      "lifecycle": "completed"
+    }
+  ],
+  "tags": [
+    {
+      "id": "demo-tag",
+      "name": "体验优化",
+      "color": "#5874B8",
+      "rank": 0
+    }
+  ],
+  "relations": [
+    {
+      "id": "demo-relation",
+      "main": "demo-direction",
+      "child": "demo-child",
+      "context": "搜索相关性验证"
+    }
+  ],
+  "frames": [
+    {
+      "id": "demo-group",
+      "name": "本期跟进（示例）",
+      "x": 40,
+      "y": 60,
+      "w": 680,
+      "h": 260,
+      "members": [
+        "demo-direction-card",
+        "demo-child-card"
+      ],
+      "color": "#B3C2D8",
+      "backgroundColor": "#F3F6FC"
+    }
+  ],
+  "instances": [
+    {
+      "id": "demo-direction-card",
+      "pid": "demo-direction",
+      "x": 72,
+      "y": 110,
+      "context": "",
+      "focus": ""
+    },
+    {
+      "id": "demo-child-card",
+      "pid": "demo-child",
+      "x": 394,
+      "y": 110,
+      "context": "",
+      "focus": ""
+    }
+  ],
+  "canvasItems": [],
+  "view": {
+    "x": 0,
+    "y": 0,
+    "z": 1
+  }
+}

@@ -1,0 +1,5 @@
+/* Dates use the same emphasis across cards, editors, meetings, and snapshots. */
+:root{--date-ink:#c4473c}
+time,.date-text,input:is([type="date"],[type="datetime-local"],[type="month"],[type="week"]){color:var(--date-ink)!important;font-variant-numeric:tabular-nums}
+input:is([type="date"],[type="datetime-local"],[type="month"],[type="week"])::-webkit-datetime-edit{color:var(--date-ink)}
+.meeting-row time{display:block;font-size:11px;margin-top:4px}
