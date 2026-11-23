@@ -13,8 +13,46 @@ const allowTags = new Set('P DIV BR STRONG B EM I U S STRIKE DEL H1 H2 H3 UL OL 
 const dropTags = new Set('SCRIPT STYLE IFRAME FRAME OBJECT EMBED SVG MATH FORM INPUT BUTTON TEXTAREA SELECT OPTION META LINK BASE AUDIO VIDEO SOURCE TEMPLATE NOSCRIPT'.split(' '));
 const blockTags = new Set('P DIV H1 H2 H3 LI BLOCKQUOTE PRE TABLE TR FIGURE FIGCAPTION'.split(' '));
 
-export function safeRichLink(value) {
-  try { const url = new URL(String(value).trim()); return ['https:','http:','mailto:'].includes(url.protocol) && !url.username && !url.password ? url.href : ''; } catch { return ''; }
+export function safeRichLink(value, base) {
+  if(typeof value!=='string'||!value.trim())return '';
+  try { const url = new URL(value.trim(),base||undefined); return ['https:','http:','mailto:'].includes(url.protocol) && !url.username && !url.password ? url.href : ''; } catch { return ''; }
+}
+function webLink(value) {
+  const href=safeRichLink(value);
+  return /^https?:\/\//i.test(href)?href:'';
+}
+function makeLink(href) {
+  const link=document.createElement('a');
+  link.href=href;link.target='_blank';link.rel='noopener noreferrer';
+  return link;
+}
+function compactLink(href) {
+  if(!webLink(href))return null;
+  const url=new URL(href),host=url.hostname.replace(/^www\./i,'');
+  const parts=url.pathname.split('/').filter(Boolean).map(part=>{
+    try{return decodeURIComponent(part);}catch{return part;}
+  });
+  const gitHub=host==='github.com',separator=parts.indexOf('-');
+  const gitLab=!gitHub&&(host==='gitlab.com'||/^gitlab[.-]/.test(host)||separator>=2&&/^(merge_requests|issues|commit|blob|tree|releases)$/.test(parts[separator+1]));
+  if((gitHub||gitLab)&&parts.length>=2){
+    const repoEnd=gitHub?2:separator>=2?separator:parts.length;
+    const repo=parts.slice(0,repoEnd).join('/').replace(/\.git$/i,'');
+    const [kind,id]=parts.slice(gitLab&&separator>=2?repoEnd+1:repoEnd);
+    const suffix=kind==='pull'&&/^\d+$/.test(id)?'PR #'+id:
+      kind==='merge_requests'&&/^\d+$/.test(id)?'MR !'+id:
+      kind==='issues'&&/^\d+$/.test(id)?'Issue #'+id:
+      kind==='commit'&&id?id.slice(0,8):
+      kind==='blob'&&id?parts.at(-1):kind==='tree'&&id?id:'';
+    return {label:repo+(suffix?' · '+suffix:''),kind:'git'};
+  }
+  const tail=parts.at(-1);
+  return {label:host+(tail?' · '+(tail.length>38?tail.slice(0,36)+'…':tail):''),kind:'web'};
+}
+function decorateLink(link,preview) {
+  if(preview){
+    link.dataset.richLink=preview.kind;
+    link.title=link.href;
+  }
 }
 export function safeRichImage(value) { return typeof value === 'string' && value.length <= MAX_IMAGE_DATA && imageData.test(value) ? value : ''; }
 /** Retain text colour only; pasted CSS never becomes an arbitrary inline style. */
@@ -38,10 +76,11 @@ function taskBox(checked, interactive = false) {
 }
 
 /** Never interpolate saved/pasted HTML directly. Rebuild only supported elements. */
-export function richHTML(html, plain = '') {
+export function richHTML(html, plain = '', {sourceURL = ''} = {}) {
   if (!html || typeof html !== 'string' || typeof document === 'undefined') return plainHTML(plain);
   const source = document.createElement('template'); source.innerHTML = html;
   const output = document.createElement('div');
+  const base=webLink(sourceURL);
   function copy(node, parent) {
     if (node.nodeType === 3) { parent.append(document.createTextNode(node.nodeValue)); return; }
     if (node.nodeType !== 1 || dropTags.has(node.tagName)) return;
@@ -61,10 +100,12 @@ export function richHTML(html, plain = '') {
       return;
     }
     if (node.tagName === 'A') {
-      const href = safeRichLink(node.getAttribute('href'));
+      const raw=node.getAttribute('href')||node.getAttribute('data-href');
+      const href = safeRichLink(raw,base)||(raw?.startsWith('//')?webLink('https:'+raw):'');
       if (!href) { for (const child of node.childNodes) copy(child, parent); return; }
-      const link = document.createElement('a'); link.href = href; link.target = '_blank'; link.rel = 'noopener noreferrer';
+      const link = makeLink(href);
       copyStyles(node,link);
+      if(node.hasAttribute('data-rich-link'))decorateLink(link,compactLink(href));
       parent.append(link); for (const child of node.childNodes) copy(child, link); return;
     }
     const element = document.createElement(node.tagName.toLowerCase());
@@ -94,28 +135,103 @@ function plainFromHTML(html) {
   }
   return Array.from(holder.childNodes).map(walk).join('').replace(/\u00a0/g,' ').replace(/\t+\n/g,'\n').replace(/\n{3,}/g,'\n\n').replace(/\n+$/,'');
 }
-/** Pasted URLs become links; copied rich text keeps its formatting and safe links. */
-export function pastedRichHTML(html, plain = '') {
-  const holder=document.createElement('div');holder.innerHTML=richHTML(html,plain);
+function splitClipboardHTML(html) {
+  if(!html)return {fragment:'',sourceURL:''};
+  const header=html.match(/^Version:[^\r\n]*(?:\r?\n(?:StartHTML|EndHTML|StartFragment|EndFragment|StartSelection|EndSelection|SourceURL):[^\r\n]*)+\r?\n/i)?.[0]||'';
+  const body=html.slice(header.length),start=/<!--\s*StartFragment\s*-->/i.exec(body),end=/<!--\s*EndFragment\s*-->/i.exec(body);
+  let sourceURL=webLink(header.match(/^SourceURL:\s*([^\r\n]+)/im)?.[1]);
+  if(!sourceURL&&/<base\b/i.test(body)){
+    const source=document.createElement('template');source.innerHTML=body;
+    sourceURL=webLink(source.content.querySelector('base[href]')?.getAttribute('href'));
+  }
+  return {fragment:start&&end&&end.index>=start.index+start[0].length?body.slice(start.index+start[0].length,end.index):body,sourceURL};
+}
+function bareLink(value, {reference=false} = {}) {
+  const text=value.trim();
+  if(/^(?:https?:\/\/|mailto:|www\.|(?:github\.com|gitlab\.com)(?=\/|$))[^\s<>"'\x60]*$/i.test(text)){
+    return safeRichLink(/^(?:https?:\/\/|mailto:)/i.test(text)?text:'https://'+text);
+  }
+  return reference&&/^\/\/[^/\s<>"'\x60][^\s<>"'\x60]*$/.test(text)?webLink('https:'+text):'';
+}
+function linkText(value) {
+  const fragment=document.createDocumentFragment();let cursor=0;
+  // Prefer Markdown's explicit label to an automatically generated one.
+  const tokens=/(?<code>\x60+[^\x60\n]+\x60+)|\[(?<label>(?:\\.|[^\]\\\n])+)\]\((?<destination><[^>\n]+>|(?:\\[()]|\([^()\s]*\)|[^\s()])+)(?:[ \t]+["'][^"'\n]*["'])?\)|(?<url>(?:(?:https?:\/\/|mailto:|www\.)[^\s<>"'\x60，。；！？、（）【】《》「」『』“”‘’：…]+|(?:github\.com|gitlab\.com)\/[^\s<>"'\x60，。；！？、（）【】《》「」『』“”‘’：…]+))/gi;
+  for(const match of value.matchAll(tokens)){
+    const {code,label,destination,url}=match.groups;
+    if(code||label&&value[match.index-1]==='!'||url&&match.index>0&&/[\w@./-]/.test(value[match.index-1]))continue;
+    let candidate=destination?destination.replace(/^<|>$/g,'').replace(/\\([()])/g,'$1'):url.replace(/[.,;:!?]+$/,'');
+    if(url)for(const [open,close] of [['(',')'],['[',']'],['{','}']]){
+      while(candidate.endsWith(close)&&candidate.split(close).length>candidate.split(open).length)candidate=candidate.slice(0,-1);
+    }
+    const href=bareLink(candidate,{reference:Boolean(destination)});if(!href)continue;
+    fragment.append(document.createTextNode(value.slice(cursor,match.index)));
+    const link=makeLink(href),preview=label?null:compactLink(href);
+    link.textContent=label?label.replace(/\\([\\[\]()])/g,'$1'):preview?.label||candidate;
+    decorateLink(link,preview);fragment.append(link);
+    cursor=match.index+(url?candidate.length:match[0].length);
+  }
+  if(!cursor)return null;
+  fragment.append(document.createTextNode(value.slice(cursor)));return fragment;
+}
+/** Keep copied anchor labels. Only bare web addresses get a generated display label. */
+export function pastedRichHTML(html, plain = '', {urls = [], markdown = ''} = {}) {
+  const {fragment,sourceURL}=splitClipboardHTML(html);
+  const holder=document.createElement('div');holder.innerHTML=richHTML(fragment,'',{sourceURL});
+  const htmlText=holder.textContent.trim(),plainText=plain.trim();
+  const anchors=holder.querySelectorAll('a'),assets=holder.querySelector('img,hr,table,pre,code');
+  if(urls.length&&!anchors.length&&!assets){
+    const text=htmlText||plainText;
+    if(!text&&!markdown){
+      for(const href of urls){
+        const preview=compactLink(href);if(!preview)continue;
+        const link=makeLink(webLink(href));
+        link.textContent=preview.label;decorateLink(link,preview);
+        if(urls.length>1){
+          const line=document.createElement('div');line.append(link);holder.append(line);
+        }else holder.append(link);
+      }
+      return holder.innerHTML;
+    }
+    const href=urls.length===1?webLink(urls[0]):'';
+    if(href&&!/\r|\n/.test(text)&&!bareLink(text)&&!linkText(text)&&(!htmlText||!plainText||htmlText===plainText||bareLink(plainText)===href)){
+      const link=makeLink(href);
+      if(htmlText)link.append(...holder.childNodes);else link.textContent=text;
+      holder.append(link);return holder.innerHTML;
+    }
+  }
+  if(!anchors.length&&!assets){
+    const linkParts=[...holder.querySelectorAll('strong,b,em,i,u,s,del,[style]')];
+    const partialLabel=linkParts.some(node=>node.textContent.trim()!==htmlText);
+    if(!htmlText||bareLink(plainText)&&htmlText===plainText&&(!linkParts.length||partialLabel)){
+      const text=markdown||plain;
+      holder.innerHTML=text&&!/\r|\n/.test(text)?esc(text):text?plainHTML(text):'';
+    }
+  }
+  for(const link of holder.querySelectorAll('a')){
+    const href=link.getAttribute('href');
+    if(link.hasAttribute('data-rich-link')||link.children.length||link.closest('pre,code')||bareLink(link.textContent)!==href)continue;
+    const preview=compactLink(href);
+    if(preview){link.textContent=preview.label;decorateLink(link,preview);}
+  }
   const walker=document.createTreeWalker(holder,NodeFilter.SHOW_TEXT),nodes=[];
   while(walker.nextNode())if(!walker.currentNode.parentElement.closest('a,pre,code'))nodes.push(walker.currentNode);
   for(const node of nodes){
-    const value=node.nodeValue,fragment=document.createDocumentFragment();let cursor=0;
-    for(const match of value.matchAll(/(?:https?:\/\/|mailto:)[^\s<>"'`，。；！？、（）]+/gi)){
-      let candidate=match[0].replace(/[.,;:!?]+$/,'');
-      for(const [open,close] of [['(',')'],['[',']'],['{','}']])while(candidate.endsWith(close)&&candidate.split(close).length>candidate.split(open).length)candidate=candidate.slice(0,-1);
-      const href=safeRichLink(candidate);if(!href)continue;
-      fragment.append(document.createTextNode(value.slice(cursor,match.index)));
-      const link=document.createElement('a');link.href=href;link.target='_blank';link.rel='noopener noreferrer';link.textContent=candidate;fragment.append(link);
-      cursor=match.index+candidate.length;
-    }
-    if(cursor){fragment.append(document.createTextNode(value.slice(cursor)));node.replaceWith(fragment);}
+    const content=linkText(node.nodeValue);if(content)node.replaceWith(content);
   }
   return holder.innerHTML;
 }
-function accompanyingContent(html, plain) {
-  if (!html&&!plain) return '';
-  const content=document.createElement('template');content.innerHTML=pastedRichHTML(html,plain);
+function transferredRichContent(data) {
+  const html=data.getData('text/html'),plain=data.getData('text/plain'),markdown=data.getData('text/markdown');
+  const [mozURL,mozTitle]=data.getData('text/x-moz-url').split(/\r?\n/);
+  const urls=[...new Set((data.getData('text/uri-list')||mozURL||data.getData('text/x-moz-url-data')).split(/\r?\n/).filter(line=>!line.trimStart().startsWith('#')).map(webLink).filter(Boolean))];
+  const text=plain||mozTitle||data.getData('text/x-moz-url-desc')||'';
+  if(!html&&!text&&!urls.length&&!markdown)return {markup:'',externalImage:false};
+  const markup=pastedRichHTML(html,text,{urls,markdown});
+  return {markup,literal:text||markdown||urls.join('\n')||null,externalImage:/<img\b/i.test(html)&&!/<img\b/i.test(markup)};
+}
+function accompanyingContent(markup) {
+  const content=document.createElement('template');content.innerHTML=markup;
   content.content.querySelectorAll('img').forEach(image=>image.remove());
   return content.innerHTML;
 }
@@ -214,6 +330,25 @@ function insertHTML(editor, html) {
   range.deleteContents(); range.insertNode(fragment);
   if (end) { range.setStartAfter(end); range.collapse(true); selection.removeAllRanges(); selection.addRange(range); }
 }
+function insertTransferredHTML(editor,{markup,literal:text}) {
+  const selection=editorRange(editor),start=selection?.startContainer;
+  const literal=(start?.nodeType===1?start:start?.parentElement)?.closest('pre,code');
+  if(literal&&editor.contains(literal)&&literal.contains(selection.endContainer)){
+    document.execCommand('insertText',false,text??plainFromHTML(markup));
+    return;
+  }
+  insertHTML(editor,markup);
+  // Typing after a freshly pasted anchor should continue as ordinary text.
+  const caret=editorRange(editor),node=caret?.startContainer;
+  const link=(node?.nodeType===1?node:node?.parentElement)?.closest('a');
+  if(link&&editor.contains(link)&&caret.collapsed){
+    const end=document.createRange();end.selectNodeContents(link);end.collapse(false);
+    if(caret.compareBoundaryPoints(Range.START_TO_START,end)===0||
+       node.nodeType===3&&caret.startOffset===node.length&&node===link.lastChild){
+      caret.setStartAfter(link);caret.collapse(true);selectRange(editor,caret);
+    }
+  }
+}
 async function prepareImage(file) {
   if (!supportedImages.test(file.type) || /\.svg$/i.test(file.name || '')) throw Error('请选择 PNG、JPEG、WebP 或 GIF 图片。');
   if (file.size > 20 * 1024 * 1024) throw Error('单张图片不能超过 20 MB。');
@@ -306,8 +441,14 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
     listen(editor,'keyup',remember); listen(editor,'mouseup',remember); listen(editor,'focus',remember);
     listen(editor,'click',event=>{
       const box=event.target.closest('[data-rich-task-box]');if(box&&editor.contains(box)){event.preventDefault();event.stopPropagation();toggleTask(box);return;}
+      const link=event.target.closest('a');
+      if(link&&state.editing&&(event.metaKey||event.ctrlKey)){
+        event.preventDefault();event.stopPropagation();
+        const href=safeRichLink(link.getAttribute('href'));if(href)window.open(href,'_blank','noopener,noreferrer');
+        return;
+      }
       if(!state.editing){
-        if(event.target.closest('a'))return;
+        if(link)return;
         state.range=editorRange(editor)||document.caretRangeFromPoint?.(event.clientX,event.clientY);setEditing(true);
       }
       state.image=event.target.tagName==='IMG'?event.target:null;updateImageTools(editor);
@@ -318,6 +459,7 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
       const box=event.target.closest('[data-rich-task-box]');
       if(box&&[' ','Enter'].includes(event.key)){event.preventDefault();toggleTask(box);return;}
       if(!state.editing){
+        if(event.target.closest('a'))return;
         if(event.key==='Enter'||event.key==='F2'){event.preventDefault();setEditing(true);}
         else if(event.key.length===1&&!event.ctrlKey&&!event.metaKey&&!event.altKey)setEditing(true);
         else return;
@@ -338,20 +480,20 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
       const clipboard=event.clipboardData; if(!clipboard)return;
       if(!state.editing)setEditing(true);
       const files=Array.from(clipboard.items||[]).filter(item=>item.kind==='file'&&item.type.startsWith('image/')).map(item=>item.getAsFile()).filter(Boolean);
-      const html=clipboard.getData('text/html'),plain=clipboard.getData('text/plain');
-      if(files.length){event.preventDefault();addImages(files,accompanyingContent(html,plain));return;}
-      if(!html&&!plain)return;
-      event.preventDefault();remember();selectRange(editor,state.range);edit(editor,()=>insertHTML(editor,pastedRichHTML(html,plain)));remember();
-      if (html && /<img\b/i.test(html) && !/<img\b/i.test(richHTML(html))) message('文字已粘贴。网页图片请复制图片本身后粘贴，或拖入本地图片。',true);
+      const content=transferredRichContent(clipboard),{markup,externalImage}=content;
+      event.preventDefault();
+      if(files.length){addImages(files,accompanyingContent(markup));return;}
+      if(markup){remember();selectRange(editor,state.range);edit(editor,()=>insertTransferredHTML(editor,content));remember();}
+      if(externalImage)message('网页图片请复制图片本身后粘贴，或拖入本地图片。',true);
     });
-    listen(editor,'dragover',event=>{if(state.editing&&Array.from(event.dataTransfer?.types||[]).includes('Files')){event.preventDefault();wrapper.classList.add('rich-dragging');}});
+    listen(editor,'dragover',event=>{if(state.editing&&Array.from(event.dataTransfer?.types||[]).some(type=>type==='Files'||/^text\//.test(type))){event.preventDefault();wrapper.classList.add('rich-dragging');}});
     listen(editor,'dragleave',()=>wrapper.classList.remove('rich-dragging'));
     listen(editor,'drop',event=>{wrapper.classList.remove('rich-dragging');if(!state.editing||!event.dataTransfer)return;const files=Array.from(event.dataTransfer.files);event.preventDefault();
       const range=document.caretRangeFromPoint?.(event.clientX,event.clientY);if(range&&editor.contains(range.startContainer)){selectRange(editor,range);state.range=range.cloneRange();}
-      const html=event.dataTransfer.getData('text/html'),plain=event.dataTransfer.getData('text/plain');
-      if(files.length){addImages(files,accompanyingContent(html,plain));return;}
-      if(html||plain){selectRange(editor,state.range);edit(editor,()=>insertHTML(editor,pastedRichHTML(html,plain)));remember();}
-      if(html&&/<img\b/i.test(html)&&!/<img\b/i.test(richHTML(html)))message('文字已插入。网页图片请复制图片本身后粘贴，或拖入本地图片。',true);
+      const content=transferredRichContent(event.dataTransfer),{markup,externalImage}=content;
+      if(files.length){addImages(files,accompanyingContent(markup));return;}
+      if(markup){selectRange(editor,state.range);edit(editor,()=>insertTransferredHTML(editor,content));remember();}
+      if(externalImage)message('网页图片请复制图片本身后粘贴，或拖入本地图片。',true);
     });
     listen(wrapper.querySelector('.rich-toolbar'),'mousedown',event=>{if(event.target.closest('button')){remember();event.preventDefault();}});
     listen(wrapper,'click',event=>{

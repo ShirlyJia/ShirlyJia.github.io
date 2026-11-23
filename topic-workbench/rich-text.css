@@ -43,6 +43,10 @@
 .rich-content pre{padding:10px;white-space:pre-wrap}
 .rich-content code{padding:1px 4px}
 .rich-content a{color:#54768a;text-decoration:underline;text-underline-offset:3px}
+.rich-content a[data-rich-link]{padding:1px 5px;border-radius:4px;background:#eef3f7;color:#3c6177;font-size:.95em;text-decoration:none;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.rich-content a[data-rich-link="git"]{background:#f0f2f4;color:#44566a}
+.rich-content a[data-rich-link]::before{content:"";display:inline-block;width:.82em;height:.82em;margin-right:.35em;vertical-align:-.06em;background:currentColor;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M7 5.5l1.8-1.8a2.5 2.5 0 013.5 3.5l-1.8 1.8M9 10.5l-1.8 1.8a2.5 2.5 0 01-3.5-3.5l1.8-1.8M6.2 9.8l3.6-3.6'/%3E%3C/svg%3E") center/contain no-repeat}
+.rich-content a[data-rich-link]:hover,.rich-content a[data-rich-link]:focus-visible{background:#e5edf4;text-decoration:underline}
 .rich-content img{display:block;max-width:100%;height:auto;max-height:620px;object-fit:contain;margin:10px 0;border-radius:3px;cursor:pointer;outline-offset:3px}
 .rich-content img[width]{max-height:none}
 .rich-content img.rich-image-selected{outline:0}
