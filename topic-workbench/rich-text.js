@@ -1,8 +1,8 @@
 /** Small shared editor. Rich HTML is optional; plain text stays available to cards/search. */
 import {safeImageWidth,mountImageResize} from './rich-image-resize.js';
 import {colorChoices} from './color-presets.js';
-import {richToolbarMarkup,copyRichStyles,mountRichFormatting} from './rich-formatting.js?v=20261117-full-editor';
-import {createRichHistory} from './rich-history.js?v=20261117-full-editor';
+import {richToolbarMarkup,copyRichStyles,mountRichFormatting} from './rich-formatting.js?v=20261123-inline-citations';
+import {createRichHistory,textSelection,restoreTextSelection} from './rich-history.js?v=20261117-full-editor';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c]));
 const supportedImages = /^image\/(png|jpeg|webp|gif)$/i;
 const imageData = /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/i;
@@ -26,14 +26,19 @@ function makeLink(href) {
   link.href=href;link.target='_blank';link.rel='noopener noreferrer';
   return link;
 }
+function citationSource(url) {
+  const host=url.hostname.replace(/^www\./i,'');
+  const icon=host==='github.com'?'github':
+    host==='gitlab.com'||/^gitlab[.-]/.test(host)||/\/-\/(?:merge_requests|issues|commit|blob|tree|releases)\//.test(url.pathname)?'gitlab':'web';
+  return {host,icon};
+}
 function compactLink(href) {
   if(!webLink(href))return null;
-  const url=new URL(href),host=url.hostname.replace(/^www\./i,'');
+  const url=new URL(href),{host,icon}=citationSource(url);
   const parts=url.pathname.split('/').filter(Boolean).map(part=>{
     try{return decodeURIComponent(part);}catch{return part;}
   });
-  const gitHub=host==='github.com',separator=parts.indexOf('-');
-  const gitLab=!gitHub&&(host==='gitlab.com'||/^gitlab[.-]/.test(host)||separator>=2&&/^(merge_requests|issues|commit|blob|tree|releases)$/.test(parts[separator+1]));
+  const gitHub=icon==='github',gitLab=icon==='gitlab',separator=parts.indexOf('-');
   if((gitHub||gitLab)&&parts.length>=2){
     const repoEnd=gitHub?2:separator>=2?separator:parts.length;
     const repo=parts.slice(0,repoEnd).join('/').replace(/\.git$/i,'');
@@ -75,8 +80,8 @@ function taskBox(checked, interactive = false) {
   return box;
 }
 
-/** Never interpolate saved/pasted HTML directly. Rebuild only supported elements. */
-export function richHTML(html, plain = '', {sourceURL = ''} = {}) {
+/** Rebuild supported elements, without storing presentation-only citation wrappers. */
+function cleanRichHTML(html, plain = '', {sourceURL = ''} = {}) {
   if (!html || typeof html !== 'string' || typeof document === 'undefined') return plainHTML(plain);
   const source = document.createElement('template'); source.innerHTML = html;
   const output = document.createElement('div');
@@ -120,6 +125,62 @@ export function richHTML(html, plain = '', {sourceURL = ''} = {}) {
   }
   for (const child of source.content.childNodes) copy(child, output);
   return output.innerHTML;
+}
+const citationInline='span,strong,b,em,i,u,s,strike,del';
+const citationGap=/^\s*(?:[·•・]\s*)?$/u;
+function citationUnit(link,root) {
+  // Include formatting around a link only when it wraps no other content.
+  let unit=link,parent=unit.parentElement;
+  while(parent&&parent!==root&&parent.matches(citationInline)&&parent.childElementCount===1&&
+      [...parent.childNodes].every(node=>node===unit||node.nodeType===3&&!node.nodeValue.trim())){
+    unit=parent;parent=unit.parentElement;
+  }
+  return unit;
+}
+function decorateCitations(root) {
+  const links=new Map();
+  for(const link of root.querySelectorAll('a[href]')){
+    const href=webLink(link.getAttribute('href'));
+    if(!href||!link.textContent.trim()||link.closest('pre,code,[data-rich-citation]')||link.querySelector('img,br,p,div,li,table'))continue;
+    link.title=href;
+    links.set(citationUnit(link,root),citationSource(new URL(href)));
+  }
+  for(const [first,source] of links){
+    const run=[first];let last=first;
+    for(;;){
+      let next=last.nextSibling,separator='';
+      const gap=[];
+      while(next&&(next.nodeType===3||next.nodeType===1&&!links.has(next)&&next.matches(citationInline)&&!next.childElementCount&&citationGap.test(next.textContent))){
+        separator+=next.textContent;gap.push(next);next=next.nextSibling;
+      }
+      const neighbor=links.get(next);
+      if(!citationGap.test(separator)||!neighbor||neighbor.host!==source.host||neighbor.icon!==source.icon)break;
+      run.push(...gap,next);links.delete(next);last=next;
+    }
+    const citation=document.createElement('span'),labels=document.createElement('span');
+    citation.dataset.richCitation=source.icon;labels.dataset.richCitationLabels='';
+    first.before(citation);citation.append(labels);
+    labels.append(...run);
+  }
+}
+function refreshCitations(editor) {
+  const selection=textSelection(editor);
+  for(const [wrapper,attribute] of [['[data-rich-citation-labels]','data-rich-citation-labels'],['[data-rich-citation]','data-rich-citation']]){
+    for(const node of editor.querySelectorAll(wrapper)){
+      if(node.hasAttribute('style'))node.removeAttribute(attribute);
+      else node.replaceWith(...node.childNodes);
+    }
+  }
+  decorateCitations(editor);
+  if(selection)restoreTextSelection(editor,selection);
+}
+/** Reading and pasting use the same inline presentation. Each link stays independent. */
+export function richHTML(html, plain = '', options) {
+  const clean=cleanRichHTML(html,plain,options);
+  if(typeof document==='undefined'||!/<a\b/i.test(clean))return clean;
+  const holder=document.createElement('div');holder.innerHTML=clean;
+  decorateCitations(holder);
+  return holder.innerHTML;
 }
 function plainFromHTML(html) {
   const holder = document.createElement('div'); holder.innerHTML = html;
@@ -177,7 +238,7 @@ function linkText(value) {
 /** Keep copied anchor labels. Only bare web addresses get a generated display label. */
 export function pastedRichHTML(html, plain = '', {urls = [], markdown = ''} = {}) {
   const {fragment,sourceURL}=splitClipboardHTML(html);
-  const holder=document.createElement('div');holder.innerHTML=richHTML(fragment,'',{sourceURL});
+  const holder=document.createElement('div');holder.innerHTML=cleanRichHTML(fragment,'',{sourceURL});
   const htmlText=holder.textContent.trim(),plainText=plain.trim();
   const anchors=holder.querySelectorAll('a'),assets=holder.querySelector('img,hr,table,pre,code');
   if(urls.length&&!anchors.length&&!assets){
@@ -228,14 +289,14 @@ function transferredRichContent(data) {
   const text=plain||mozTitle||data.getData('text/x-moz-url-desc')||'';
   if(!html&&!text&&!urls.length&&!markdown)return {markup:'',externalImage:false};
   const markup=pastedRichHTML(html,text,{urls,markdown});
-  return {markup,literal:text||markdown||urls.join('\n')||null,externalImage:/<img\b/i.test(html)&&!/<img\b/i.test(markup)};
+  return {markup,hasCitation:/<a\b/i.test(markup),literal:text||markdown||urls.join('\n')||null,externalImage:/<img\b/i.test(html)&&!/<img\b/i.test(markup)};
 }
 function accompanyingContent(markup) {
   const content=document.createElement('template');content.innerHTML=markup;
   content.content.querySelectorAll('img').forEach(image=>image.remove());
   return content.innerHTML;
 }
-export function readRichEditor(editor) { const html = richHTML(editor.innerHTML); return {text:plainFromHTML(html), html}; }
+export function readRichEditor(editor) { const html = cleanRichHTML(editor.innerHTML); return {text:plainFromHTML(html), html}; }
 export function setRichEditor(editor, {text = '', html = ''} = {}) {
   if (!editor) return;
   const mounted = mounts.get(editor);
@@ -330,7 +391,7 @@ function insertHTML(editor, html) {
   range.deleteContents(); range.insertNode(fragment);
   if (end) { range.setStartAfter(end); range.collapse(true); selection.removeAllRanges(); selection.addRange(range); }
 }
-function insertTransferredHTML(editor,{markup,literal:text}) {
+function insertTransferredHTML(editor,{markup,hasCitation,literal:text}) {
   const selection=editorRange(editor),start=selection?.startContainer;
   const literal=(start?.nodeType===1?start:start?.parentElement)?.closest('pre,code');
   if(literal&&editor.contains(literal)&&literal.contains(selection.endContainer)){
@@ -338,15 +399,19 @@ function insertTransferredHTML(editor,{markup,literal:text}) {
     return;
   }
   insertHTML(editor,markup);
+  if(!hasCitation)return;
+  refreshCitations(editor);
   // Typing after a freshly pasted anchor should continue as ordinary text.
   const caret=editorRange(editor),node=caret?.startContainer;
-  const link=(node?.nodeType===1?node:node?.parentElement)?.closest('a');
-  if(link&&editor.contains(link)&&caret.collapsed){
-    const end=document.createRange();end.selectNodeContents(link);end.collapse(false);
-    if(caret.compareBoundaryPoints(Range.START_TO_START,end)===0||
-       node.nodeType===3&&caret.startOffset===node.length&&node===link.lastChild){
-      caret.setStartAfter(link);caret.collapse(true);selectRange(editor,caret);
+  const target=(node?.nodeType===1?node:node?.parentElement);
+  const link=target?.closest('a');
+  if(caret?.collapsed&&link){
+    for(const boundary of [link,target?.closest('[data-rich-citation]')]){
+      if(!boundary||!editor.contains(boundary))continue;
+      const remaining=caret.cloneRange();remaining.setEnd(boundary,boundary.childNodes.length);
+      if(!remaining.toString()&&!remaining.cloneContents().querySelector('img,br'))caret.setStartAfter(boundary);
     }
+    selectRange(editor,caret);
   }
 }
 async function prepareImage(file) {
@@ -432,7 +497,7 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
         for (const file of images) markup.push(await prepareImage(file));
         if (!editor.isConnected || state.revision !== revision) return;
         state.pending=0;delete editor.dataset.richPending;message('');
-        selectRange(editor, range); edit(editor,()=>insertHTML(editor, markup.join(''))); remember();
+        selectRange(editor, range); edit(editor,()=>{insertHTML(editor, markup.join(''));if(/<a\b/i.test(accompaniment))refreshCitations(editor);}); remember();
       } catch(error) { if (editor.isConnected) message(error.message || '图片插入失败，请重试。',true); }
       finally { state.pending=0; delete editor.dataset.richPending; }
     };
@@ -514,8 +579,8 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
       remember();
     });
     syncTaskControls(editor);updateEmpty(editor);
-    state.history=createRichHistory(editor,{read:()=>readRichEditor(editor).html,restore:html=>{state.range=null;state.image=null;state.nextFontSize=null;editor.innerHTML=html;syncTaskControls(editor);updateEmpty(editor);updateImageTools(editor);notify(editor);},onState:availability=>{for(const name of ['undo','redo'])wrapper.querySelector('[data-rich-command="'+name+'"]').disabled=!availability[name];}});
-    const formatting=mountRichFormatting({editor,wrapper,state,listen,remember,selectRange,edit,insertHTML,addImages,safeLink:safeRichLink,safeColor:safeTextColor,colorChoices});
+    state.history=createRichHistory(editor,{read:()=>readRichEditor(editor).html,restore:html=>{state.range=null;state.image=null;state.nextFontSize=null;editor.innerHTML=richHTML(html);syncTaskControls(editor);updateEmpty(editor);updateImageTools(editor);notify(editor);},onState:availability=>{for(const name of ['undo','redo'])wrapper.querySelector('[data-rich-command="'+name+'"]').disabled=!availability[name];}});
+    const formatting=mountRichFormatting({editor,wrapper,state,listen,remember,selectRange,edit,insertHTML,addImages,safeLink:safeRichLink,safeColor:safeTextColor,colorChoices,refreshLinks:()=>refreshCitations(editor)});
     listen(editor,'beforeinput',event=>{if(['historyUndo','historyRedo'].includes(event.inputType)){event.preventDefault();if(!state.pending&&!state.composing)state.history[event.inputType==='historyUndo'?'undo':'redo']();return;}state.history.remember();});
   }
   return () => added.forEach(editor=>{mounts.get(editor)?.controller.abort();mounts.delete(editor);});

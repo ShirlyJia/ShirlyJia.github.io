@@ -53,7 +53,7 @@ export function copyRichStyles(source,target,safeColor){
 }
 let activePopup=null;
 const emojis=[['😀','开心'],['😊','微笑'],['😎','自信'],['🤔','思考'],['👍','赞'],['👏','鼓掌'],['🙌','庆祝'],['🤝','合作'],['✅','完成'],['☑️','勾选'],['❗','注意'],['❓','问题'],['💡','想法'],['📌','置顶'],['🎯','目标'],['🚀','启动'],['🔥','重点'],['⭐','星标'],['❤️','喜欢'],['💬','讨论'],['📝','记录'],['📅','日期'],['⏳','等待'],['🔍','查找'],['📊','数据'],['📎','附件'],['🔗','链接'],['🧩','模块'],['🛠️','修复'],['📦','交付'],['🎉','庆祝完成'],['❄️','冻结']];
-export function mountRichFormatting({editor,wrapper,state,listen,remember,selectRange,edit,insertHTML,addImages,safeLink,safeColor,colorChoices}){
+export function mountRichFormatting({editor,wrapper,state,listen,remember,selectRange,edit,insertHTML,addImages,safeLink,safeColor,colorChoices,refreshLinks}){
   const toolbar=wrapper.querySelector('.rich-toolbar');
   const range=()=>{const s=window.getSelection();return s?.rangeCount&&editor.contains(s.getRangeAt(0).commonAncestorContainer)?s.getRangeAt(0):null;};
   const anchor=()=>{const node=range()?.startContainer;return node?.nodeType===1?node:node?.parentElement;};
@@ -117,13 +117,14 @@ export function mountRichFormatting({editor,wrapper,state,listen,remember,select
   }
   function linkMenu(){
     const link=inside('a'),selection=range(),selected=selection?.toString()||'',initial=link?.textContent||selected;
-    const popup=open('link','<form class="rich-link-form"><label>显示文字<input name="label" aria-label="链接文字" value="'+esc(initial)+'" placeholder="选中文字或填写名称"></label><label>链接地址<input name="url" aria-label="链接地址" value="'+esc(link?.getAttribute('href')||safeLink(selected))+'" placeholder="https://" autofocus></label><p class="rich-menu-error" role="alert" hidden></p><div class="rich-menu-actions">'+(link?row('unlink','移除链接'):'')+'<button type="submit" class="rich-menu-primary">确定</button></div></form>',action=>{if(action==='unlink')apply(()=>{const bookmark=textSelection(editor);link.replaceWith(...link.childNodes);restoreTextSelection(editor,bookmark);});},{className:'rich-link-menu'});
+    const popup=open('link','<form class="rich-link-form"><label>显示文字<input name="label" aria-label="链接文字" value="'+esc(initial)+'" placeholder="选中文字或填写名称"></label><label>链接地址<input name="url" aria-label="链接地址" value="'+esc(link?.getAttribute('href')||safeLink(selected))+'" placeholder="https://" autofocus></label><p class="rich-menu-error" role="alert" hidden></p><div class="rich-menu-actions">'+(link?row('unlink','移除链接'):'')+'<button type="submit" class="rich-menu-primary">确定</button></div></form>',action=>{if(action==='unlink')apply(()=>{const bookmark=textSelection(editor);link.replaceWith(...link.childNodes);restoreTextSelection(editor,bookmark);refreshLinks();});},{className:'rich-link-menu'});
     if(!popup)return;popup.on(popup.menu.querySelector('form'),'submit',event=>{
       event.preventDefault();const form=event.currentTarget,href=safeLink(form.elements.url.value),label=form.elements.label.value.trim()||href;
       if(!href){const error=form.querySelector('[role=alert]');error.textContent='请输入 http、https 或 mailto 链接。';error.hidden=false;form.elements.url.focus();return;}
       apply(()=>{if(link){link.href=href;if(label!==initial)link.textContent=label;link.target='_blank';link.rel='noopener noreferrer';}
         else if(selected&&label===selected){command('createLink',href);editor.querySelectorAll('a').forEach(a=>{a.target='_blank';a.rel='noopener noreferrer';});}
         else insertHTML(editor,`<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`);
+        refreshLinks();
       });
     });
   }
