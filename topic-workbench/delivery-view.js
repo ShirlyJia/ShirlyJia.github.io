@@ -46,9 +46,11 @@ export function deliveryCardMarkup(project,{today=todayDate(),compact=false}={})
   const {node,state}=rows[0],confirmedDate=state.date||node.estimatedDate||'',date=confirmedDate||node.targetDate;
   const dateLabel=confirmedDate?'承诺交付':'期望日期',status=confirmedDate?label(state,today,node):'期望';
   if(compact){
-    const basis=confirmedDate?(node.dateConfirmed?'承诺交付日':'预计交付日（待确认）'):'期望日期';
-    return '<div class="board-plan-summary delivery-tone-'+tone(state,today)+'" title="'+esc(basis+' '+date+(node.title?' · '+node.title:'')+(rows.length>1?' · 另有 '+(rows.length-1)+' 项计划':''))+'">'+
-      dateHTML(date)+'<span class="delivery-state">'+esc(confirmedDate?status:'期望日期')+'</span>'+
+    const basis=confirmedDate?(node.dateConfirmed?'承诺交付日':'预计交付日'):'期望日期';
+    const short=confirmedDate?({overdue:'已延期',due:'今天交付',delivered:'已交付',draft:node.delivery?'已撤回确认':'待确认'}[state.kind]||
+      (state.kind==='scheduled'&&date<today?'到期未交付':'')):'期望日期';
+    return '<div class="board-plan-summary delivery-tone-'+tone(state,today)+'" title="'+esc([basis+' '+date,confirmedDate?status:'',node.title,node.owner,rows.length>1?'另有 '+(rows.length-1)+' 项计划':''].filter(Boolean).join(' · '))+'">'+
+      dateHTML(date)+(short?'<span class="board-plan-status'+(state.kind==='overdue'?' overdue':'')+'">'+esc(short)+'</span>':'')+
       (node.owner?'<span class="board-ledger-owner" title="'+esc(node.owner)+'">'+esc(node.owner)+'</span>':'')+'</div>';
   }
   return '<div class="delivery-card-date delivery-tone-'+tone(state,today)+'" aria-label="'+esc(dateLabel+' '+date+' '+status)+'">'+

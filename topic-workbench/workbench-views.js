@@ -1,11 +1,11 @@
-import {isHistoryProject,projectLifecycle} from './project-lifecycle.js';
+import {isHistoryProject,lifecycleLabels,projectLifecycle} from './project-lifecycle.js';
 import {DEFAULT_HISTORY_FILTER,resultsTimelineMarkup} from './results-timeline.js';
 import {mountRichEditors, flushRichEditors, destroyRichEditors} from './rich-text.js?v=20261030-card-preview';
 import {colorPickerMarkup,colorChoices} from './color-presets.js';
 import {deliveryCases,todayDate} from './delivery-model.js';
 import {deliveryCardMarkup,deliveryPageMarkup} from './delivery-view.js';
-import {displayDescription,displayPriority,visibleNodes} from './presentation.js';
-import {parentCardMarkup} from './child-projects.js';
+import {displayPriority,visibleNodes} from './presentation.js';
+import {parentProjectRows} from './child-projects.js';
 import {setProjectClosed} from './project-flow.js';
 import {isClosedProject, sortProjectsByPriority, boardFromFrame, linkBoardToFrame} from './workbench-model.js';
 
@@ -58,6 +58,12 @@ export function createWorkbenchViews(api) {
     const identity=textIdentity(el);if(!identity)return true;
     const board=boardById(identity.boardId);if(!board)return true;
     const value=el.value,current=identity.kind==='note'?board.notes:(board.contexts?.[identity.pid]||'');
+    if(identity.kind==='context'){
+      const preview=el.previousElementSibling,visible=value.trim();
+      preview.textContent=visible;
+      el.parentElement.classList.toggle('is-empty',!visible);
+      el.title=visible;
+    }
     if(current===value&&!pendingText.has(identity.key))return true;
     pendingText.set(identity.key,{...identity,value});
     return flush();
@@ -118,41 +124,42 @@ export function createWorkbenchViews(api) {
       ? '<button type="button" class="board-title" data-board-title="'+id+'" data-board-rename="'+id+'" aria-label="修改看板名称：'+title+'" title="点击修改名称">'+title+'</button>'
       : title;
     const count=(rows.length===all.length?rows.length:rows.length+' / '+all.length)+' 个项目';
-    const today=todayDate(),tags=new Map(state.tagDefinitions.map(tag=>[tag.id,tag]));
+    const today=todayDate();
     view.innerHTML='<section class="action-board"><header class="action-board-bar"><div class="action-board-meta">'+
       (editable?colorControl(board.color,'data-board-color',board.id,'调整看板颜色'):'<span class="nav-color" style="background:'+esc(board.color)+'"></span>')+
       '<span class="action-board-count">'+count+'</span>'+
       (frame?'<span class="action-board-link" title="随分组自动更新">关联分组 <strong>'+esc(frame.name)+'</strong></span>':'')+
-      '</div>'+(editable?'<div class="action-board-tools"><button type="button" data-board-edit="'+id+'">设置</button><button type="button" class="primary" data-board-members="'+id+'">＋ 项目</button></div>':'')+'</header>'+
-      (editable?'<textarea class="inline-text action-board-note" data-board-note="'+id+'" aria-label="看板说明" placeholder="添加看板说明…" rows="1">'+esc(board.notes)+'</textarea>':
+      '</div>'+(editable?'<div class="action-board-tools"><button type="button" data-board-edit="'+id+'">设置</button><button type="button" class="primary" data-board-members="'+id+'">加入项目</button></div>':'')+'</header>'+
+      (note&&editable?'<textarea class="inline-text action-board-note" data-board-note="'+id+'" aria-label="看板说明" placeholder="添加看板说明…" rows="1">'+esc(board.notes)+'</textarea>':
         note?'<p class="action-board-note">'+esc(note)+'</p>':'')+
-      (rows.length?'<div class="board-ledger" role="table" aria-label="'+title+'的项目"><div class="board-ledger-head" role="row"><div role="columnheader">项目</div><div role="columnheader">优先级</div><div role="columnheader">计划</div><div role="columnheader">看板备注</div>'+(editable?'<div role="columnheader"><span class="sr-only">操作</span></div>':'')+'</div>'+
-        rows.map(project=>boardRowMarkup(project,board,state,editable,today,tags)).join('')+'</div>':
+      (rows.length?'<div class="board-ledger" role="table" aria-label="'+title+'的项目"><div class="board-ledger-head" role="row"><div role="columnheader">项目</div><div role="columnheader">优先级</div><div role="columnheader">交付</div><div role="columnheader">本板备注</div>'+(editable?'<div role="columnheader"><span class="sr-only">操作</span></div>':'')+'</div>'+
+        rows.map(project=>boardRowMarkup(project,board,state,editable,today)).join('')+'</div>':
         '<div class="view-empty action-board-empty"><strong>'+(!board.projectIds.length?'尚未加入项目':all.length?'没有匹配的项目':'本板项目已全部结束')+'</strong><p>'+(!board.projectIds.length?'同一项目可以加入多个行动看板。':all.length?'清除筛选后查看全部。':'结项记录可在成果与历史中查看。')+'</p>'+
         (!board.projectIds.length&&editable?'<button type="button" data-board-members="'+id+'">＋ 选择项目</button>':'')+'</div>')+'</section>';
   }
-  function boardRowMarkup(project,board,state,editable,today,tags){
+  function boardRowMarkup(project,board,state,editable,today){
     const id=esc(board.id),pid=esc(project.id),name=esc(project.name),priority=displayPriority(project);
-    const description=displayDescription(project.description).replace(/\s+/g,' ');
     const frozen=projectLifecycle(project)==='frozen',emphasized=board.emphasisIds.includes(project.id);
     const nodes=visibleNodes(project),owner=nodes.find(node=>node.focus&&node.owner)?.owner||nodes.find(node=>node.owner)?.owner;
     const plan=deliveryCardMarkup(project,{today,compact:true})||(owner?'<span class="board-ledger-owner" title="'+esc(owner)+'">'+esc(owner)+'</span>':'');
-    const context=board.contexts?.[project.id]||'';
-    const parents=parentCardMarkup(project.id,state);
-    const labels=project.tagIds.map(id=>tags.get(id)).filter(Boolean).sort((a,b)=>(a.rank??Infinity)-(b.rank??Infinity));
-    const tagPills=labels.slice(0,2).map(tag=>'<span class="card-tag" title="'+esc(tag.name)+'" style="--tag-color:'+esc(tag.color)+'">'+esc(tag.name)+'</span>').join('')+
-      (labels.length>2?'<span class="card-tag" title="'+esc(labels.slice(2).map(tag=>tag.name).join('、'))+'">+'+(labels.length-2)+'</span>':'');
+    const context=board.contexts?.[project.id]||'',note=esc(context.trim());
+    const parents=parentProjectRows(project.id,state);
+    const parentLabel=parents.length?'所属主项目：'+parents.map(({project,draft})=>project.name+(draft?'（待确认）':'')).join('、'):'';
+    const marker=parentLabel?'<span class="board-ledger-kind" role="img" aria-label="'+esc(parentLabel)+'" title="'+esc(parentLabel)+'"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11.5 11.5H8a3 3 0 0 1-3-3v-4m-2 2 2-2 2 2"/></svg></span>':
+      project.kind==='direction'?'<span class="board-ledger-kind" role="img" aria-label="主方向" title="主方向"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4v5a3 3 0 0 0 3 3h4M4 7h7"/><circle cx="4" cy="3" r="1.25"/><circle cx="12" cy="7" r="1.25"/><circle cx="12" cy="12" r="1.25"/></svg></span>':'';
+    const noteEditor='<div class="board-context-editor'+(note?'':' is-empty')+'"><span class="board-context-preview" aria-hidden="true">'+note+'</span>'+
+      '<textarea class="inline-text" data-board-context="'+id+'" data-pid="'+pid+'" aria-label="'+name+'在此看板的备注" title="'+note+'" placeholder="添加备注…" rows="2">'+esc(context)+'</textarea></div>';
+    const noteReader=note?'<details class="board-context-reader"><summary aria-label="查看本板备注" title="'+note+'"><span>'+note+'</span><span class="board-context-collapse">收起备注</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m5 6 3 3 3-3"/></svg></summary><p>'+note+'</p></details>':'';
     return '<div class="board-ledger-row'+(emphasized?' emphasized':'')+(frozen?' frozen':'')+'" role="row" data-project-highlight="'+pid+'" style="--board-color:'+esc(board.color)+'">'+
-      '<div class="board-ledger-project" role="cell"><div class="board-ledger-title"><button type="button" data-project-open="'+pid+'" title="'+name+'">'+name+'</button>'+
-      (frozen?'<span class="lifecycle-badge frozen">Frozen</span>':'')+(!editable&&emphasized?'<span class="board-ledger-star" role="img" aria-label="本板重点">★</span>':'')+'</div>'+
-      (parents||project.kind==='direction'||tagPills||description?'<div class="board-ledger-subline">'+
-        (parents||project.kind==='direction'||tagPills?'<div class="board-ledger-meta">'+(project.kind==='direction'?'<span class="board-ledger-direction">主方向</span>':'')+parents+tagPills+'</div>':'')+
-        (description?'<p class="board-ledger-preview">'+esc(description)+'</p>':'')+'</div>':'')+'</div>'+
-      '<div class="board-ledger-priority" role="cell">'+(editable?priorityControl(project,true):priority?'<span class="priority" data-priority="'+esc(priority)+'">'+esc(priority)+'</span>':'')+'</div>'+
+      '<div class="board-ledger-project" role="cell"><div class="board-ledger-title"><button type="button" data-project-open="'+pid+'" title="'+name+'">'+name+'</button>'+marker+
+      (frozen?'<span class="lifecycle-badge frozen">'+lifecycleLabels.frozen+'</span>':'')+(emphasized?'<span class="board-ledger-pin" role="img" aria-label="本板重点" title="本板重点">★</span>':'')+'</div></div>'+
+      '<div class="board-ledger-priority" role="cell">'+(editable?priorityControl(project,true,'—'):priority?'<span class="priority" data-priority="'+esc(priority)+'">'+esc(priority)+'</span>':'')+'</div>'+
       '<div class="board-ledger-plan" role="cell">'+plan+'</div>'+
-      '<div class="board-ledger-context" role="cell">'+(editable?'<textarea class="inline-text" data-board-context="'+id+'" data-pid="'+pid+'" aria-label="'+name+'在此看板的备注" placeholder="添加备注…" rows="1">'+esc(context)+'</textarea>':context?'<p>'+esc(context)+'</p>':'')+'</div>'+
-      (editable?'<div class="board-ledger-actions" role="cell"><button class="board-ledger-star" type="button" data-board-star="'+id+'" data-pid="'+pid+'" aria-pressed="'+emphasized+'" aria-label="'+name+'：标为本板重点" title="'+(emphasized?'取消本板重点':'标为本板重点')+'">'+(emphasized?'★':'☆')+'</button>'+
-        '<button class="board-ledger-remove" type="button" data-board-remove="'+id+'" data-pid="'+pid+'" aria-label="'+name+'：移出本板" title="移出本板"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="M7 10h6"/></svg></button></div>':'')+'</div>';
+      '<div class="board-ledger-context" role="cell">'+(editable?noteEditor:noteReader)+'</div>'+
+      (editable?'<div class="board-ledger-actions" role="cell"><div class="detail-menu board-row-menu"><button class="menu-trigger" type="button" aria-expanded="false" aria-label="'+name+'：更多操作" title="更多操作"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r=".9"/><circle cx="10" cy="10" r=".9"/><circle cx="16" cy="10" r=".9"/></svg></button>'+
+        '<div class="detail-menu-content"><button type="button" class="text-action" data-focus-board-context>编辑备注</button>'+
+        '<button type="button" class="text-action" data-board-star="'+id+'" data-pid="'+pid+'" aria-pressed="'+emphasized+'">'+(emphasized?'取消重点':'标为重点')+'</button>'+
+        '<button type="button" class="text-action" data-board-remove="'+id+'" data-pid="'+pid+'">移出本板</button></div></div></div>':'')+'</div>';
   }
   function renderResults(view){
     view.innerHTML=resultsTimelineMarkup(getState(),matches,historyFilter);
@@ -258,7 +265,7 @@ export function createWorkbenchViews(api) {
     },'看板已保存'));
   }
   document.addEventListener('click',e=>{
-    const b=e.target.closest('[data-board-open],[data-board-members],[data-board-edit],[data-board-rename],[data-create-board],[data-import-frames],[data-board-create-mode],[data-project-open],[data-board-remove],[data-board-star],[data-delete-board],[data-reopen-project],[data-history-filter]');if(!b)return;
+    const b=e.target.closest('[data-board-open],[data-board-members],[data-board-edit],[data-board-rename],[data-create-board],[data-import-frames],[data-board-create-mode],[data-project-open],[data-focus-board-context],[data-board-remove],[data-board-star],[data-delete-board],[data-reopen-project],[data-history-filter]');if(!b)return;
     if(b.hasAttribute('data-history-filter')){if(!flush())return;historyFilter=b.dataset.historyFilter;render();$('workbenchView').querySelector('[data-history-filter="'+historyFilter+'"]')?.focus({preventScroll:true});return;}
     if(b.hasAttribute('data-board-open')){navigate('boards',b.dataset.boardOpen);return;}
     if(b.hasAttribute('data-project-open')){openProject(b.dataset.projectOpen);return;}
@@ -270,9 +277,27 @@ export function createWorkbenchViews(api) {
     if(b.hasAttribute('data-board-create-mode')){rememberCreationDraft();createBoardEditor(b.dataset.boardCreateMode);return;}
     if(b.hasAttribute('data-delete-board')){removeBoard(b.dataset.deleteBoard);return;}
     if(b.hasAttribute('data-reopen-project')){update(()=>{const p=getState().projects.find(p=>p.id===b.dataset.reopenProject);setProjectClosed(p,false);},'已恢复跟进，历史结果保留');return;}
-    const id=b.dataset.boardRemove||b.dataset.boardStar,pid=b.dataset.pid;
     if(!canMaintain()||!flush())return;
-    update(()=>{const board=boardById(id);if(b.hasAttribute('data-board-remove')){board.projectIds=board.projectIds.filter(x=>x!==pid);board.emphasisIds=board.emphasisIds.filter(x=>x!==pid);delete board.contexts?.[pid];}else board.emphasisIds=board.emphasisIds.includes(pid)?board.emphasisIds.filter(x=>x!==pid):[...board.emphasisIds,pid];});
+    const row=b.closest('.board-ledger-row');
+    if(b.hasAttribute('data-focus-board-context')){
+      const textarea=row?.querySelector('[data-board-context]');
+      const menu=b.closest('.detail-menu');menu.removeAttribute('open');menu.querySelector('.menu-trigger').setAttribute('aria-expanded','false');
+      textarea?.focus({preventScroll:true});
+      textarea?.scrollIntoView({block:'nearest'});
+      return;
+    }
+    const id=b.dataset.boardRemove||b.dataset.boardStar,pid=b.dataset.pid,remove=b.hasAttribute('data-board-remove');
+    const focusPid=remove?(row?.nextElementSibling?.dataset.projectHighlight||row?.previousElementSibling?.dataset.projectHighlight):pid;
+    if(update(()=>{
+      const board=boardById(id);
+      if(remove){
+        board.projectIds=board.projectIds.filter(x=>x!==pid);
+        board.emphasisIds=board.emphasisIds.filter(x=>x!==pid);
+        delete board.contexts?.[pid];
+      }else board.emphasisIds=board.emphasisIds.includes(pid)?board.emphasisIds.filter(x=>x!==pid):[...board.emphasisIds,pid];
+    },remove?'已移出本板，可撤销':'')!==false&&e.detail===0){
+      [...$('workbenchView').querySelectorAll('[data-project-open]')].find(button=>button.dataset.projectOpen===focusPid)?.focus({preventScroll:true});
+    }
   });
   document.addEventListener('change',e=>{
     const el=e.target;

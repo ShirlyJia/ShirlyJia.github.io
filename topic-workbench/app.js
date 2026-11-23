@@ -406,9 +406,9 @@ function readableText(value){
   return html+esc(text.slice(offset));
 }
 function detailMenu(label,body){return '<div class="detail-menu"><button type="button" class="menu-trigger" aria-expanded="false">'+label+'</button><div class="detail-menu-content">'+body+'</div></div>';}
-function priorityControl(p,card=false){
+function priorityControl(p,card=false,emptyLabel=card?'＋ 优先级':'未设置'){
   const value=displayPriority(p),values=['','P0','P1','P2','长期'];if(value&&!values.includes(value))values.push(value);
-  return '<select class="priority priority-editor'+(card&&!displayPriority(p)?' unset-priority':'')+'" data-priority-editor="'+esc(p.id)+'" data-priority="'+esc(p.priority)+'" aria-label="'+esc(p.name)+'优先级">'+values.map(v=>'<option value="'+esc(v)+'"'+(v===value?' selected':'')+'>'+esc(v||(card?'＋ 优先级':'未设置'))+'</option>').join('')+'</select>';
+  return '<select class="priority priority-editor'+(card&&!displayPriority(p)?' unset-priority':'')+'" data-priority-editor="'+esc(p.id)+'" data-priority="'+esc(p.priority)+'" aria-label="'+esc(p.name)+'优先级">'+values.map(v=>'<option value="'+esc(v)+'"'+(v===value?' selected':'')+'>'+esc(v||emptyLabel)+'</option>').join('')+'</select>';
 }
 function resizeInlineFields(root=$('detailBody')){
   root.querySelectorAll('textarea[data-autogrow]').forEach(el=>{el.style.height='0px';el.style.height=Math.max(el.closest('.inline-title')?0:el.classList.contains('comment-draft')?56:72,el.scrollHeight+2)+'px';});
