@@ -1,9 +1,11 @@
-import {isHistoryProject} from './project-lifecycle.js';
+import {isHistoryProject,projectLifecycle} from './project-lifecycle.js';
 import {DEFAULT_HISTORY_FILTER,resultsTimelineMarkup} from './results-timeline.js';
 import {mountRichEditors, flushRichEditors, destroyRichEditors} from './rich-text.js?v=20261030-card-preview';
 import {colorPickerMarkup,colorChoices} from './color-presets.js';
-import {deliveryCases} from './delivery-model.js';
-import {deliveryPageMarkup} from './delivery-view.js';
+import {deliveryCases,todayDate} from './delivery-model.js';
+import {deliveryCardMarkup,deliveryPageMarkup} from './delivery-view.js';
+import {displayDescription,displayPriority,visibleNodes} from './presentation.js';
+import {parentCardMarkup} from './child-projects.js';
 import {setProjectClosed} from './project-flow.js';
 import {isClosedProject, sortProjectsByPriority, boardFromFrame, linkBoardToFrame} from './workbench-model.js';
 
@@ -15,7 +17,7 @@ export function colorControl(value, attribute, id, label) {
 }
 
 export function createWorkbenchViews(api) {
-  const {getState,update,openProject,cardElement,navigate,editor,field,area,matches} = api;
+  const {getState,update,openProject,priorityControl,canMaintain,navigate,editor,field,area,matches} = api;
   const boardById = id => getState().quickBoards.find(b=>b.id===id);
   const pendingText = new Map(), composing = new WeakSet();
   let historyFilter=DEFAULT_HISTORY_FILTER;
@@ -79,7 +81,7 @@ export function createWorkbenchViews(api) {
   };
   function renderNav(){
     const state=getState();
-    $('quickBoardNav').innerHTML=[...state.quickBoards].sort((a,b)=>a.rank-b.rank).map(b=>'<button class="sidebar-item'+(state.activeBoard===b.id?' current':'')+'" data-board-open="'+esc(b.id)+'"><span class="nav-color" style="background:'+esc(b.color)+'"></span><span>'+esc(b.name)+'</span><small>'+b.projectIds.length+'</small></button>').join('') || '<button class="sidebar-item board-start" data-create-board>新建或导入分组</button>';
+    $('quickBoardNav').innerHTML=[...state.quickBoards].sort((a,b)=>a.rank-b.rank).map(b=>'<button class="sidebar-item'+(state.activeBoard===b.id?' current':'')+'"'+(state.activeBoard===b.id?' aria-current="page"':'')+' data-board-open="'+esc(b.id)+'"><span class="nav-color" style="background:'+esc(b.color)+'"></span><span>'+esc(b.name)+'</span><small>'+b.projectIds.length+'</small></button>').join('') || '<button class="sidebar-item board-start" data-create-board>新建或导入分组</button>';
     $('resultsCount').textContent=state.projects.filter(isHistoryProject).length;
     const overdue=deliveryCases(state).filter(r=>r.state.kind==='overdue'&&!r.removed).length;
     $('deliveryCount').textContent=overdue;$('deliveryCount').hidden=!overdue;
@@ -105,20 +107,52 @@ export function createWorkbenchViews(api) {
     if(state.display==='results'){renderResults(view);return;}
     const board=boardById(state.activeBoard);
     if(!board){view.hidden=true;return;}
-    $('pageTitle').textContent=board.name;
-    if(board){
-      view.innerHTML='<header class="board-page-head"><div><span class="section-kicker">行动看板'+(board.sourceFrameId?' · 随分组更新':'')+'</span><h2>'+colorControl(board.color,'data-board-color',board.id,'调整看板颜色')+'<button class="board-title" data-board-title="'+esc(board.id)+'" data-board-rename="'+esc(board.id)+'" aria-label="修改看板名称：'+esc(board.name)+'" title="点击修改名称">'+esc(board.name)+'</button></h2></div><div class="board-actions"><button data-board-edit="'+esc(board.id)+'">编辑说明</button><button data-delete-board="'+esc(board.id)+'" aria-label="删除看板：'+esc(board.name)+'">删除</button><button class="primary" data-board-members="'+esc(board.id)+'">＋ 项目</button></div></header><textarea class="board-note inline-text" data-board-note="'+esc(board.id)+'" aria-label="看板说明" placeholder="本看板要解决什么、需要准备什么…" rows="2">'+esc(board.notes)+'</textarea><div class="board-project-grid" id="activeBoardCards"></div>';
-      const target=$('activeBoardCards'),rows=boardProjects(board).filter(matches);const hasOpen=boardProjects(board).length>0;
-      rows.forEach(p=>{
-        const wrap=document.createElement('div');wrap.className='board-project'+(board.emphasisIds.includes(p.id)?' emphasized':'');wrap.style.setProperty('--board-color',board.color);
-        const card=cardElement(p);card.addEventListener('click',e=>{if(!e.target.closest('select,input,button'))openProject(p.id);});wrap.append(card);
-        const extra=document.createElement('div');extra.className='board-project-context';
-        extra.innerHTML='<div class="board-project-actions"><button data-board-star="'+esc(board.id)+'" data-pid="'+esc(p.id)+'" aria-pressed="'+board.emphasisIds.includes(p.id)+'">'+(board.emphasisIds.includes(p.id)?'★ 本板重点':'☆ 标重点')+'</button><button data-board-remove="'+esc(board.id)+'" data-pid="'+esc(p.id)+'">移出本板</button></div><textarea class="inline-text" data-board-context="'+esc(board.id)+'" data-pid="'+esc(p.id)+'" aria-label="'+esc(p.name)+'在此看板的备注" placeholder="本看板的讨论备注…" rows="2">'+esc(board.contexts?.[p.id]||'')+'</textarea>';
-        wrap.append(extra);target.append(wrap);
-      });
-      if(!rows.length)target.innerHTML='<div class="view-empty"><strong>'+(!board.projectIds.length?'尚未加入项目':hasOpen?'没有匹配的项目':'本板项目已全部结束')+'</strong><p>'+(!board.projectIds.length?'选择项目加入；同一项目可以出现在多个看板。':hasOpen?'清除筛选后查看全部。':'结项记录可在成果与历史中查看。')+'</p>'+(!board.projectIds.length?'<button data-board-members="'+esc(board.id)+'">＋ 选择项目</button>':'')+'</div>';
-      return;
-    }
+    renderBoard(view,board,state);
+  }
+
+  function renderBoard(view,board,state){
+    const editable=canMaintain(),all=boardProjects(board),rows=all.filter(matches);
+    const frame=state.frames.find(frame=>frame.id===board.sourceFrameId);
+    const id=esc(board.id),title=esc(board.name),note=board.notes?.trim()||'';
+    $('pageTitle').innerHTML=editable
+      ? '<button type="button" class="board-title" data-board-title="'+id+'" data-board-rename="'+id+'" aria-label="修改看板名称：'+title+'" title="点击修改名称">'+title+'</button>'
+      : title;
+    const count=(rows.length===all.length?rows.length:rows.length+' / '+all.length)+' 个项目';
+    const today=todayDate(),tags=new Map(state.tagDefinitions.map(tag=>[tag.id,tag]));
+    view.innerHTML='<section class="action-board"><header class="action-board-bar"><div class="action-board-meta">'+
+      (editable?colorControl(board.color,'data-board-color',board.id,'调整看板颜色'):'<span class="nav-color" style="background:'+esc(board.color)+'"></span>')+
+      '<span class="action-board-count">'+count+'</span>'+
+      (frame?'<span class="action-board-link" title="随分组自动更新">关联分组 <strong>'+esc(frame.name)+'</strong></span>':'')+
+      '</div>'+(editable?'<div class="action-board-tools"><button type="button" data-board-edit="'+id+'">设置</button><button type="button" class="primary" data-board-members="'+id+'">＋ 项目</button></div>':'')+'</header>'+
+      (editable?'<textarea class="inline-text action-board-note" data-board-note="'+id+'" aria-label="看板说明" placeholder="添加看板说明…" rows="1">'+esc(board.notes)+'</textarea>':
+        note?'<p class="action-board-note">'+esc(note)+'</p>':'')+
+      (rows.length?'<div class="board-ledger" role="table" aria-label="'+title+'的项目"><div class="board-ledger-head" role="row"><div role="columnheader">项目</div><div role="columnheader">优先级</div><div role="columnheader">计划</div><div role="columnheader">看板备注</div>'+(editable?'<div role="columnheader"><span class="sr-only">操作</span></div>':'')+'</div>'+
+        rows.map(project=>boardRowMarkup(project,board,state,editable,today,tags)).join('')+'</div>':
+        '<div class="view-empty action-board-empty"><strong>'+(!board.projectIds.length?'尚未加入项目':all.length?'没有匹配的项目':'本板项目已全部结束')+'</strong><p>'+(!board.projectIds.length?'同一项目可以加入多个行动看板。':all.length?'清除筛选后查看全部。':'结项记录可在成果与历史中查看。')+'</p>'+
+        (!board.projectIds.length&&editable?'<button type="button" data-board-members="'+id+'">＋ 选择项目</button>':'')+'</div>')+'</section>';
+  }
+  function boardRowMarkup(project,board,state,editable,today,tags){
+    const id=esc(board.id),pid=esc(project.id),name=esc(project.name),priority=displayPriority(project);
+    const description=displayDescription(project.description).replace(/\s+/g,' ');
+    const frozen=projectLifecycle(project)==='frozen',emphasized=board.emphasisIds.includes(project.id);
+    const nodes=visibleNodes(project),owner=nodes.find(node=>node.focus&&node.owner)?.owner||nodes.find(node=>node.owner)?.owner;
+    const plan=deliveryCardMarkup(project,{today,compact:true})||(owner?'<span class="board-ledger-owner" title="'+esc(owner)+'">'+esc(owner)+'</span>':'');
+    const context=board.contexts?.[project.id]||'';
+    const parents=parentCardMarkup(project.id,state);
+    const labels=project.tagIds.map(id=>tags.get(id)).filter(Boolean).sort((a,b)=>(a.rank??Infinity)-(b.rank??Infinity));
+    const tagPills=labels.slice(0,2).map(tag=>'<span class="card-tag" title="'+esc(tag.name)+'" style="--tag-color:'+esc(tag.color)+'">'+esc(tag.name)+'</span>').join('')+
+      (labels.length>2?'<span class="card-tag" title="'+esc(labels.slice(2).map(tag=>tag.name).join('、'))+'">+'+(labels.length-2)+'</span>':'');
+    return '<div class="board-ledger-row'+(emphasized?' emphasized':'')+(frozen?' frozen':'')+'" role="row" data-project-highlight="'+pid+'" style="--board-color:'+esc(board.color)+'">'+
+      '<div class="board-ledger-project" role="cell"><div class="board-ledger-title"><button type="button" data-project-open="'+pid+'" title="'+name+'">'+name+'</button>'+
+      (frozen?'<span class="lifecycle-badge frozen">Frozen</span>':'')+(!editable&&emphasized?'<span class="board-ledger-star" role="img" aria-label="本板重点">★</span>':'')+'</div>'+
+      (parents||project.kind==='direction'||tagPills||description?'<div class="board-ledger-subline">'+
+        (parents||project.kind==='direction'||tagPills?'<div class="board-ledger-meta">'+(project.kind==='direction'?'<span class="board-ledger-direction">主方向</span>':'')+parents+tagPills+'</div>':'')+
+        (description?'<p class="board-ledger-preview">'+esc(description)+'</p>':'')+'</div>':'')+'</div>'+
+      '<div class="board-ledger-priority" role="cell">'+(editable?priorityControl(project,true):priority?'<span class="priority" data-priority="'+esc(priority)+'">'+esc(priority)+'</span>':'')+'</div>'+
+      '<div class="board-ledger-plan" role="cell">'+plan+'</div>'+
+      '<div class="board-ledger-context" role="cell">'+(editable?'<textarea class="inline-text" data-board-context="'+id+'" data-pid="'+pid+'" aria-label="'+name+'在此看板的备注" placeholder="添加备注…" rows="1">'+esc(context)+'</textarea>':context?'<p>'+esc(context)+'</p>':'')+'</div>'+
+      (editable?'<div class="board-ledger-actions" role="cell"><button class="board-ledger-star" type="button" data-board-star="'+id+'" data-pid="'+pid+'" aria-pressed="'+emphasized+'" aria-label="'+name+'：标为本板重点" title="'+(emphasized?'取消本板重点':'标为本板重点')+'">'+(emphasized?'★':'☆')+'</button>'+
+        '<button class="board-ledger-remove" type="button" data-board-remove="'+id+'" data-pid="'+pid+'" aria-label="'+name+'：移出本板" title="移出本板"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="M7 10h6"/></svg></button></div>':'')+'</div>';
   }
   function renderResults(view){
     view.innerHTML=resultsTimelineMarkup(getState(),matches,historyFilter);
@@ -127,18 +161,15 @@ export function createWorkbenchViews(api) {
 
   function renameBoard(id,trigger){
     if(!flush())return;const board=boardById(id);if(!board)return;
-    const container=trigger.closest('.quick-board,.board-page-head');
+    const container=trigger.closest('#pageTitle');
     const title=container?.querySelector('[data-board-title]');if(!title)return;
     const input=document.createElement('input');input.className='board-name-input';input.setAttribute('aria-label','看板名称');input.value=board.name;input.required=true;input.maxLength=60;input.autocomplete='off';
     let finished=false;
     const restoreTitle=()=>{
       const live=boardById(id);if(!live)return;
-      const strong=title.querySelector('strong');if(strong)strong.textContent=live.name;else title.textContent=live.name;
+      title.textContent=live.name;
+      title.setAttribute('aria-label','修改看板名称：'+live.name);
       input.replaceWith(title);
-      container.querySelector('[data-board-rename]')?.setAttribute('aria-label','修改看板名称：'+live.name);
-      container.querySelector('[data-board-open]')?.setAttribute('aria-label','进入看板：'+live.name);
-      container.querySelector('[data-delete-board]')?.setAttribute('aria-label','删除看板：'+live.name);
-      if(getState().activeBoard===id)$('pageTitle').textContent=live.name;
     };
     const finish=commit=>{
       if(finished)return true;
@@ -226,9 +257,6 @@ export function createWorkbenchViews(api) {
       board.notes=values.notes;
     },'看板已保存'));
   }
-  $('workbenchView').addEventListener('keydown',event=>{
-    if(event.target.closest('[data-board-title]')&&(event.code==='Space'||event.key===' '))event.stopPropagation();
-  });
   document.addEventListener('click',e=>{
     const b=e.target.closest('[data-board-open],[data-board-members],[data-board-edit],[data-board-rename],[data-create-board],[data-import-frames],[data-board-create-mode],[data-project-open],[data-board-remove],[data-board-star],[data-delete-board],[data-reopen-project],[data-history-filter]');if(!b)return;
     if(b.hasAttribute('data-history-filter')){if(!flush())return;historyFilter=b.dataset.historyFilter;render();$('workbenchView').querySelector('[data-history-filter="'+historyFilter+'"]')?.focus({preventScroll:true});return;}
@@ -243,6 +271,7 @@ export function createWorkbenchViews(api) {
     if(b.hasAttribute('data-delete-board')){removeBoard(b.dataset.deleteBoard);return;}
     if(b.hasAttribute('data-reopen-project')){update(()=>{const p=getState().projects.find(p=>p.id===b.dataset.reopenProject);setProjectClosed(p,false);},'已恢复跟进，历史结果保留');return;}
     const id=b.dataset.boardRemove||b.dataset.boardStar,pid=b.dataset.pid;
+    if(!canMaintain()||!flush())return;
     update(()=>{const board=boardById(id);if(b.hasAttribute('data-board-remove')){board.projectIds=board.projectIds.filter(x=>x!==pid);board.emphasisIds=board.emphasisIds.filter(x=>x!==pid);delete board.contexts?.[pid];}else board.emphasisIds=board.emphasisIds.includes(pid)?board.emphasisIds.filter(x=>x!==pid):[...board.emphasisIds,pid];});
   });
   document.addEventListener('change',e=>{

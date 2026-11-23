@@ -41,10 +41,16 @@ function orderedPlans(project,today) {
 }
 
 /** One date summary per project; overdue work takes precedence over a manually focused plan. */
-export function deliveryCardMarkup(project,{today=todayDate()}={}) {
+export function deliveryCardMarkup(project,{today=todayDate(),compact=false}={}) {
   const rows=orderedPlans(project,today);if(!rows.length)return '';
   const {node,state}=rows[0],confirmedDate=state.date||node.estimatedDate||'',date=confirmedDate||node.targetDate;
   const dateLabel=confirmedDate?'承诺交付':'期望日期',status=confirmedDate?label(state,today,node):'期望';
+  if(compact){
+    const basis=confirmedDate?(node.dateConfirmed?'承诺交付日':'预计交付日（待确认）'):'期望日期';
+    return '<div class="board-plan-summary delivery-tone-'+tone(state,today)+'" title="'+esc(basis+' '+date+(node.title?' · '+node.title:'')+(rows.length>1?' · 另有 '+(rows.length-1)+' 项计划':''))+'">'+
+      dateHTML(date)+'<span class="delivery-state">'+esc(confirmedDate?status:'期望日期')+'</span>'+
+      (node.owner?'<span class="board-ledger-owner" title="'+esc(node.owner)+'">'+esc(node.owner)+'</span>':'')+'</div>';
+  }
   return '<div class="delivery-card-date delivery-tone-'+tone(state,today)+'" aria-label="'+esc(dateLabel+' '+date+' '+status)+'">'+
     '<div class="delivery-card-date-main"><span class="delivery-calendar" aria-hidden="true">▣</span><span class="delivery-date-label">'+dateLabel+'</span>'+dateHTML(date)+'<span class="delivery-state">'+esc(status)+'</span></div>'+
     ((node.title||node.owner||rows.length>1)?'<div class="delivery-card-context">'+(node.title?'<span>'+esc(node.title)+'</span>':'')+(node.owner?'<span>'+esc(node.owner)+'</span>':'')+(rows.length>1?'<span class="delivery-other-count">另 '+(rows.length-1)+' 项计划</span>':'')+'</div>':'')+'</div>';
