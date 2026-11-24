@@ -17,7 +17,7 @@ import { detachSourceMetadata } from './source-detach.js';
 import { displayPriority, visibleNodes, nodeStatus, displayDescription } from './presentation.js';
 import {boardPublication, deployment, storageKey, useBoardEdition} from './deployment-config.js?v=20261105-editions';
 import {showBoardCopies} from './board-publication.js';
-import {loadSharedBoard, mountAutoSync, prepareLiveStorage} from './auto-sync.js?v=20261105-pairing2';
+import {isOlderThanLiveBaseline, loadSharedBoard, mountAutoSync, newerSharedBoard, prepareLiveStorage, validateRelease, watchSharedBoard} from './auto-sync.js?v=20261124-live-sync';
 import {richEditorMarkup, mountRichEditors, readRichEditor, richHTML, richHasContent, flushRichEditors, destroyRichEditors} from './rich-text.js?v=20261030-card-preview';
 import {frozenNote,saveFrozenNote} from './frozen-note.js';
 import {freezeCommentPickerMarkup,mountFreezeCommentPickers} from './freeze-comment-picker.js';
@@ -1196,6 +1196,24 @@ world.addEventListener('dblclick',e=>{const h=e.target.closest('[data-frame-head
     let resized;window.addEventListener('resize',()=>{clearTimeout(resized);resized=setTimeout(()=>{if(!window.matchMedia('(max-width:760px)').matches){document.body.classList.remove('sidebar-open');$('sidebarBackdrop').hidden=true}applyView();applyFilter();if(state.detail)resizeInlineFields()},100)});
 
 }
+function normalizeBoard(data) {
+  return applyProfessionalColors(restoreYellowNotes(detachSourceMetadata(enrichProjectContent(applyDomainTags(enrichWorkbench(data)))).data));
+}
+function readPublishedCopy(key) {
+  try { return validateRelease(JSON.parse(localStorage.getItem(key))); } catch { return null; }
+}
+function cachePublishedCopy(key, release) {
+  try { localStorage.setItem(key,JSON.stringify(release)); } catch {}
+}
+function updatePublicBoard(release, cacheKey) {
+  const data=normalizeBoard(release.board);
+  storage.validate(data);
+  restoreData({...data,view:state.view});
+  reconcileDelivery(state);
+  if (state.detail && !byId[state.detail]) closeDetail();
+  renderAll();
+  cachePublishedCopy(cacheKey,release);
+}
 async function boot(){
  try {
   const syncKey = storageKey('topic-workbench-auto-sync');
@@ -1204,27 +1222,34 @@ async function boot(){
   localMaintainer=Boolean(connection)||!deployment.public;
   document.body.classList.toggle('board-reader',!canMaintain());
   removeRetiredSession({local:localStorage,session:sessionStorage,location,history});
-  const release = await loadSharedBoard({connection, publicSite:deployment.public});
+  const publicCopyKey=syncKey+':public-copy',liveKey=storageKey('topic-workbench-live-v1');
+  const cached=!canMaintain()?readPublishedCopy(publicCopyKey):null;
+  const fromNetwork=await loadSharedBoard({connection,publicSite:deployment.public});
+  const release=canMaintain() && isOlderThanLiveBaseline(localStorage,liveKey,fromNetwork)
+    ? null : newerSharedBoard(cached,fromNetwork)?fromNetwork:cached;
   if (release) useBoardEdition(release.updatedAt.slice(0,10) + '-' + release.revision.slice(0,16));
   const live = release && (!boardPublication.edition || boardPublication.active === boardPublication.edition);
-  const fallbackLive = !release && !new URLSearchParams(location.search).has('draft') && localStorage.getItem(storageKey('topic-workbench-live-v1'));
-  const dataKey = live || fallbackLive ? storageKey('topic-workbench-live-v1') : storageKey('topic-workbench-v2');
-  if (live) await prepareLiveStorage({storage:localStorage,key:dataKey,
+  const fallbackLive = !release && !new URLSearchParams(location.search).has('draft') && localStorage.getItem(liveKey);
+  const dataKey = live || fallbackLive ? liveKey : storageKey('topic-workbench-v2');
+  if (live && canMaintain()) await prepareLiveStorage({storage:localStorage,key:dataKey,
     archivePrefix:(deployment.public?deployment.namespace+':':'')+'topic-workbench-v2',release});
   storage = createPersistence({key:dataKey,onStatus:result=>{
     if (result?.ok === false) setSaveStatus(false);
   }});
   const seedUrl = boardPublication.edition ? './initial-data.json?v=' + boardPublication.edition : './initial-data.json';
   let seed = release?.board;
+  if (!seed && canMaintain() && fallbackLive) {
+    try { seed=JSON.parse(fallbackLive); storage.validate(seed); } catch { seed=null; }
+  }
   if (!seed) {
     const response = await fetch(seedUrl, {cache:'no-cache'});
     if (!response.ok) throw Error('初始项目尚未就绪');
     seed = await response.json();
   }
-  const loaded = storage.load(seed);
-  if(!canMaintain())loaded.data=seed;
+  if (!canMaintain()) storage.validate(seed);
+  const loaded=canMaintain()?storage.load(seed):{data:seed,fromStorage:false,error:null};
   if (canMaintain() && (!boardPublication.edition || boardPublication.active === boardPublication.edition)) {
-    cloudSync = mountAutoSync({key:syncKey,release,getData:documentData,notify:toast});
+    cloudSync = mountAutoSync({key:syncKey,release,dataKey,getData:documentData,notify:toast});
     if (cloudSync.pendingBoard()) {
       storage.validate(cloudSync.pendingBoard());
       loaded.data = cloudSync.pendingBoard();
@@ -1233,7 +1258,7 @@ async function boot(){
   if(loaded.error){$('loadCaption').textContent='本地记录读取失败，原记录已保留';$('saveStatus').textContent='需要恢复';$('world').innerHTML='<div class="load-error"><h2>本地记录暂时无法读取</h2><p>'+esc(loaded.error)+'</p><p>原记录已保留。先导出原始备份，再处理恢复。</p><button id="downloadRaw">导出原始记录</button></div>';$('downloadRaw').onclick=()=>storage.download(localStorage.getItem(dataKey));return;}
   if(!loaded.data.domainTagVersion&&loaded.fromStorage)localStorage.setItem(storageKey('topic-workbench-v2-before-domain-tags'),JSON.stringify(loaded.data));
   if(!loaded.data.projectContentVersion&&loaded.fromStorage)localStorage.setItem(storageKey('topic-workbench-v2-before-project-content'),JSON.stringify(loaded.data));
-  const enriched=applyProfessionalColors(restoreYellowNotes(detachSourceMetadata(enrichProjectContent(applyDomainTags(enrichWorkbench(loaded.data)))).data));
+  const enriched=normalizeBoard(loaded.data);
   if(!loaded.data.workbenchVersion&&loaded.fromStorage)localStorage.setItem(storageKey('topic-workbench-v2-before-workbench-upgrade'),JSON.stringify(loaded.data));
   const {tags,...data}=enriched;
   state={...data,canvasItems:data.canvasItems||[],tagDefinitions:tags,selected:new Set(),selectedFrames:new Set(),tags:new Set(),logic:'intersection',mode:'highlight',query:'',tool:'select',detail:null,detailInstance:null,display:'canvas',activeBoard:null,scopeFrame:null,focusDirection:null,deliveryFilter:'active',deliveryQuery:''};
@@ -1245,7 +1270,11 @@ async function boot(){
   localStorage.setItem(storageKey('topic-workbench-active-key'),dataKey);
   cloudSync?.start();
   refreshSearchMeetings();
-  if (deployment.public && !release) toast('最新线上画板暂时无法读取，当前显示上次发布版');
+  if (deployment.public && !fromNetwork) toast('最新线上画板暂时无法读取，当前显示上次发布版');
+  if (deployment.public && !canMaintain() && boardPublication.active===boardPublication.edition) {
+    if (fromNetwork && release===fromNetwork) cachePublishedCopy(publicCopyKey,release);
+    watchSharedBoard({release,apply:next=>updatePublicBoard(next,publicCopyKey)});
+  }
   showBoardCopies($('settingsDialog').querySelector('.settings-links'), boardPublication);
   try { snapshots.list(); } catch(error) { toast(error.message); }
   const linkedProject=new URLSearchParams(location.search).get('project');if(linkedProject&&byId[linkedProject])openDetail(linkedProject);
