@@ -17,7 +17,7 @@ import { detachSourceMetadata } from './source-detach.js';
 import { displayPriority, visibleNodes, nodeStatus, displayDescription } from './presentation.js';
 import {boardPublication, deployment, storageKey, useBoardEdition} from './deployment-config.js?v=20261105-editions';
 import {showBoardCopies} from './board-publication.js';
-import {isOlderThanLiveBaseline, loadSharedBoard, mountAutoSync, newerSharedBoard, prepareLiveStorage, validateRelease, watchSharedBoard} from './auto-sync.js?v=20261124-live-sync';
+import {isOlderThanLiveBaseline, loadSharedBoard, mountAutoSync, newerSharedBoard, prepareLiveStorage, validateRelease, watchSharedBoard} from './auto-sync.js?v=20261124-durable-sync';
 import {richEditorMarkup, mountRichEditors, readRichEditor, richHTML, richHasContent, flushRichEditors, destroyRichEditors} from './rich-text.js?v=20261030-card-preview';
 import {frozenNote,saveFrozenNote} from './frozen-note.js';
 import {freezeCommentPickerMarkup,mountFreezeCommentPickers} from './freeze-comment-picker.js';
@@ -904,7 +904,7 @@ $('snapshots').addEventListener('click',snapshotsPanel);$('reviewIssues').addEve
 document.addEventListener('click',e=>{const b=e.target.closest('[data-snapshot-read],[data-snapshot-export],[data-snapshot-delete],[data-review-project]');if(!b)return;try{if(b.hasAttribute('data-snapshot-read'))snapshotPreview(b.dataset.snapshotRead);if(b.hasAttribute('data-snapshot-export'))storage.download(snapshots.export(b.dataset.snapshotExport));if(b.hasAttribute('data-snapshot-delete')){const id=b.dataset.snapshotDelete;editor('删除快照','<p>仅删除这份历史快照，当前项目和布局保留。</p>',()=>{snapshots.remove(id);toast('快照已删除');},'确认删除');}if(b.hasAttribute('data-review-project')){$('editorDialog').close();openDetail(b.dataset.reviewProject);}}catch(error){toast(error.message);}});
 
 document.addEventListener('click',e=>{const direction=e.target.closest('[data-focus-direction]');if(direction){if(clickSuppressed)return;const id=direction.dataset.focusDirection;if(!['canvas','list'].includes(state.display))navigate('canvas');setDirectionFocus(state.focusDirection===id?'':id);return;}const parent=e.target.closest('[data-card-parent]');if(parent){openDetail(parent.dataset.cardParent);return;}const child=e.target.closest('[data-open-children]');if(child&&!child.closest('#world')){showChildren(child.dataset.openChildren);return;}const b=e.target.closest('[data-open]');if(b&&!b.closest('#world'))openDetail(b.dataset.open);});
-window.addEventListener('beforeunload',e=>{if(!flushInline()||!flushRichEditors($('editorFields'))||dirty){e.preventDefault();e.returnValue='';}});
+window.addEventListener('beforeunload',e=>{if(!flushInline()||!flushRichEditors($('editorFields'))||dirty||cloudSync?.awaitingHandoff()){e.preventDefault();e.returnValue='';}});
 $('toggleSidebar').addEventListener('click',()=>toggleSidebar());$('collapseSidebar').addEventListener('click',()=>toggleSidebar(false));$('sidebarBackdrop').addEventListener('click',()=>toggleSidebar(false));
 $('canvasView').addEventListener('click',()=>navigate('canvas'));$('listView').addEventListener('click',()=>navigate('list'));$('canvasNav').addEventListener('click',()=>navigate('canvas'));$('resultsNav').addEventListener('click',()=>navigate('results'));$('deliveryNav').addEventListener('click',()=>navigate('delivery'));
 $('frameNav').addEventListener('change',e => {

@@ -1,6 +1,8 @@
 export const SYNC_ORIGIN = 'http://127.0.0.1:8768';
-export const LIVE_BOARD_URL = 'https://api.github.com/repos/ShirlyJia/ShirlyJia.github.io/contents/topic-workbench/live-board.json?ref=topic-board-data';
-const RAW_BOARD_URL = 'https://raw.githubusercontent.com/ShirlyJia/ShirlyJia.github.io/topic-board-data/topic-workbench/live-board.json';
+const REF_URL = 'https://api.github.com/repos/ShirlyJia/ShirlyJia.github.io/git/ref/heads/topic-board-data';
+const RAW_REPO = 'https://raw.githubusercontent.com/ShirlyJia/ShirlyJia.github.io/';
+const BOARD_PATH = '/topic-workbench/live-board.json';
+let pinned, nextRefCheck=0;
 const isRevision = value => typeof value === 'string' && /^[a-f0-9]{32}$/.test(value);
 const nextWriteId = () => crypto.randomUUID().replaceAll('-','');
 
@@ -16,6 +18,11 @@ async function jsonRequest(url, {timeout=15000, ...options} = {}) {
     const data = await response.json().catch(()=>null);
     const error = new Error(data?.error || '无法读取线上画板');
     error.status = response.status;
+    if ([403,429].includes(error.status)) {
+      const retry=(Number(response.headers.get('Retry-After'))||0)*1000;
+      const reset=(Number(response.headers.get('X-RateLimit-Reset'))||0)*1000-Date.now();
+      error.backoff=Math.max(retry,reset,60000);
+    }
     throw error;
   }
   return response.json();
@@ -41,16 +48,22 @@ export async function loadSharedBoard({connection = '', publicSite = false, chec
     try { return await loadBridgeBoard(connection, request); } catch {}
   }
   if (!publicSite) return null;
-  // The branch URL can still be cached after a GitHub write is acknowledged.
-  if (checkApi) {
+  // Discover the current commit separately from the cacheable board document.
+  if (checkApi && Date.now()>=nextRefCheck) {
     try {
-      return validateRelease(await request(LIVE_BOARD_URL + '&t=' + Date.now(), {
-        headers:{Accept:'application/vnd.github.raw+json'}, timeout:7000
-      }));
-    } catch {}
+      const ref=await request(REF_URL,{cache:'no-cache',timeout:6500});
+      const commit=ref?.object?.sha;
+      if (!/^[a-f0-9]{40}$/.test(commit)) throw Error('线上版本标识无效');
+      if (pinned?.commit===commit) return pinned.release;
+      const release=validateRelease(await request(RAW_REPO+commit+BOARD_PATH,{cache:'force-cache',timeout:7000}));
+      pinned={commit,release};
+      return release;
+    } catch (error) {
+      if (error.backoff) nextRefCheck=Date.now()+error.backoff;
+    }
   }
   try {
-    return validateRelease(await request(RAW_BOARD_URL, {cache:'no-cache', timeout:7000}));
+    return validateRelease(await request(RAW_REPO+'topic-board-data'+BOARD_PATH, {cache:'no-cache', timeout:7000}));
   } catch { return null; }
 }
 
@@ -136,36 +149,53 @@ export async function prepareLiveStorage({storage, key, archivePrefix, release})
 }
 
 export function createAutoSync({key, release, baseline = null, getData, status, storage = localStorage,
-                               onBaseline = ()=>{}, request = jsonRequest, delay = 2000}) {
-  const tokenKey = key + ':connection', draftKey = key + ':pending';
-  let token = storage.getItem(tokenKey) || '';
-  let revision = release?.revision ?? baseline;
-  let acknowledged = release ? boardFingerprint(release.board) : null;
-  let pending = null, timer = null, uploading = false, needsPairing = false, conflictRevision = null, retryDelay = delay;
+                               onBaseline = ()=>{}, request = jsonRequest, delay = 1500}) {
+  const tokenKey=key+':connection',draftKey=key+':pending';
+  let token=storage.getItem(tokenKey)||'', revision=release?.revision??baseline;
+  let acknowledged=release?boardFingerprint(release.board):null;
+  let pending=null, stagedId=null, sending=false, needsPairing=false, conflictRevision=null, timer=null;
+  let retryDelay=delay;
   try {
-    const saved = JSON.parse(storage.getItem(draftKey) || 'null');
-    if (token && saved?.board?.schemaVersion === 2) pending = saved;
+    const saved=JSON.parse(storage.getItem(draftKey)||'null');
+    if (token && saved?.board?.schemaVersion===2) pending=saved;
   } catch { status('待同步备份读取失败，请先导出画板'); }
-  const report = text => status(text,Boolean(conflictRevision));
-  const paused = () => needsPairing || conflictRevision !== null;
+
+  const paused=()=>needsPairing || conflictRevision!==null;
+  const canProgress=()=>!paused() || (conflictRevision!==null && stagedId===pending?.writeId);
+  const report=text=>status(text,Boolean(conflictRevision));
   function persist() {
     if (pending) storage.setItem(draftKey,JSON.stringify(pending));
-    else storage.removeItem(draftKey);
   }
-  function schedule(ms = delay) {
+  function clearDraft(submitted) {
+    const raw=storage.getItem(draftKey);
+    if (raw) {
+      try {
+        const saved=JSON.parse(raw);
+        if ((submitted.writeId && saved.writeId===submitted.writeId) ||
+            (!submitted.writeId && boardFingerprint(saved.board)===boardFingerprint(submitted.board))) {
+          storage.removeItem(draftKey);
+        }
+      } catch {}
+    }
+    pending=null;
+  }
+  function schedule(ms) {
     clearTimeout(timer);
-    if (token && pending && !paused()) timer = setTimeout(publish,ms);
+    if (token && pending && canProgress()) timer=setTimeout(sync,ms);
+  }
+  function nextDraft(board,baseRevision) {
+    const earlierWrites=[...(pending?.earlierWrites||[])];
+    if (pending?.writeId) earlierWrites.push(pending.writeId);
+    pending={board:structuredClone(board),baseRevision,earlierWrites};
+    try { persist(); } catch { /* The saved board can still be sent to the Mac. */ }
   }
   function changed(board) {
     if (!token) return;
-    const fingerprint = boardFingerprint(board);
-    if (!pending && fingerprint === acknowledged) return;
-    if (pending && fingerprint === boardFingerprint(pending.board)) return;
-    const earlierWrites = [...(pending?.earlierWrites || [])];
-    if (pending?.writeId) earlierWrites.push(pending.writeId);
-    pending = {board:structuredClone(board), baseRevision:pending?.baseRevision ?? revision, earlierWrites};
-    try { persist(); } catch { report('待同步内容保存失败，请导出备份'); return; }
-    if (!paused()) { report('等待同步'); schedule(); }
+    const fingerprint=boardFingerprint(board);
+    if (!pending && fingerprint===acknowledged) return;
+    if (pending && fingerprint===boardFingerprint(pending.board)) return;
+    nextDraft(board,pending?.baseRevision??revision);
+    if (!paused()) sync();
   }
   function useOnlineBaseline(saved) {
     revision=saved.revision;
@@ -173,96 +203,118 @@ export function createAutoSync({key, release, baseline = null, getData, status, 
     conflictRevision=null;
     onBaseline(saved);
   }
-  function rebaseDraft(saved) {
-    useOnlineBaseline(saved);
-    pending.baseRevision=revision;
-    pending.earlierWrites=[];
-    delete pending.writeId;
-    persist();
-  }
   function accept(saved,submitted) {
-    if (pending===submitted || boardFingerprint(pending.board)===boardFingerprint(saved.board)) {
-      useOnlineBaseline(saved);
-      pending=null;
-      persist();
-    } else rebaseDraft(saved);
-    retryDelay=delay;
-    report(pending?'等待同步':'已同步到线上');
+    useOnlineBaseline(saved);
+    clearDraft(submitted);
+    report('已同步到线上');
   }
-  function inspectConflict(latest) {
-    if (boardFingerprint(latest.board)===boardFingerprint(pending.board)) {
-      accept(latest,pending);
-    } else if (latest.writeId && pending.earlierWrites?.includes(latest.writeId)) {
-      // Only a confirmed earlier payload from this draft may advance its base.
-      rebaseDraft(latest);
-      retryDelay=0;
-      report('等待同步');
-    } else {
-      conflictRevision=latest.revision;
-      report('线上有更新，自动同步已暂停');
-    }
-  }
-  async function publish() {
-    if (uploading || !pending || !token || paused()) return;
-    uploading = true;
-    const submitted = pending;
-    report('正在同步…');
+  async function sync() {
+    if (sending || !pending || !token || !canProgress()) return;
+    clearTimeout(timer);
+    sending=true;
+    const submitted=pending;
+    const activeToken=token;
     try {
-      if (!submitted.writeId) { submitted.writeId=nextWriteId(); persist(); }
-      const saved = validateRelease(await request(SYNC_ORIGIN + '/publish', {
-        method:'POST',headers:{Authorization:'Bearer ' + token,'Content-Type':'application/json'},
-        body:JSON.stringify({board:submitted.board,baseRevision:submitted.baseRevision,writeId:submitted.writeId}),
-        timeout:45000
-      }));
-      accept(saved,submitted);
-    } catch (error) {
-      if (error.status === 409) {
-        try { inspectConflict(await loadBridgeBoard(token,request)); return; }
-        catch (readError) { error=readError; }
+      if (!submitted.writeId) {
+        submitted.writeId=nextWriteId();
+        try { persist(); } catch { /* The background copy is independent of browser quota. */ }
       }
+      const checking=stagedId===submitted.writeId;
+      const headers={Authorization:'Bearer '+activeToken};
+      if (!checking) report('正在交给 Mac 后台…');
+      const ticket=checking
+        ? await request(SYNC_ORIGIN+'/outbox?writeId='+submitted.writeId,{headers,timeout:5000})
+        : await request(SYNC_ORIGIN+'/outbox',{
+            method:'POST',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify(submitted),timeout:6000
+          });
+      if (pending!==submitted || activeToken!==token) return;
+      retryDelay=delay;
+      switch (ticket.status) {
+        case 'published':
+          accept(validateRelease({...ticket.release,board:submitted.board}),submitted);
+          break;
+        case 'queued':
+        case 'retry':
+          stagedId=submitted.writeId;
+          report(ticket.status==='retry'?'已交给后台 · 等待自动重试':'已交给后台 · 发布中');
+          break;
+        case 'conflict':
+          if (!isRevision(ticket.conflictRevision)) throw Error('发布状态缺少线上版本');
+          stagedId=submitted.writeId;
+          conflictRevision=ticket.conflictRevision;
+          retryDelay=15000;
+          report('线上有更新，自动同步已暂停');
+          break;
+        case 'busy':
+          report('另一个画板正在发布，本机修改已保留');
+          retryDelay=5000;
+          break;
+        case 'missing':
+          stagedId=null; retryDelay=0;
+          break;
+        case 'superseded': {
+          const latest=await loadBridgeBoard(activeToken,request);
+          if (pending!==submitted || activeToken!==token) return;
+          stagedId=null;
+          if (boardFingerprint(latest.board)===boardFingerprint(submitted.board)) accept(latest,submitted);
+          else {
+            conflictRevision=latest.revision;
+            report('线上有更新，自动同步已暂停');
+          }
+          break;
+        }
+        default: throw Error('无法确认后台状态');
+      }
+    } catch(error) {
+      if (pending!==submitted || activeToken!==token) return;
       if ([401,403].includes(error.status)) {
-        needsPairing = true;report('请重新连接这台 Mac');
+        needsPairing=true; report('请检查这台 Mac 的同步连接');
       } else {
-        retryDelay=Math.min(Math.max(retryDelay*2,10000),60000);
-        report('修改已保留，等待重试');
+        retryDelay=Math.min(Math.max(retryDelay*2,3000),30000);
+        report(stagedId===submitted.writeId?'已交给后台 · 等待状态确认':'修改已保留，等待连接后台');
       }
-    } finally { uploading=false;schedule(retryDelay); }
+    } finally {
+      sending=false;
+      schedule(pending===submitted?retryDelay:0);
+    }
   }
   return {
     connection:()=>token,
     pendingBoard:()=>pending?.board,
+    awaitingHandoff:()=>!!token && !!pending && !paused() && (!pending.writeId || stagedId!==pending.writeId),
     changed,
     async connect(value) {
-      const current = await loadBridgeBoard(value,request);
+      const current=await loadBridgeBoard(value,request);
       storage.setItem(tokenKey,value);token=value;needsPairing=false;
       useOnlineBaseline(current);
       report('自动同步已开启');changed(getData());schedule(0);
     },
     disconnect() {
-      clearTimeout(timer);token='';storage.removeItem(tokenKey);
-      conflictRevision=null;
-      report('自动同步已关闭');
+      clearTimeout(timer);token='';storage.removeItem(tokenKey);conflictRevision=null;
+      report('已停止提交新修改');
     },
     start() {
       if (!token) return;
-      // An interrupted response may already have reached GitHub.
-      if (pending && acknowledged === boardFingerprint(pending.board)) {
-        pending=null;persist();
-      }
-      report(pending ? '等待同步' : release ? '已同步到线上' : '自动同步已开启');schedule(0);
+      if (pending && !pending.writeId && acknowledged===boardFingerprint(pending.board)) clearDraft(pending);
+      report(pending?'等待同步':release?'已同步到线上':'自动同步已开启');
+      schedule(0);
     },
-    retry() { if (!uploading) schedule(0); },
+    retry() { if (!sending) schedule(0); },
     async publishLocalVersion() {
-      if (uploading || !conflictRevision || !pending || !token) return;
+      if (sending || !conflictRevision || !pending || !token) return;
       const reviewed=conflictRevision;
-      uploading=true;
+      sending=true;
       try {
         const latest=await loadBridgeBoard(token,request);
-        if (latest.revision===reviewed && boardFingerprint(latest.board)!==boardFingerprint(pending.board)) {
-          rebaseDraft(latest);retryDelay=0;report('等待同步');
-        } else inspectConflict(latest);
+        if (latest.revision===reviewed || boardFingerprint(latest.board)===boardFingerprint(pending.board)) {
+          useOnlineBaseline(latest);
+          nextDraft(pending.board,latest.revision);
+        } else {
+          conflictRevision=latest.revision;
+          report('线上再次更新，本机修改已保留');
+        }
       } catch { report('暂时无法核对线上版本，本机修改已保留'); }
-      finally { uploading=false;schedule(retryDelay); }
+      finally { sending=false; schedule(0); }
     },
     dispose() { clearTimeout(timer); }
   };
@@ -290,7 +342,7 @@ export function mountAutoSync({key, release, dataKey, getData, notify}) {
   };
   button.textContent=sync.connection()?'关闭自动同步':'连接这台 Mac 自动同步';
   badge.hidden=!sync.connection();
-  detail.textContent=sync.connection()?'编辑后自动发布到原网址。':'连接后，项目内容、分组与布局会自动发布到原网址。';
+  detail.textContent=sync.connection()?'Mac 后台接收后，关闭页面也会继续发布。':'连接后，项目内容、分组与布局会自动发布到原网址。';
   container.prepend(button,detail,resolve);
   let pairing=null, pairingNonce='';
   button.onclick=()=>{
