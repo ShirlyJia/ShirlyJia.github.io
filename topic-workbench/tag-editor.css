@@ -85,3 +85,39 @@
 .filterbar .tag-manage{flex:none;min-width:28px;height:30px;padding:3px;color:#8f959e;font-size:17px}
 .selected-tag-count{padding:0 5px;border-radius:4px;background:#f2f3f5;color:#4e5969;font-size:10px;font-variant-numeric:tabular-nums}
 @media(prefers-reduced-motion:reduce){.tag-disclosure svg{transition:none}}
+
+/* Project assignment stays separate from editing the shared tag catalog. */
+.detail-tags .project-tag-chips{display:contents}
+.project-tag-chips .card-tag:not(:has(.color-control)){padding-inline:7px}
+.project-tag-chips .card-tag:not(:has(.color-control))::before{display:block}
+.detail-tags .project-tag-trigger{display:inline-flex;align-items:center;gap:4px;min-height:28px;padding:3px 7px;border:1px solid transparent;border-radius:5px;background:transparent;color:#6f6c64;font:inherit;font-size:12px;line-height:18px;cursor:pointer}
+.detail-tags .project-tag-trigger:is(:hover,[aria-expanded="true"]){background:#f3f2ef;color:#37352f}
+.project-tag-trigger svg{width:13px;height:13px;flex:none}
+.project-tag-picker{position:fixed;inset:auto;z-index:2400;box-sizing:border-box;display:flex;flex-direction:column;width:320px;min-width:0;margin:0;padding:7px;border:1px solid #e6e4df;border-radius:8px;background:#fff;color:#37352f;box-shadow:0 5px 21px #22201a19;font:13px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;overflow:hidden}
+.project-tag-search{display:flex;align-items:center;gap:8px;flex:none;min-height:36px;margin-bottom:5px;padding:0 9px;border:1px solid #ebe9e5;border-radius:5px;background:#f8f8f6;color:#78766f}
+.project-tag-search:focus-within{border-color:#a5b7cf;background:#fff}
+.project-tag-search svg{width:15px;height:15px;flex:none}
+.project-tag-picker .project-tag-search input{flex:1;min-width:0;width:100%;min-height:33px;padding:0;border:0;border-radius:0;background:transparent;color:#37352f;font:inherit;outline:none;box-shadow:none}
+.project-tag-picker .project-tag-search input::placeholder{color:#77756e}
+.project-tag-options{min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.project-tag-picker .project-tag-option{display:grid;grid-template-columns:14px minmax(0,1fr) 16px;align-items:center;gap:8px;width:100%;min-height:33px;padding:5px 8px;border:0;border-radius:5px;background:transparent;color:#37352f;text-align:left;font:inherit;cursor:pointer}
+.project-tag-picker .project-tag-option:is(:hover,.is-active){background:#f3f2ef}
+.project-tag-option>span:nth-child(2){overflow-wrap:anywhere}
+.project-tag-dot{width:8px;height:8px;border-radius:50%;justify-self:center}
+.project-tag-check{display:grid;place-items:center;color:#51696c;visibility:hidden}
+.project-tag-check svg{width:14px;height:14px;stroke-width:1.75}
+.project-tag-option[aria-selected="true"] .project-tag-check{visibility:visible}
+.project-tag-picker .project-tag-create{color:#4c6076}
+.project-tag-create>svg{width:14px;height:14px}
+.project-tag-picker .project-tag-create:not(:first-child){position:relative;margin-top:4px}
+.project-tag-create:not(:first-child)::before{content:"";position:absolute;top:-3px;left:8px;right:8px;border-top:1px solid #efede8}
+.project-tag-picker .project-tag-empty{margin:0;padding:9px 8px;color:#75726a;font-size:12px}
+.project-tag-picker footer{display:flex;align-items:center;justify-content:space-between;flex:none;gap:12px;margin-top:5px;padding:6px 1px 0 8px;border-top:1px solid #efede9;color:#77736a;font-size:11px;font-variant-numeric:tabular-nums}
+.project-tag-picker .project-tag-done{min-height:25px;padding:3px 8px;border-radius:4px;background:#f4f3f0;color:#4d4942;font:inherit;cursor:pointer}
+.project-tag-picker .project-tag-done:hover{background:#eae8e3}
+@media(max-width:760px),(pointer:coarse){
+  .detail-tags .project-tag-trigger{min-height:35px}
+  .project-tag-picker .project-tag-option{min-height:41px}
+  .project-tag-picker .project-tag-search input{min-height:38px;font-size:16px}
+  .project-tag-picker .project-tag-done{min-height:34px;padding-inline:11px}
+}
