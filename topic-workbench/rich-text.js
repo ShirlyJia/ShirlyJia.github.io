@@ -585,10 +585,10 @@ export function mountRichEditors(root, {onChange, onError, onCommit} = {}) {
   }
   return () => added.forEach(editor=>{mounts.get(editor)?.controller.abort();mounts.delete(editor);});
 }
-export function flushRichEditors(root) {
+export function flushRichEditors(root, {silent=false} = {}) {
   const editors = root.matches?.('.rich-editor-input') ? [root] : Array.from(root.querySelectorAll('.rich-editor-input'));
   const pending=editors.find(editor=>mounts.get(editor)?.pending||mounts.get(editor)?.composing||mounts.get(editor)?.resize?.active);
-  if(pending){const state=mounts.get(pending);state?.message(state.resize?.active?'请先松开图片缩放手柄。':'请等待输入或图片处理完成后再切换。',true);return false;}
+  if(pending){const state=mounts.get(pending);if(!silent)state?.message(state.resize?.active?'请先松开图片缩放手柄。':'请等待输入或图片处理完成后再切换。',true);return false;}
   return true;
 }
 export function destroyRichEditors(root) {

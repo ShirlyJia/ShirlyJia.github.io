@@ -27,7 +27,7 @@
   <link rel="stylesheet" href="project-list.css?v=20261030-two-line-previews">
   <link rel="stylesheet" href="canvas-navigation.css?v=20261102-pan-fit">
   <link rel="stylesheet" href="date-styles.css?v=20261030-dates">
-  <link rel="stylesheet" href="workspace-header.css?v=20261125-sync-time">
+  <link rel="stylesheet" href="workspace-header.css?v=20261125-autosave">
   <link rel="stylesheet" href="project-lifecycle.css?v=20261113-frozen-style">
   <link rel="stylesheet" href="viewer-mode.css?v=20261117">
   <link rel="stylesheet" href="action-board.css?v=20261123-action-focus">
@@ -55,7 +55,16 @@
 
     <h1 id="pageTitle" class="workspace-title">自由画板</h1>
     <span id="workspaceSyncTime" class="workspace-sync-time" role="status" hidden><span>最近同步</span><time></time><span class="sr-only">北京时间</span></span>
-    <div class="header-spacer"></div><button id="saveStatus" class="save-status" title="保存状态">正在载入…</button><button class="plain-button" id="undo" disabled>撤销</button><button class="plain-button" id="snapshots">保存快照</button><button class="plain-button" id="reviewIssues">待核对</button><button class="plain-button" id="help" title="操作说明与快捷键">帮助</button>
+    <div class="header-spacer"></div>
+    <div class="workspace-actions">
+      <button type="button" id="saveStatus" class="save-status workspace-save-status" data-save-phase="loading" title="正在载入画板"><span id="saveStatusLabel" aria-live="polite">载入中</span></button>
+      <div class="workspace-tools" role="group" aria-label="画板操作">
+        <button type="button" id="undo" class="plain-button" title="撤销" aria-label="撤销" disabled><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7 4-4 4 4 4M3 8h9a4 4 0 0 1 0 8H9"/></svg></button>
+        <button type="button" id="snapshots" class="plain-button" title="保存快照" aria-label="保存快照"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 5 8.5 3h3L13 5h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><circle cx="10" cy="10.5" r="2.5"/></svg><span>快照</span></button>
+        <button type="button" id="reviewIssues" class="plain-button" title="待核对" aria-label="待核对"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 17V4m0 1c3-3 6 2 10 0v7c-4 2-7-3-10 0"/></svg><span>待核对</span></button>
+        <button type="button" id="help" class="plain-button" title="操作说明与快捷键" aria-label="帮助"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M8 8a2 2 0 1 1 3 1.6c-.7.4-1 .9-1 1.9m0 2.6h.01"/></svg></button>
+      </div>
+    </div>
   </header>
   <p id="loadCaption" class="load-caption" role="status">正在载入项目…</p>
   <button id="deliveryReminder" class="delivery-reminder" hidden></button>
@@ -151,12 +160,12 @@
     "./direction-focus.js?v=20261030-direction2": "./direction-focus.js?v=20261112-lifecycle",
     "./workbench-views.js": "./workbench-views.js?v=20261123-action-focus",
     "./direction-focus.js": "./direction-focus.js?v=20261112-lifecycle",
-    "./rich-text.js": "./rich-text.js?v=20261123-inline-citations",
-    "./rich-text.js?v=20261030-card-preview": "./rich-text.js?v=20261123-inline-citations",
-    "./rich-text.js?v=20261030-comment-interactions": "./rich-text.js?v=20261123-inline-citations"
+    "./rich-text.js": "./rich-text.js?v=20261125-autosave",
+    "./rich-text.js?v=20261030-card-preview": "./rich-text.js?v=20261125-autosave",
+    "./rich-text.js?v=20261030-comment-interactions": "./rich-text.js?v=20261125-autosave"
   }
 }
   </script>
-  <script type="module" src="app.js?v=20261125-sync-time"></script>
+  <script type="module" src="app.js?v=20261125-autosave"></script>
 </body>
 </html>

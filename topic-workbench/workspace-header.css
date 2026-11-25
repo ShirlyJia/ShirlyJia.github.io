@@ -3,7 +3,17 @@
 .workspace-title{font-size:18px;line-height:1.4;font-weight:650;letter-spacing:-.25px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:72px}
 .app-header .header-spacer{min-width:8px}
 .workspace-sync-time{display:inline-flex;align-items:baseline;flex:none;gap:5px;color:#73726e;font-size:11px;line-height:1.4;white-space:nowrap}
-.app-header #syncStatus{max-width:230px;overflow:hidden;text-overflow:ellipsis}
+.workspace-actions{display:flex;align-items:center;gap:8px;flex:none}
+.app-header .workspace-save-status{display:inline-flex;min-height:28px;align-items:center;gap:6px;padding:4px 8px;border-radius:5px;color:#625f5a;font-size:11px}
+.workspace-save-status::before{content:"";width:6px;height:6px;border-radius:50%;background:#a09c94}
+.workspace-save-status:is([data-save-phase="saved"],[data-save-phase="synced"])::before{background:#68866b}
+.workspace-save-status:is([data-save-phase="saving"],[data-save-phase="syncing"],[data-save-phase="background"])::before{background:#607f9e}
+.workspace-save-status:is([data-save-phase="waiting"],[data-save-phase="conflict"],[data-save-phase="attention"],[data-save-phase="incomplete"])::before{background:#b88045}
+.workspace-save-status:is([data-save-phase="failed"],[data-save-phase="recovery"],[data-save-phase="unavailable"])::before{background:#bf584b}
+.workspace-tools{display:flex;align-items:center;gap:2px;padding-left:7px;border-left:1px solid #eeede9}
+.workspace-tools button{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:28px;height:28px;padding:4px 6px;white-space:nowrap}
+.workspace-tools svg{width:15px;height:15px;flex:none;fill:none;stroke:currentColor;stroke-width:1.45;stroke-linecap:round;stroke-linejoin:round}
+.workspace-save-status:hover,.workspace-tools button:not(:disabled):hover{background:#f3f2ee;color:#37352f}
 .load-caption{margin:0;padding:5px 24px;color:#73726e;font-size:11px}
 .load-caption:empty{display:none}
 .app-shell>.database-toolbar{flex:0 0 42px;height:42px;margin:0 24px;gap:18px}
@@ -22,13 +32,20 @@
  .project-detail-open .filterbar>.direction-focus-bar{max-width:100%;min-height:28px}
  .project-detail-open .filterbar .direction-select-wrap{max-width:160px}
 }
-@media(max-width:1000px){.app-header #saveStatus{display:none}.app-header #syncStatus{max-width:160px}.filterbar .direction-focus-count{display:none}}
+@media(max-width:1000px){.filterbar .direction-focus-count{display:none}}
 @media(max-width:760px){
  .app-shell>.app-header{height:44px;flex-basis:44px;padding:0 12px;gap:5px}
  .app-shell>.app-header:has(.workspace-sync-time:not([hidden])){flex-wrap:wrap;height:auto;flex-basis:auto;row-gap:0;padding-bottom:5px}
  .workspace-sync-time{flex-basis:100%;order:1;font-size:10px;padding-left:5px}
- .workspace-title{font-size:16px}.app-header #syncStatus{max-width:105px;font-size:10px}
+ .workspace-title{font-size:16px;min-width:0}
+ .app-header .header-spacer{min-width:0}
+ .workspace-actions{gap:4px}
+ .app-header .workspace-save-status{font-size:10px;padding:3px 4px}
+ .workspace-tools{gap:0;padding-left:3px}
+ .workspace-tools button,.workspace-tools #help{min-width:27px;min-height:32px;padding:3px 5px}
  .app-shell>.database-toolbar{margin:0 16px;gap:10px}.database-toolbar .search-wrap{width:160px;flex:1;max-width:none}
  .app-shell>.filterbar{padding:5px 16px;gap:5px 10px;min-height:40px;align-content:start}
  .filterbar>.direction-focus-bar{max-width:100%;padding-right:10px}.filterbar .direction-select-wrap{max-width:150px}
 }
+
+@media(max-width:430px){.workspace-tools button span{display:none}}

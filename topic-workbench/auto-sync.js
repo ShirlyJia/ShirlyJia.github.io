@@ -158,11 +158,11 @@ export function createAutoSync({key, release, baseline = null, getData, status, 
   try {
     const saved=JSON.parse(storage.getItem(draftKey)||'null');
     if (token && saved?.board?.schemaVersion===2) pending=saved;
-  } catch { status('待同步备份读取失败，请先导出画板'); }
+  } catch { status('待同步备份读取失败，请先导出画板',false,'attention'); }
 
   const paused=()=>needsPairing || conflictRevision!==null;
   const canProgress=()=>!paused() || (conflictRevision!==null && stagedId===pending?.writeId);
-  const report=text=>status(text,Boolean(conflictRevision));
+  const report=(text,phase='syncing')=>status(text,Boolean(conflictRevision),conflictRevision?'conflict':phase);
   function persist() {
     if (pending) storage.setItem(draftKey,JSON.stringify(pending));
   }
@@ -206,7 +206,7 @@ export function createAutoSync({key, release, baseline = null, getData, status, 
   function accept(saved,submitted) {
     useOnlineBaseline(saved);
     clearDraft(submitted);
-    report('已同步到线上');
+    report('已同步到线上','synced');
     onPublished(saved);
   }
   async function sync() {
@@ -237,7 +237,8 @@ export function createAutoSync({key, release, baseline = null, getData, status, 
         case 'queued':
         case 'retry':
           stagedId=submitted.writeId;
-          report(ticket.status==='retry'?'已交给后台 · 等待自动重试':'已交给后台 · 发布中');
+          if (ticket.status==='retry') report('已交给后台 · 等待自动重试','waiting');
+          else report('已交给后台 · 发布中','background');
           break;
         case 'conflict':
           if (!isRevision(ticket.conflictRevision)) throw Error('发布状态缺少线上版本');
@@ -247,7 +248,7 @@ export function createAutoSync({key, release, baseline = null, getData, status, 
           report('线上有更新，自动同步已暂停');
           break;
         case 'busy':
-          report('另一个画板正在发布，本机修改已保留');
+          report('另一个画板正在发布，本机修改已保留','waiting');
           retryDelay=5000;
           break;
         case 'missing':
@@ -269,10 +270,10 @@ export function createAutoSync({key, release, baseline = null, getData, status, 
     } catch(error) {
       if (pending!==submitted || activeToken!==token) return;
       if ([401,403].includes(error.status)) {
-        needsPairing=true; report('请检查这台 Mac 的同步连接');
+        needsPairing=true; report('请检查这台 Mac 的同步连接','attention');
       } else {
         retryDelay=Math.min(Math.max(retryDelay*2,3000),30000);
-        report(stagedId===submitted.writeId?'已交给后台 · 等待状态确认':'修改已保留，等待连接后台');
+        report(stagedId===submitted.writeId?'已交给后台 · 等待状态确认':'修改已保留，等待连接后台','waiting');
       }
     } finally {
       sending=false;
@@ -288,16 +289,18 @@ export function createAutoSync({key, release, baseline = null, getData, status, 
       const current=await loadBridgeBoard(value,request);
       storage.setItem(tokenKey,value);token=value;needsPairing=false;
       useOnlineBaseline(current);
-      report('自动同步已开启');changed(getData());schedule(0);
+      report('自动同步已开启','saved');changed(getData());schedule(0);
     },
     disconnect() {
       clearTimeout(timer);token='';storage.removeItem(tokenKey);conflictRevision=null;
-      report('已停止提交新修改');
+      report('已停止提交新修改','saved');
     },
     start() {
       if (!token) return;
       if (pending && !pending.writeId && acknowledged===boardFingerprint(pending.board)) clearDraft(pending);
-      report(pending?'等待同步':release?'已同步到线上':'自动同步已开启');
+      if (pending) report('等待同步','waiting');
+      else if (release) report('已同步到线上','synced');
+      else report('自动同步已开启','saved');
       schedule(0);
     },
     retry() { if (!sending) schedule(0); },
@@ -321,20 +324,17 @@ export function createAutoSync({key, release, baseline = null, getData, status, 
   };
 }
 
-export function mountAutoSync({key, release, dataKey, getData, notify, onPublished}) {
+export function mountAutoSync({key, release, dataKey, getData, notify, onPublished, onStatus}) {
   const container=document.querySelector('#settingsDialog .settings-links');
   const button=document.createElement('button');
   const detail=document.createElement('p');
   const resolve=document.createElement('button');
   resolve.textContent='发布本机版本';resolve.hidden=true;
-  const badge=document.createElement('button');
-  badge.className='save-status';badge.id='syncStatus';
-  badge.onclick=()=>document.getElementById('settingsDialog').showModal();
-  document.getElementById('saveStatus').after(badge);
   const sync=createAutoSync({key,release,getData,onPublished,baseline:cachedBoardRevision(localStorage,dataKey),
     onBaseline:saved=>{rememberLiveBaseline(localStorage,dataKey,saved).catch(()=>{});},
-    status:(text,conflict)=>{
-      badge.textContent=text;badge.hidden=false;resolve.hidden=!conflict;
+    status:(text,conflict,phase)=>{
+      onStatus?.(phase,text);
+      resolve.hidden=!conflict;
       detail.textContent=conflict?text+'。发布本机版本后，先前的线上版本仍可从发布历史恢复。':text;
     }});
   resolve.onclick=async()=>{
@@ -342,7 +342,6 @@ export function mountAutoSync({key, release, dataKey, getData, notify, onPublish
     try { await sync.publishLocalVersion(); } finally { resolve.disabled=false; }
   };
   button.textContent=sync.connection()?'关闭自动同步':'连接这台 Mac 自动同步';
-  badge.hidden=!sync.connection();
   detail.textContent=sync.connection()?'Mac 后台接收后，关闭页面也会继续发布。':'连接后，项目内容、分组与布局会自动发布到原网址。';
   container.prepend(button,detail,resolve);
   let pairing=null, pairingNonce='';

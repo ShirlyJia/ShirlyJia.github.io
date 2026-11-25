@@ -17,13 +17,13 @@ import { detachSourceMetadata } from './source-detach.js';
 import { displayPriority, visibleNodes, nodeStatus, displayDescription } from './presentation.js';
 import {boardPublication, deployment, storageKey, useBoardEdition} from './deployment-config.js?v=20261105-editions';
 import {showBoardCopies} from './board-publication.js';
-import {isOlderThanLiveBaseline, loadSharedBoard, mountAutoSync, newerSharedBoard, prepareLiveStorage, readLiveBaseline, validateRelease, watchSharedBoard} from './auto-sync.js?v=20261125-sync-time';
+import {isOlderThanLiveBaseline, loadSharedBoard, mountAutoSync, newerSharedBoard, prepareLiveStorage, readLiveBaseline, validateRelease, watchSharedBoard} from './auto-sync.js?v=20261125-autosave';
 import {richEditorMarkup, mountRichEditors, readRichEditor, richHTML, richHasContent, flushRichEditors, destroyRichEditors} from './rich-text.js?v=20261030-card-preview';
 import {frozenNote,saveFrozenNote} from './frozen-note.js';
 import {freezeCommentPickerMarkup,mountFreezeCommentPickers} from './freeze-comment-picker.js';
 import {projectLifecycle,isHistoryProject,lifecycleLabels,lifecycleField,lifecycleConclusionLabel,lifecycleDate} from './project-lifecycle.js';
 import {readProjectFlow, setCurrentFlowNode, setProjectClosed, setProjectLifecycle} from './project-flow.js';
-import {flowMarkup, mountProjectFlow} from './project-flow-view.js';
+import {flowMarkup, mountProjectFlow} from './project-flow-view.js?v=20261125-autosave';
 import {reconcileDelivery, recordDeliveryLifecycle, deliveryCases, todayDate} from './delivery-model.js';
 import {deliveryCardMarkup, deliveryPlanMarkup} from './delivery-view.js';
 import {createDeliveryController} from './delivery-controller.js?v=20261030-dates';
@@ -53,13 +53,20 @@ const textValue = value => typeof value === 'string' ? value : typeof value === 
 const pageIcon = '<svg class="page-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 2h7l4 4v12H5zM12 2v5h4M8 11h5M8 14h4"/></svg>';
 let projectList = null, workbench = null, canvasEditor = null, flowEditor = null, deliveryController = null, tagEditor = null, projectTagPicker = null;
 const inlineTimers = new Map();
+const composingInputs='[data-inline-composing],[data-flow-composing]';
+const pendingInputs='[data-inline][data-pending],[data-flow-pending],'+composingInputs;
 const expandedDirectionTrees = new Set();
 let focusedDirection = null;
 let state, projects = [], byId = {}, tagById = {}, lastEditor, editorInstance, gesture = null, space = false, toastTimer, pendingFrame, clickSuppressed = false, lastFrameClick, dirty = false;
 const viewport = $('viewport'), world = $('world');
 const navigationArea = $('canvasNavigation');
 let recoveryCheck = 0, viewPaintFrame = 0, viewSaveTimer = 0, paintedScale;
-$('saveStatus').title='修改保存在当前浏览器；数据与备份见设置';
+let localSavePhase='loading', onlineSaveStatus=null;
+const saveStatusLabels={
+  loading:'载入中',saved:'已保存',saving:'自动保存中',synced:'已同步',syncing:'同步中',background:'已交给后台',
+  waiting:'待同步',conflict:'同步冲突',attention:'同步待处理',failed:'保存失败',
+  incomplete:'待补齐',reader:'公开浏览',recovery:'需要恢复',unavailable:'未载入'
+};
 let cloudSync = null;
 let localMaintainer = !deployment.public, globalSearch = null, searchMeetings = [], searchEntries = [], searchMeetingStatus = '正在读取会议记录…', projectSearchText = new Map();
 const canMaintain = () => localMaintainer;
@@ -69,9 +76,37 @@ let storage = createPersistence({key:storageKey('topic-workbench-v2'),onStatus: 
   if (result?.ok === false || result?.success === false) setSaveStatus(false);
 }});
 function documentData() { return {schemaVersion:2, workbenchVersion:state.workbenchVersion, frameBoardSyncVersion:state.frameBoardSyncVersion, domainTagVersion:state.domainTagVersion, projectContentVersion:state.projectContentVersion, canvasNoteStyleVersion:state.canvasNoteStyleVersion, quickBoards:state.quickBoards, deliveryEvents:state.deliveryEvents||[], sourceDetachedVersion:state.sourceDetachedVersion, projects:state.projects, tags:state.tagDefinitions, relations:state.relations, frames:state.frames, instances:state.instances, canvasItems:state.canvasItems||[], view:state.view}; }
-function setSaveStatus(ok) { dirty = !ok; const saved='已本机保存';$('saveStatus').textContent = ok ? saved : '未保存 · 点击重试'; $('saveStatus').classList.toggle('unsaved',!ok);$('detailSaveStatus').textContent=ok?saved:'未保存 · 重试';$('detailSaveStatus').classList.toggle('unsaved',!ok); }
+function refreshSaveStatus(){
+  let local=localSavePhase;
+  if(local==='saved'){
+    const invalid=document.querySelector('[data-pending][aria-invalid="true"],[data-flow-pending][aria-invalid="true"]');
+    if(invalid)local='incomplete';
+    else if(dirty||document.querySelector(pendingInputs))local='saving';
+  }
+  const sync=local==='saved'?onlineSaveStatus:null;
+  const phase=sync?.phase||local;
+  const button=$('saveStatus'), label=$('saveStatusLabel')||button, detail=$('detailSaveStatus');
+  button.dataset.savePhase=phase;
+  const text=saveStatusLabels[phase];
+  if(label.textContent!==text)label.textContent=text;
+  button.title=sync?'已保存到本机。'+sync.message+'。点击查看同步与备份'
+    : ({saved:'已自动保存到本机。点击查看同步与备份',saving:'停笔后自动保存',failed:'点击重试本机保存',
+        incomplete:'补齐必填内容后自动保存',reader:'当前查看已发布画板'})[local]||text;
+  const detailText=saveStatusLabels[local];
+  if(detail.textContent!==detailText)detail.textContent=detailText;
+  detail.classList.toggle('unsaved',local==='failed'||local==='incomplete');
+}
+function setSaveStatus(ok) {
+  dirty=!ok;
+  localSavePhase=ok?'saved':'failed';
+  refreshSaveStatus();
+}
+function setOnlineSaveStatus(phase,message){
+  onlineSaveStatus={phase,message};
+  refreshSaveStatus();
+}
 function save(history = true) {
-  if(!canMaintain()){$('saveStatus').textContent='公开浏览';$('detailSaveStatus').textContent='公开浏览';return true;}
+  if(!canMaintain()){localSavePhase='reader';refreshSaveStatus();return true;}
   clearTimeout(viewSaveTimer);
   viewSaveTimer = 0;
   try {
@@ -599,7 +634,7 @@ function openDetail(pid,instanceId=null,resetScroll=true,{keepTrail=false}={}){
   if(instance&&(instance.focus||instance.context))html+=section('本处备注',(instance.focus?'<p>★ 本处重点</p>':'')+(instance.context?'<div class="rich-content">'+richHTML(instance.richText?.context,instance.context)+'</div>':''),actionButton('编辑','placement',instance.id));
   html+='<details class="board-membership"><summary>行动看板 <span>'+state.quickBoards.filter(b=>b.projectIds.includes(pid)).map(b=>esc(b.name)).join(' · ')+'</span></summary><div>'+state.quickBoards.map(b=>'<label><input type="checkbox" data-project-board="'+esc(b.id)+'"'+(b.projectIds.includes(pid)?' checked':'')+'><span class="nav-color" style="background:'+esc(b.color)+'"></span>'+esc(b.name)+'</label>').join('')+'</div></details>';
   projectTagPicker?.close();
-  $('detailBody').querySelectorAll('[data-inline]').forEach(el=>{clearTimeout(inlineTimers.get(el));inlineTimers.delete(el);});flowEditor?.destroy();destroyRichEditors($('detailBody'));$('detailBody').innerHTML=html;if(canMaintain())mountRichEditors($('detailBody'),{onError:toast,onCommit:commitInline});flowEditor=mountProjectFlow($('detailBody'),{getProject:()=>byId[pid],mutate:(fn,message,options)=>mutateFlow(pid,fn,message,options),toast,onChange:({kind})=>{if(kind==='current')openDetail(pid,state.detailInstance,false);}});$('detail').hidden=false;$('detailBody').scrollTop=resetScroll?0:scroll;resizeInlineFields();syncActiveProject();if(resetScroll){$('closeDetail').focus({preventScroll:true});revealActiveProject();}
+  $('detailBody').querySelectorAll('[data-inline]').forEach(el=>{clearTimeout(inlineTimers.get(el));inlineTimers.delete(el);});flowEditor?.destroy();destroyRichEditors($('detailBody'));$('detailBody').innerHTML=html;if(canMaintain())mountRichEditors($('detailBody'),{onError:toast,onCommit:commitInline});flowEditor=mountProjectFlow($('detailBody'),{getProject:()=>byId[pid],mutate:(fn,message,options)=>mutateFlow(pid,fn,message,options),toast,canAutoSave:readyForAutosave,onPendingChange:refreshSaveStatus,onChange:({kind})=>{if(kind==='current')openDetail(pid,state.detailInstance,false);}});$('detail').hidden=false;$('detailBody').scrollTop=resetScroll?0:scroll;resizeInlineFields();syncActiveProject();if(resetScroll){$('closeDetail').focus({preventScroll:true});revealActiveProject();}
   applyViewerMode($('detailBody'),canMaintain());syncDetailBack();
   return true;
 }
@@ -717,23 +752,29 @@ function reconcileMembership(placements,frames,onlyCrossings=false){
 }
 function scatter(){state.mode='highlight';applyFilter();renderSelection();}
 function closeOrCancel(){if(!document.querySelector('dialog[open]')){if(document.body.classList.contains('sidebar-open'))toggleSidebar(false);else if(state.detail)closeDetail();else if(state.mode==='gather')scatter();else if(state.focusDirection)setDirectionFocus('');else{state.selected.clear();state.selectedFrames.clear();renderSelection();setTool('select');}}}
-function commitInline(el){
-  if(!canMaintain()){if(el?.dataset)delete el.dataset.pending;return true;}
+function finishInlineCommit(el){
+  delete el.dataset.pending;
+  el.removeAttribute('aria-invalid');
+  refreshSaveStatus();
+}
+function commitInline(el,{automatic=false}={}){
   clearTimeout(inlineTimers.get(el));inlineTimers.delete(el);
-  if(!el?.dataset.pending)return true;
+  if(!canMaintain()){if(el?.dataset)delete el.dataset.pending;return true;}
+  if(!el?.isConnected||!el.dataset.pending)return true;
+  if(el.dataset.inlineComposing)return false;
   const pid=el.dataset.timelinePid||el.dataset.editingPid||state.detail,p=byId[pid];if(!p)return false;
   const rich=el.classList.contains('rich-editor-input')?readRichEditor(el):null;
   const key=el.dataset.inline,value=rich?rich.text:el.type==='checkbox'?el.checked:el.value;
-  if(el.dataset.layoutKey){const ok=mutate(()=>renameDetailSection(p,el.dataset.layoutKey,value),'',{keepDetail:true});if(ok){delete el.dataset.pending;el.removeAttribute('aria-invalid');}return ok;}
+  if(el.dataset.layoutKey){const ok=mutate(()=>renameDetailSection(p,el.dataset.layoutKey,value),'',{keepDetail:true,rollbackOnSaveFailure:true});if(ok)finishInlineCommit(el);return ok;}
   const target=el.dataset.sectionId?(p.customSections||[]).find(s=>s.id===el.dataset.sectionId):el.dataset.commentId?(p.comments||[]).find(c=>c.id===el.dataset.commentId):el.dataset.nodeId?p.planNodes.find(n=>n.id===el.dataset.nodeId):el.dataset.relationId?state.relations.find(r=>r.id===el.dataset.relationId):p;
   if(!target)return false;
-  if(key==='name'&&!value.trim()){el.setAttribute('aria-invalid','true');toast('项目标题不能为空');return false;}
-  if(target[key]===value&&(!rich||target.richText?.[key]===rich.html)){if(dirty&&!save(false))return false;delete el.dataset.pending;return true;}
+  if(key==='name'&&!value.trim()){el.setAttribute('aria-invalid','true');refreshSaveStatus();if(!automatic)toast('项目标题不能为空');return false;}
+  if(target[key]===value&&(!rich||target.richText?.[key]===rich.html)){if(dirty&&!save(false))return false;finishInlineCommit(el);return true;}
   const ok=mutate(()=>{target[key]=value;if(rich){target.richText??={};target.richText[key]=rich.html;}if(key==='freezeReason')saveFrozenNote(target,{text:value,html:rich?.html||''});if(key==='focus'&&value)p.planNodes.filter(n=>n.id!==el.dataset.nodeId).forEach(n=>n.focus=false);if(el.dataset.commentId)target.updatedAt=new Date().toISOString();},'',el.dataset.timelinePid
-    ?{keepMain:true,keepDetail:state.detail!==pid,rollbackOnSaveFailure:true}:{keepDetail:true});
-  if(ok){delete el.dataset.pending;el.removeAttribute('aria-invalid');if(key==='focus')$('detailBody').querySelectorAll('[data-inline="focus"]').forEach(box=>box.checked=!!p.planNodes.find(n=>n.id===box.dataset.nodeId)?.focus);}return ok;
+    ?{keepMain:true,keepDetail:state.detail!==pid,rollbackOnSaveFailure:true}:{keepDetail:true,rollbackOnSaveFailure:true});
+  if(ok){finishInlineCommit(el);if(key==='focus')$('detailBody').querySelectorAll('[data-inline="focus"]').forEach(box=>box.checked=!!p.planNodes.find(n=>n.id===box.dataset.nodeId)?.focus);}return ok;
 }
-function flushInline(){if(tagEditor?.flush()===false)return false;if(!flushRichEditors($('detailBody'))||!flushRichEditors($('workbenchView')))return false;let ok=flowEditor?.flush()!==false;if(canvasEditor?.flush()===false)ok=false;document.querySelectorAll('[data-inline][data-pending]').forEach(el=>{if(!commitInline(el))ok=false;});if(workbench?.flush()===false)ok=false;return ok;}
+function flushInline(){if(document.querySelector(composingInputs))return false;if(tagEditor?.flush()===false)return false;if(!flushRichEditors($('detailBody'))||!flushRichEditors($('workbenchView')))return false;let ok=flowEditor?.flush()!==false;if(canvasEditor?.flush()===false)ok=false;document.querySelectorAll('[data-inline][data-pending]').forEach(el=>{if(!commitInline(el))ok=false;});if(workbench?.flush()===false)ok=false;return ok;}
 function navigate(display,board=null){
   if(!flushInline())return;closeDetail();state.activeBoard=board;state.scopeFrame=null;state.focusDirection=null;state.tags.clear();state.query='';$('search').value='';renderTags();setDisplay(display);if(mobile())toggleSidebar(false);
 }
@@ -825,10 +866,48 @@ function bindProjectContent(){
     const id=uid('section');mutate(()=>p.customSections.push({id,title:'',body:''}),'已添加栏目');focusDetailSection('custom:'+id,true);
   });
 }
+function readyForAutosave(){
+  return flushRichEditors($('detailBody'),{silent:true})&&flushRichEditors($('workbenchView'),{silent:true})&&
+    !document.querySelector(composingInputs);
+}
+function scheduleInlineSave(el){
+  clearTimeout(inlineTimers.get(el));
+  inlineTimers.set(el,setTimeout(()=>{
+    if(!el.isConnected||!el.dataset.pending){inlineTimers.delete(el);return;}
+    if(!readyForAutosave()){scheduleInlineSave(el);return;}
+    commitInline(el,{automatic:true});
+  },700));
+}
+function trackInlineInput(el){
+  if(el.matches('textarea[data-autogrow]')){
+    el.style.height='0px';
+    el.style.height=Math.max(el.closest('.inline-title')?0:el.classList.contains('comment-draft')?56:72,el.scrollHeight+2)+'px';
+  }
+  el.dataset.pending='true';
+  el.dataset.editingPid=state.detail;
+  el.removeAttribute('aria-invalid');
+  refreshSaveStatus();
+  scheduleInlineSave(el);
+}
 function bindInlineEditing(){
   $('detailBody').addEventListener('keydown',e=>{if(e.target.matches('.comment-title')&&e.key==='Enter'&&!e.isComposing){e.preventDefault();e.stopPropagation();if(commitInline(e.target))e.target.blur();}});
-  $('detailBody').addEventListener('compositionend',e=>{if(e.target.matches('.comment-title'))e.target.dispatchEvent(new Event('input',{bubbles:true}));});
-  document.addEventListener('input',e=>{const el=e.target;if(!el.matches('[data-inline]'))return;if(e.isComposing)return;if(el.matches('textarea[data-autogrow]')){el.style.height='0px';el.style.height=Math.max(el.closest('.inline-title')?0:el.classList.contains('comment-draft')?56:72,el.scrollHeight+2)+'px';}el.dataset.pending='true';el.dataset.editingPid=state.detail;$('saveStatus').textContent='正在编辑…';$('detailSaveStatus').textContent='正在编辑…';clearTimeout(inlineTimers.get(el));inlineTimers.set(el,setTimeout(()=>commitInline(el),700));});
+  document.addEventListener('compositionstart',e=>{
+    const el=e.target;
+    if(!state||!canMaintain()||!el.matches('[data-inline]'))return;
+    el.dataset.inlineComposing='true';
+    clearTimeout(inlineTimers.get(el));inlineTimers.delete(el);refreshSaveStatus();
+  });
+  document.addEventListener('compositionend',e=>{
+    const el=e.target;
+    if(!el.dataset.inlineComposing)return;
+    delete el.dataset.inlineComposing;
+    trackInlineInput(el);
+  });
+  document.addEventListener('input',e=>{
+    const el=e.target;
+    if(!state||!canMaintain()||!el.matches('[data-inline]')||e.isComposing||el.dataset.inlineComposing)return;
+    trackInlineInput(el);
+  });
   document.addEventListener('focusout',e=>{if(e.target.matches('[data-inline][data-pending]'))commitInline(e.target);});
   $('detailBody').addEventListener('change',e=>{
     const el=e.target;if(el.matches('[data-inline]')){el.dataset.pending='true';el.dataset.editingPid=state.detail;commitInline(el);}
@@ -899,7 +978,7 @@ $('tagDialog').addEventListener('cancel',e=>{if(!tagEditor.flush())e.preventDefa
 $('newTagColorControl').innerHTML=colorPickerMarkup('#8c8981','data-new-tag-color','new','标签颜色',{inputId:'newTagColor'});
 for(const [id,edge] of [['bringFrameFront','front'],['sendFrameBack','back']])$(id).addEventListener('click',()=>{if(!state.selectedFrames.size)return;mutate(()=>state.frames=moveFramesToEdge(state.frames,state.selectedFrames,edge),'',{keepDetail:true,rollbackOnSaveFailure:true});});
 mountDetailResize({panel:$('detail'),handle:$('detailResize'),container:document.querySelector('.workspace'),key:storageKey('topic-workbench-detail-width'),onResize:()=>{document.querySelector('.app-shell').style.setProperty('--detail-width',$('detail').style.getPropertyValue('--detail-width'));if(state?.detail)resizeInlineFields();}});
-bindDetailNavigation($('detailBody'));$('detailBack').addEventListener('click',goBackDetail);bindInlineEditing();bindProjectContent();bindHoverMenus();bindDeliveryActions();$('jumpComments').addEventListener('click',()=>{if(!flushInline())return;const p=byId[state.detail];if(p&&detailLayout(p).hidden.includes('comments'))mutate(()=>setDetailSectionHidden(p,'comments',false));const composer=canMaintain()?$('commentForm'):$('detailBody').querySelector('.comment-entries');composer?.scrollIntoView({block:'center',behavior:'smooth'});if(canMaintain())composer?.querySelector('[data-inline="commentDraft"]').focus({preventScroll:true});});$('detailSaveStatus').addEventListener('click',()=>{flushInline();save(false);});
+bindDetailNavigation($('detailBody'));$('detailBack').addEventListener('click',goBackDetail);bindInlineEditing();bindProjectContent();bindHoverMenus();bindDeliveryActions();$('jumpComments').addEventListener('click',()=>{if(!flushInline())return;const p=byId[state.detail];if(p&&detailLayout(p).hidden.includes('comments'))mutate(()=>setDetailSectionHidden(p,'comments',false));const composer=canMaintain()?$('commentForm'):$('detailBody').querySelector('.comment-entries');composer?.scrollIntoView({block:'center',behavior:'smooth'});if(canMaintain())composer?.querySelector('[data-inline="commentDraft"]').focus({preventScroll:true});});$('detailSaveStatus').addEventListener('click',()=>{if(flushInline())save(false);});
 $('snapshots').addEventListener('click',snapshotsPanel);$('reviewIssues').addEventListener('click',reviewPanel);
 document.addEventListener('click',e=>{const b=e.target.closest('[data-snapshot-read],[data-snapshot-export],[data-snapshot-delete],[data-review-project]');if(!b)return;try{if(b.hasAttribute('data-snapshot-read'))snapshotPreview(b.dataset.snapshotRead);if(b.hasAttribute('data-snapshot-export'))storage.download(snapshots.export(b.dataset.snapshotExport));if(b.hasAttribute('data-snapshot-delete')){const id=b.dataset.snapshotDelete;editor('删除快照','<p>仅删除这份历史快照，当前项目和布局保留。</p>',()=>{snapshots.remove(id);toast('快照已删除');},'确认删除');}if(b.hasAttribute('data-review-project')){$('editorDialog').close();openDetail(b.dataset.reviewProject);}}catch(error){toast(error.message);}});
 
@@ -921,6 +1000,9 @@ $('returnToCanvas').addEventListener('click',returnToCenter);
 new ResizeObserver(scheduleRecoveryCheck).observe(navigationArea);
 // Settle a wheel gesture before any edit or drag can change the document.
 document.addEventListener('pointerdown',flushViewSave,true);
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden&&state&&canMaintain()&&readyForAutosave())flushInline();
+});
 window.addEventListener('pagehide',flushViewSave);
 window.addEventListener('pageshow',event => {
   if (event.persisted && state.display==='canvas' && !state.detail && state.mode!=='gather') {
@@ -950,7 +1032,11 @@ document.querySelectorAll('[data-close-editor]').forEach(b=>b.addEventListener('
 $('editorFields').addEventListener('click',e=>{const b=e.target.closest('[data-editor-remove]');if(!b)return;const {pid,nodeId,materialId,relationId,placementId}=editorInstance;if(b.dataset.editorRemove==='node'){deliveryController.removeNode(pid,nodeId);return;}if(b.dataset.editorRemove==='placement'){if(removeCanvasReference(placementId))$('editorDialog').close();return;}const ok=mutate(()=>{if(b.dataset.editorRemove==='material')byId[pid].materials=byId[pid].materials.filter(m=>m.id!==materialId);if(b.dataset.editorRemove==='relation')state.relations=state.relations.filter(r=>r.id!==relationId);},'已移除，可撤销');if(ok)$('editorDialog').close();});
 $('detailBody').addEventListener('click',e=>{const related=e.target.closest('[data-related]');if(related){openRelatedProject(related.dataset.related);return;}const jump=e.target.closest('[data-detail-jump]');if(jump){jumpDetailSection(jump.dataset.detailJump);return;}if(e.target.closest('[data-locate-detail-project]')){locateDetailProject(state.detail);return;}const tag=e.target.closest('[data-detach-tag]');if(tag){if(editProjectTags(state.detail,{id:tag.dataset.detachTag,selected:false}))$('detailBody').querySelector('[data-project-tag-trigger]')?.focus({preventScroll:true});return;}const frame=e.target.closest('[data-focus-frame]');if(frame){closeDetail();setDisplay('canvas');focusFrame(frame.dataset.focusFrame);return;}const preview=e.target.closest('[data-preview]');if(preview){previewMaterial(state.detail,preview.dataset.preview);return;}const b=e.target.closest('[data-action]');if(!b||!canMaintain())return;b.closest('.detail-menu')?.removeAttribute('open');const pid=state.detail,id=b.dataset.id;switch(b.dataset.action){case 'project-edit':projectEditor(pid);break;case 'project-delete':deleteProject(pid);break;case 'tags':openTags();break;case 'node-add':nodeEditor(pid);break;case 'node-edit':nodeEditor(pid,id);break;case 'material-add':materialEditor(pid);break;case 'material-edit':materialEditor(pid,id);break;case 'children-show':showChildren(pid);break;case 'child-create':childProjectEditor(pid);break;case 'relation-add-main':relationEditor(pid,'main');break;case 'relation-add-child':relationEditor(pid,'child');break;case 'relation-edit':relationEditor(pid,'main',id);break;case 'reference':referenceEditor([pid]);break;case 'placement':placementEditor(id);break;}});
 $('closePreview').addEventListener('click',()=>$('previewDialog').close());$('previewDialog').addEventListener('close',()=>$('previewFrame').removeAttribute('src'));
-$('saveStatus').addEventListener('click',()=>{if(dirty)save();else toast('内容与布局保存在当前浏览器。可在设置中导出备份。');});
+$('saveStatus').addEventListener('click',()=>{
+  if(state&&(dirty||document.querySelector(pendingInputs))){
+    if(flushInline()&&dirty)save(false);
+  }else $('settingsDialog').showModal();
+});
 $('exportData').addEventListener('click',()=>{try{if(!flushRichEditors($('detailBody')))return;if(!flushInline())return;if(reconcileDelivery(state))save(false);storage.download(documentData());toast(dirty?'已导出备份，包含当前未保存修改':'备份已导出');}catch(e){toast('导出失败：'+e.message);}});
 $('undo').addEventListener('click',undoWithDeliveryHistory);
 world.addEventListener('click',e=>{
@@ -1267,13 +1353,13 @@ async function boot(){
   if (!canMaintain()) storage.validate(seed);
   const loaded=canMaintain()?storage.load(seed):{data:seed,fromStorage:false,error:null};
   if (canMaintain() && (!boardPublication.edition || boardPublication.active === boardPublication.edition)) {
-    cloudSync = mountAutoSync({key:syncKey,release,dataKey,getData:documentData,notify:toast,onPublished:showPublicationTime});
+    cloudSync = mountAutoSync({key:syncKey,release,dataKey,getData:documentData,notify:toast,onPublished:showPublicationTime,onStatus:setOnlineSaveStatus});
     if (cloudSync.pendingBoard()) {
       storage.validate(cloudSync.pendingBoard());
       loaded.data = cloudSync.pendingBoard();
     }
   }
-  if(loaded.error){$('loadCaption').textContent='本地记录读取失败，原记录已保留';$('saveStatus').textContent='需要恢复';$('world').innerHTML='<div class="load-error"><h2>本地记录暂时无法读取</h2><p>'+esc(loaded.error)+'</p><p>原记录已保留。先导出原始备份，再处理恢复。</p><button id="downloadRaw">导出原始记录</button></div>';$('downloadRaw').onclick=()=>storage.download(localStorage.getItem(dataKey));return;}
+  if(loaded.error){$('loadCaption').textContent='本地记录读取失败，原记录已保留';localSavePhase='recovery';refreshSaveStatus();$('world').innerHTML='<div class="load-error"><h2>本地记录暂时无法读取</h2><p>'+esc(loaded.error)+'</p><p>原记录已保留。先导出原始备份，再处理恢复。</p><button id="downloadRaw">导出原始记录</button></div>';$('downloadRaw').onclick=()=>storage.download(localStorage.getItem(dataKey));return;}
   if(!loaded.data.domainTagVersion&&loaded.fromStorage)localStorage.setItem(storageKey('topic-workbench-v2-before-domain-tags'),JSON.stringify(loaded.data));
   if(!loaded.data.projectContentVersion&&loaded.fromStorage)localStorage.setItem(storageKey('topic-workbench-v2-before-project-content'),JSON.stringify(loaded.data));
   const enriched=normalizeBoard(loaded.data);
@@ -1282,7 +1368,7 @@ async function boot(){
   state={...data,canvasItems:data.canvasItems||[],tagDefinitions:tags,selected:new Set(),selectedFrames:new Set(),tags:new Set(),logic:'intersection',mode:'highlight',query:'',tool:'select',detail:null,detailInstance:null,display:'canvas',activeBoard:null,scopeFrame:null,focusDirection:null,deliveryFilter:'active',deliveryQuery:''};
   reconcileDelivery(state);
   deliveryController=createDeliveryController({getState:()=>state,mutate,flush:flushInline,editor,field,area,check,openProject:openDetail,navigate,toast,storageKey});
-  indexData();canvasEditor=createCanvasEditor({world,viewport,getState:()=>state,mutate,save,toWorld,setTool,isPanning:e=>space||state.tool==='pan'||e.button===1,clearProjects:()=>{state.selected.clear();state.selectedFrames.clear();renderSelection();},closeDetail,toast,onEditing:()=>{dirty=true;$('saveStatus').textContent='正在编辑…';}});workbench=createWorkbenchViews({getState:()=>state,update:mutate,openProject:openDetail,priorityControl,canMaintain,navigate,editor,field,area,matches,commitInline,notify:toast,afterRender:syncActiveProject});projectList=createProjectList({root:$('mobileList'),getData:()=>state,cardElement,openProject:openDetail,matches,beforeChange:flushInline,onFilterChange:()=>{renderTags();applyFilter();renderSelection();},key:storageKey('topic-workbench-list-view-v1'),notify:toast});bindEvents();
+  indexData();canvasEditor=createCanvasEditor({world,viewport,getState:()=>state,mutate,save,toWorld,setTool,isPanning:e=>space||state.tool==='pan'||e.button===1,clearProjects:()=>{state.selected.clear();state.selectedFrames.clear();renderSelection();},closeDetail,toast,onEditing:()=>{dirty=true;refreshSaveStatus();}});workbench=createWorkbenchViews({getState:()=>state,update:mutate,openProject:openDetail,priorityControl,canMaintain,navigate,editor,field,area,matches,commitInline,notify:toast,afterRender:syncActiveProject});projectList=createProjectList({root:$('mobileList'),getData:()=>state,cardElement,openProject:openDetail,matches,beforeChange:flushInline,onFilterChange:()=>{renderTags();applyFilter();renderSelection();},key:storageKey('topic-workbench-list-view-v1'),notify:toast});bindEvents();
   const compact=matchMedia('(min-width:761px) and (max-width:1100px)').matches;if(compact)document.body.classList.add('sidebar-collapsed');
   renderAll();setDisplay(state.display);save(loaded.fromStorage&&!loaded.data.frameBoardSyncVersion&&data.quickBoards.some(board=>board.sourceFrameId));
   localStorage.setItem(storageKey('topic-workbench-active-key'),dataKey);
@@ -1299,6 +1385,6 @@ async function boot(){
   try { snapshots.list(); } catch(error) { toast(error.message); }
   const linkedProject=new URLSearchParams(location.search).get('project');if(linkedProject&&byId[linkedProject])openDetail(linkedProject);
   $('toggleSidebar').setAttribute('aria-expanded',String(!mobile()&&!compact));
- }catch(error){$('loadCaption').textContent='载入失败：'+error.message;$('saveStatus').textContent='未载入';world.innerHTML='<div class="load-error"><h2>项目暂时无法载入</h2><p>'+esc(error.message)+'</p><button onclick="location.reload()">重新载入</button></div>';}
+ }catch(error){$('loadCaption').textContent='载入失败：'+error.message;localSavePhase='unavailable';refreshSaveStatus();world.innerHTML='<div class="load-error"><h2>项目暂时无法载入</h2><p>'+esc(error.message)+'</p><button onclick="location.reload()">重新载入</button></div>';}
 }
 boot();

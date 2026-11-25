@@ -26,11 +26,11 @@ export function flowMarkup(project) {
 }
 
 /** Owns only the embedded strip. Project facts and persistence remain with the app. */
-export function mountProjectFlow(root,{getProject,mutate,toast=()=>{},onChange=()=>{}}={}) {
+export function mountProjectFlow(root,{getProject,mutate,toast=()=>{},onChange=()=>{},onPendingChange=()=>{},canAutoSave=()=>true}={}) {
   const host=root?.matches?.('[data-project-flow]')?root:root?.querySelector('[data-project-flow]');
   if(!host)return {flush:()=>true,destroy:()=>{}};
   const owner=host.dataset.projectFlow, controller=new AbortController();
-  let committing=false, destroyed=false, dragging=null;
+  let committing=false, destroyed=false, dragging=null, saveTimer;
   const project=()=>{const value=getProject();return value?.id===owner?value:null;};
   const listen=(name,fn)=>host.addEventListener(name,fn,{signal:controller.signal});
   const error=message=>{const target=host.querySelector('.flow-save-error');if(target){target.textContent=message;target.hidden=!message;}if(message)toast(message);};
@@ -42,18 +42,21 @@ export function mountProjectFlow(root,{getProject,mutate,toast=()=>{},onChange=(
     const input=[...host.querySelectorAll('[data-flow-title]')].find(el=>el.dataset.flowTitle===focusId);
     if(input){input.focus({preventScroll:true});if(select)input.select();input.scrollIntoView({block:'nearest',inline:'nearest'});}
   }
-  function commit(input) {
+  function commit(input, {automatic=false} = {}) {
     if(!input?.dataset.flowPending)return true;
+    clearTimeout(saveTimer);
     if(input.dataset.flowComposing==='true'){error('请完成输入后再切换。');return false;}
     const value=project();if(!value)return false;
     const next=input.value.trim();
-    if(!next){input.setAttribute('aria-invalid','true');error('请填写节点名称，或从节点选项中删除。');return false;}
+    if(!next){input.setAttribute('aria-invalid','true');onPendingChange();error('请填写节点名称，或从节点选项中删除。');return false;}
     let ok=false;committing=true;
     try {ok=mutate(()=>renameFlowNode(project(),input.dataset.flowTitle,next),'',{keepDetail:true})!==false;}
     catch(failure){error(failure.message||'节点名称未保存');}
     finally{committing=false;}
     if(!ok){error('节点修改尚未保存，请重试。');return false;}
-    delete input.dataset.flowPending;input.removeAttribute('aria-invalid');input.value=next;input.style.width=titleWidth(next)+'px';error('');
+    delete input.dataset.flowPending;input.removeAttribute('aria-invalid');
+    if(!automatic)input.value=next;
+    input.style.width=titleWidth(input.value)+'px';error('');onPendingChange();
     // Do not replace the focused input on blur: a following toolbar click must retain its target.
     input.setAttribute('aria-label','节点名称：'+next);
     const node=input.closest('[data-flow-node]');
@@ -97,12 +100,30 @@ export function mountProjectFlow(root,{getProject,mutate,toast=()=>{},onChange=(
     panel.dataset.node=id;panel.hidden=false;
     panel.innerHTML='<span>'+esc(node.title)+'</span><label title="设为结束节点后，点击它的圆点会结束项目"><input type="checkbox" data-flow-closing="'+esc(id)+'"'+(node.closesProject?' checked':'')+'>结束节点</label><button type="button" data-flow-remove="'+esc(id)+'">删除节点</button><button type="button" data-flow-close-options aria-label="关闭节点选项">×</button>';
   }
+  function scheduleSave(input) {
+    clearTimeout(saveTimer);
+    onPendingChange();
+    if(input.dataset.flowComposing==='true')return;
+    saveTimer=setTimeout(()=>{
+      if(destroyed||!host.contains(input)||!input.dataset.flowPending)return;
+      if(!input.value.trim()){input.setAttribute('aria-invalid','true');onPendingChange();return;}
+      if(!canAutoSave()){scheduleSave(input);return;}
+      commit(input,{automatic:true});
+    },700);
+  }
   listen('input',event=>{
     const input=event.target.closest('[data-flow-title]');if(!input)return;
-    input.dataset.flowPending='true';input.style.width=titleWidth(input.value)+'px';input.removeAttribute('aria-invalid');
+    input.dataset.flowPending='true';input.style.width=titleWidth(input.value)+'px';input.removeAttribute('aria-invalid');scheduleSave(input);
   });
-  listen('compositionstart',event=>{if(event.target.matches('[data-flow-title]'))event.target.dataset.flowComposing='true';});
-  listen('compositionend',event=>{delete event.target.dataset.flowComposing;});
+  listen('compositionstart',event=>{
+    if(!event.target.matches('[data-flow-title]'))return;
+    event.target.dataset.flowComposing='true';clearTimeout(saveTimer);onPendingChange();
+  });
+  listen('compositionend',event=>{
+    if(!event.target.matches('[data-flow-title]'))return;
+    delete event.target.dataset.flowComposing;
+    event.target.dataset.flowPending='true';scheduleSave(event.target);
+  });
   listen('focusout',event=>{if(event.target.matches('[data-flow-title]'))commit(event.target);});
   listen('keydown',event=>{
     event.stopPropagation();
@@ -112,7 +133,7 @@ export function mountProjectFlow(root,{getProject,mutate,toast=()=>{},onChange=(
     if(!input)return;
     if(event.key==='Escape'){
       event.preventDefault();const saved=readProjectFlow(project()).nodes.find(node=>node.id===id);if(saved)input.value=saved.title;
-      delete input.dataset.flowPending;input.removeAttribute('aria-invalid');input.style.width=titleWidth(input.value)+'px';error('');input.blur();return;
+      clearTimeout(saveTimer);delete input.dataset.flowPending;input.removeAttribute('aria-invalid');input.style.width=titleWidth(input.value)+'px';error('');onPendingChange();input.blur();return;
     }
     if(event.key==='Enter'){event.preventDefault();if(commit(input))add(id);return;}
   });
@@ -150,5 +171,5 @@ export function mountProjectFlow(root,{getProject,mutate,toast=()=>{},onChange=(
     if(target&&target!==id&&index>=0)change('move',id,p=>moveFlowNode(p,id,index),{focus:id});
   });
   listen('dragend',()=>{dragging=null;host.querySelectorAll('.dragging,.drop-target').forEach(el=>el.classList.remove('dragging','drop-target'));});
-  return {flush,destroy(){destroyed=true;controller.abort();}};
+  return {flush,destroy(){destroyed=true;clearTimeout(saveTimer);controller.abort();}};
 }
