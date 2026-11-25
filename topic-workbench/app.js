@@ -17,7 +17,7 @@ import { detachSourceMetadata } from './source-detach.js';
 import { displayPriority, visibleNodes, nodeStatus, displayDescription } from './presentation.js';
 import {boardPublication, deployment, storageKey, useBoardEdition} from './deployment-config.js?v=20261105-editions';
 import {showBoardCopies} from './board-publication.js';
-import {isOlderThanLiveBaseline, loadSharedBoard, mountAutoSync, newerSharedBoard, prepareLiveStorage, validateRelease, watchSharedBoard} from './auto-sync.js?v=20261124-durable-sync';
+import {isOlderThanLiveBaseline, loadSharedBoard, mountAutoSync, newerSharedBoard, prepareLiveStorage, readLiveBaseline, validateRelease, watchSharedBoard} from './auto-sync.js?v=20261125-sync-time';
 import {richEditorMarkup, mountRichEditors, readRichEditor, richHTML, richHasContent, flushRichEditors, destroyRichEditors} from './rich-text.js?v=20261030-card-preview';
 import {frozenNote,saveFrozenNote} from './frozen-note.js';
 import {freezeCommentPickerMarkup,mountFreezeCommentPickers} from './freeze-comment-picker.js';
@@ -1205,6 +1205,23 @@ function readPublishedCopy(key) {
 function cachePublishedCopy(key, release) {
   try { localStorage.setItem(key,JSON.stringify(release)); } catch {}
 }
+const publicationClock=new Intl.DateTimeFormat('zh-CN',{
+  timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',
+  hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'
+});
+function showPublicationTime(release) {
+  if (!release?.updatedAt || typeof release.revision!=='string') return;
+  const date=new Date(release.updatedAt);
+  if (!Number.isFinite(date.getTime())) return;
+  const {year,month,day,hour,minute,second}=Object.fromEntries(
+    publicationClock.formatToParts(date).map(({type,value})=>[type,value])
+  );
+  const stamp=$('workspaceSyncTime'), time=stamp.querySelector('time');
+  time.dateTime=release.updatedAt;
+  time.textContent=`${year}-${month}-${day} ${hour}:${minute}:${second}`;
+  stamp.title='北京时间 · 版本 '+release.revision.slice(0,8);
+  stamp.hidden=false;
+}
 function updatePublicBoard(release, cacheKey) {
   const data=normalizeBoard(release.board);
   storage.validate(data);
@@ -1212,6 +1229,7 @@ function updatePublicBoard(release, cacheKey) {
   reconcileDelivery(state);
   if (state.detail && !byId[state.detail]) closeDetail();
   renderAll();
+  showPublicationTime(release);
   cachePublishedCopy(cacheKey,release);
 }
 async function boot(){
@@ -1249,7 +1267,7 @@ async function boot(){
   if (!canMaintain()) storage.validate(seed);
   const loaded=canMaintain()?storage.load(seed):{data:seed,fromStorage:false,error:null};
   if (canMaintain() && (!boardPublication.edition || boardPublication.active === boardPublication.edition)) {
-    cloudSync = mountAutoSync({key:syncKey,release,dataKey,getData:documentData,notify:toast});
+    cloudSync = mountAutoSync({key:syncKey,release,dataKey,getData:documentData,notify:toast,onPublished:showPublicationTime});
     if (cloudSync.pendingBoard()) {
       storage.validate(cloudSync.pendingBoard());
       loaded.data = cloudSync.pendingBoard();
@@ -1268,6 +1286,8 @@ async function boot(){
   const compact=matchMedia('(min-width:761px) and (max-width:1100px)').matches;if(compact)document.body.classList.add('sidebar-collapsed');
   renderAll();setDisplay(state.display);save(loaded.fromStorage&&!loaded.data.frameBoardSyncVersion&&data.quickBoards.some(board=>board.sourceFrameId));
   localStorage.setItem(storageKey('topic-workbench-active-key'),dataKey);
+  if (live) showPublicationTime(release);
+  else if (fallbackLive && canMaintain()) showPublicationTime(readLiveBaseline(localStorage,liveKey));
   cloudSync?.start();
   refreshSearchMeetings();
   if (deployment.public && !fromNetwork) toast('最新线上画板暂时无法读取，当前显示上次发布版');

@@ -103,23 +103,23 @@ export function watchSharedBoard({release, apply, load = loadSharedBoard, interv
 const digest = async text => Array.from(new Uint8Array(await crypto.subtle.digest(
   'SHA-256',new TextEncoder().encode(text)))).map(n=>n.toString(16).padStart(2,'0')).join('');
 
-function readBaseline(storage, key) {
+export function readLiveBaseline(storage, key) {
   try { return JSON.parse(storage.getItem(key+':baseline') || 'null'); } catch { return null; }
 }
 
 export function cachedBoardRevision(storage, key) {
-  const revision=readBaseline(storage,key)?.revision;
+  const revision=readLiveBaseline(storage,key)?.revision;
   return isRevision(revision) ? revision : null;
 }
 
 export function isOlderThanLiveBaseline(storage, key, release) {
-  const previous=readBaseline(storage,key);
+  const previous=readLiveBaseline(storage,key);
   return !!release && Date.parse(release.updatedAt)<Date.parse(previous?.updatedAt);
 }
 
 export async function rememberLiveBaseline(storage, key, release) {
   const fingerprint=await digest(boardFingerprint(release.board));
-  const previous=readBaseline(storage,key);
+  const previous=readLiveBaseline(storage,key);
   if (previous?.updatedAt && Date.parse(previous.updatedAt)>Date.parse(release.updatedAt)) return;
   storage.setItem(key+':baseline',JSON.stringify({revision:release.revision, updatedAt:release.updatedAt,
     edition:release.updatedAt.slice(0,10)+'-'+release.revision.slice(0,16),fingerprint,ordered:true}));
@@ -128,7 +128,7 @@ export async function rememberLiveBaseline(storage, key, release) {
 // Reuse one current copy. Preserve only unsubmitted edits when a newer release
 // arrives, rather than filling browser storage with every published revision.
 export async function prepareLiveStorage({storage, key, archivePrefix, release}) {
-  const raw=storage.getItem(key),meta=readBaseline(storage,key);
+  const raw=storage.getItem(key),meta=readLiveBaseline(storage,key);
   if (raw && meta?.revision !== release.revision) {
     // Parsing failures surface through normal persistence recovery; never erase.
     let previous;
@@ -149,7 +149,7 @@ export async function prepareLiveStorage({storage, key, archivePrefix, release})
 }
 
 export function createAutoSync({key, release, baseline = null, getData, status, storage = localStorage,
-                               onBaseline = ()=>{}, request = jsonRequest, delay = 1500}) {
+                               onBaseline = ()=>{}, onPublished = ()=>{}, request = jsonRequest, delay = 1500}) {
   const tokenKey=key+':connection',draftKey=key+':pending';
   let token=storage.getItem(tokenKey)||'', revision=release?.revision??baseline;
   let acknowledged=release?boardFingerprint(release.board):null;
@@ -207,6 +207,7 @@ export function createAutoSync({key, release, baseline = null, getData, status, 
     useOnlineBaseline(saved);
     clearDraft(submitted);
     report('已同步到线上');
+    onPublished(saved);
   }
   async function sync() {
     if (sending || !pending || !token || !canProgress()) return;
@@ -320,7 +321,7 @@ export function createAutoSync({key, release, baseline = null, getData, status, 
   };
 }
 
-export function mountAutoSync({key, release, dataKey, getData, notify}) {
+export function mountAutoSync({key, release, dataKey, getData, notify, onPublished}) {
   const container=document.querySelector('#settingsDialog .settings-links');
   const button=document.createElement('button');
   const detail=document.createElement('p');
@@ -330,7 +331,7 @@ export function mountAutoSync({key, release, dataKey, getData, notify}) {
   badge.className='save-status';badge.id='syncStatus';
   badge.onclick=()=>document.getElementById('settingsDialog').showModal();
   document.getElementById('saveStatus').after(badge);
-  const sync=createAutoSync({key,release,getData,baseline:cachedBoardRevision(localStorage,dataKey),
+  const sync=createAutoSync({key,release,getData,onPublished,baseline:cachedBoardRevision(localStorage,dataKey),
     onBaseline:saved=>{rememberLiveBaseline(localStorage,dataKey,saved).catch(()=>{});},
     status:(text,conflict)=>{
       badge.textContent=text;badge.hidden=false;resolve.hidden=!conflict;

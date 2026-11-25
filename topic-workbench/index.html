@@ -27,7 +27,7 @@
   <link rel="stylesheet" href="project-list.css?v=20261030-two-line-previews">
   <link rel="stylesheet" href="canvas-navigation.css?v=20261102-pan-fit">
   <link rel="stylesheet" href="date-styles.css?v=20261030-dates">
-  <link rel="stylesheet" href="workspace-header.css?v=20261112">
+  <link rel="stylesheet" href="workspace-header.css?v=20261125-sync-time">
   <link rel="stylesheet" href="project-lifecycle.css?v=20261113-frozen-style">
   <link rel="stylesheet" href="viewer-mode.css?v=20261117">
   <link rel="stylesheet" href="action-board.css?v=20261123-action-focus">
@@ -53,7 +53,9 @@
   <header class="app-header">
     <button id="toggleSidebar" class="icon-button" aria-label="切换侧栏" aria-expanded="true" title="切换侧栏"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4" width="14" height="12" rx="2"/><path d="M8 4v12"/></svg></button>
 
-    <h1 id="pageTitle" class="workspace-title">自由画板</h1><div class="header-spacer"></div><button id="saveStatus" class="save-status" title="保存状态">正在载入…</button><button class="plain-button" id="undo" disabled>撤销</button><button class="plain-button" id="snapshots">保存快照</button><button class="plain-button" id="reviewIssues">待核对</button><button class="plain-button" id="help" title="操作说明与快捷键">帮助</button>
+    <h1 id="pageTitle" class="workspace-title">自由画板</h1>
+    <span id="workspaceSyncTime" class="workspace-sync-time" role="status" hidden><span>最近同步</span><time></time><span class="sr-only">北京时间</span></span>
+    <div class="header-spacer"></div><button id="saveStatus" class="save-status" title="保存状态">正在载入…</button><button class="plain-button" id="undo" disabled>撤销</button><button class="plain-button" id="snapshots">保存快照</button><button class="plain-button" id="reviewIssues">待核对</button><button class="plain-button" id="help" title="操作说明与快捷键">帮助</button>
   </header>
   <p id="loadCaption" class="load-caption" role="status">正在载入项目…</p>
   <button id="deliveryReminder" class="delivery-reminder" hidden></button>
@@ -155,6 +157,6 @@
   }
 }
   </script>
-  <script type="module" src="app.js?v=20261124-durable-sync"></script>
+  <script type="module" src="app.js?v=20261125-sync-time"></script>
 </body>
 </html>
